@@ -1,0 +1,102 @@
+lad:
+ query-all:
+  summary: 查询提货方式（分页+条件）
+ modify:
+  summary: 修改提货方式
+ add:
+  summary: 录入提货方式
+ delete:
+  summary: 删除提货方式
+ batchDelete:
+  summary: 批量删除提货方式
+ import:
+  summary: 导入提货方式
+ export:
+  summary: 导出提货方式
+ excel:
+  name: 提货方式
+  col:
+   first: 提货方式代码
+   second: 提货方式名称
+ field:
+  code: 提货方式代码
+  name: 提货方式名称
+  id: 唯一标识
+  ids: 唯一标识列表
+
+recv-g-way:
+ get:
+  description: 查询接货方式
+  del_mode_code: 接货方式代码
+  del_mode_name: 接货方式名称
+  id: 编号
+ post:
+  description: 增加接货方式
+  del_mode_code: 接货方式代码
+  del_mode_name: 接货方式名称
+  id: 编号
+ put:
+  description: 修改接货方式
+  del_mode_code: 接货方式代码
+  del_mode_name: 接货方式名称
+ delete:
+  description: 删除接货方式
+  del_mode_code: 接货方式代码
+  del_mode_name: 接货方式名称
+  id: 编号
+ query-all:
+  description: 查询接货方式（分页+条件）
+  summary: 查询接货方式（分页+条件）
+ batchDelete:
+  summary: 批量删除接货方式
+ file:
+  del_mode_code: 接货方式代码
+  del_mode_name: 接货方式名称
+  id: 编号
+ field:
+  ids: 唯一标识列表
+
+recv-g-way-file:
+ upload_f:
+  description: 导入接货方式（Excel上传）
+  summary: 导入接货方式
+ download_f:
+  description: 导出接货方式（Excel下载）
+  summary: 导出接货方式
+ excel:
+  name: 接货方式
+  col:
+   first: 接货方式代码
+   second: 接货方式名称
+ filed:
+  filename: 文件名字   
+  img-url: 图片src
+  img-alt: 图片文字描述
+  img-href: 图片链接地址
+
+op:
+ delete:
+  summary: 删除操作类型
+ batchDelete:
+  summary: 批量删除操作类型
+ import:
+  summary: 导入操作类型
+ export:
+  summary: 导出操作类型
+ field:
+  code: 操作类型代码
+  name: 操作类型名称
+  id: 唯一标识
+  ids: 唯一标识列表
+ modify:
+    summary: 修改操作类型
+ post:
+    summary: 增加操作类型
+ query-all:
+    summary: 查询所有操作类型
+      
+ excel:
+  name: 操作类型
+  col:
+   first: 操作类型代码
+   second: 操作类型名称

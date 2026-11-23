@@ -1,0 +1,196 @@
+server:
+  port: ${sp.gateway}
+spring:
+  application:
+    name: ${sn.gateway}
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          # 公钥文件配置
+          public-key-location: classpath:public.pem
+  cloud:
+    gateway:
+      discovery:
+        locator:
+          # 开启从注册中心动态创建路由的功能
+          enabled: true
+      # 注意：这里的路径配置需要移植到nacos配置中心system.yaml中
+      # 提示：predicates 中如果要匹配多个地址前缀，每个前缀用,分割，如：- Path=/auth/**,/oauth/**
+      routes:
+        - id: oauth2-auth-route
+          uri: lb://${sn.auth}
+          predicates:
+            - Path=/auth/**
+          filters:
+            - StripPrefix=1
+        - id: login-route
+          uri: lb://${sn.login}
+          predicates:
+            - Path=/login/**
+        # 验证码接口（由 wms-login 的 AJ-Captcha 控制器提供）
+        - id: captcha-route
+          uri: lb://${sn.login}
+          predicates:
+            - Path=/captcha/**
+        # 首页看板
+        - id: dashboard-route
+          uri: lb://${sn.dashboard}
+          predicates:
+            - Path=/dashboard/**
+        # 系统管理
+        - id: sysmanager-route
+          uri: lb://${sn.sysmanager}
+          predicates:
+            - Path=/sysmanager/**
+          filters:
+            - StripPrefix=1
+        - id: sysmgr-route
+          uri: lb://${sn.sysmgr}
+          predicates:
+            - Path=/sysmgr/**
+        # 系统图标 / 多语言（j3）
+        - id: j3sysmanager-route
+          uri: lb://${sn.j3sysmanager}
+          predicates:
+            - Path=/j3sysmanager/**
+          filters:
+            - StripPrefix=1
+        # 基础配置（j4）
+        - id: baseconfig-route
+          uri: lb://${sn.parameterType}
+          predicates:
+            - Path=/baseconfig/**,/baseConfig/**,/measurementunit/**,/ParameterType/**,/systemparameter/**
+        # 基础资料
+        - id: md-route
+          uri: lb://${sn.basezl}
+          predicates:
+            - Path=/md/**
+          filters:
+            - StripPrefix=1
+        # 其他配置（j8）：商品品牌/港口信息/箱规/箱型
+        - id: othermana-route
+          uri: lb://${sn.othermana}
+          predicates:
+            - Path=/othermana/**,/contshape/**
+        # 消息中间件 / 通知 / 出入库
+        - id: msgmw-route
+          uri: lb://${sn.msgmw}
+          predicates:
+            - Path=/msgmw/**
+        - id: notice-route
+          uri: lb://${sn.notice}
+          predicates:
+            - Path=/notice/**
+        - id: stockln-route
+          uri: lb://${sn.stockln}
+          predicates:
+            - Path=/stockln/**,/stock/**
+        - id: daycheck-route
+          uri: lb://${sn.daycheck}
+          predicates:
+            - Path=/daycheck/**
+        - id: sample-route
+          uri: lb://${sn.sample}
+          predicates:
+            - Path=/sample/**
+        - id: cpp-route
+          uri: lb://${sn.cpp}
+          predicates:
+            - Path=/cpp/**
+        # C++ 出库管理 wms-c3-chuweiguanli（仓库名称列表）
+        # C++ 服务不注册 Nacos，使用静态地址；端口与服务启动时 sp 参数保持一致。
+        - id: c3-chuweiguanli-route
+          uri: http://127.0.0.1:8103
+          predicates:
+            - Path=/chuweiguanli/**
+        # C++ 库内管理 wms-c3-kuneiguanli（托盘转移/储位转移/库内转移）
+        - id: c3-kuneiguanli-route
+          uri: http://127.0.0.1:8104
+          predicates:
+            - Path=/kuneiguanli/**
+        # C++ 盘点管理 wms-c4-icmanagement（C++ 服务不注册 Nacos，使用静态地址）
+        - id: c4-icmanagement-route
+          uri: http://127.0.0.1:8107
+          predicates:
+            - Path=/inv/**,/lis/**,/goods/**,/review/**,/stt/**,/moving-warehouse-inventory/**,/removal-adjustment/**,/overall-inventory/**
+        # C++ 仓储配置 wms-c7-reposity（订单类型等）
+        - id: c7-reposity-route
+          uri: http://127.0.0.1:8113
+          predicates:
+            - Path=/repository/**
+        # C++ 月台管理 wms-c8-platmanag（月台定义/月台计划/PLC指令）
+        - id: c8-platmanag-route
+          uri: http://127.0.0.1:8114
+          predicates:
+            - Path=/platmanag/**
+        # C++ 基础资料 wms-c1-bconf（产品属性/商品类目/品质代码/品检状态）
+        - id: c1-bconf-route
+          uri: http://127.0.0.1:8090
+          predicates:
+            - Path=/pa/**,/gc/**,/qcd/**,/pis/**
+        # C++ 人员分配 wms-c1-persalloc（工作状态/在职状态）
+        - id: c1-persalloc-route
+          uri: http://127.0.0.1:8101
+          predicates:
+            - Path=/ops/**,/es/**
+        # C++ 区域配置 wms-c6-areaconf
+        - id: c6-areaconf-route
+          uri: http://127.0.0.1:8111
+          predicates:
+            - Path=/areaconf/**
+        # C++ 人员配置 wms-c6-staffconf（学历代码/性别代码）
+        - id: c6-staffconf-route
+          uri: http://127.0.0.1:8112
+          predicates:
+            - Path=/staffconf/**
+        # Java 出库管理 wms-j7-outgoodsmanage（通知单/明细/任务确认/拣货/复核/下架/异常/月台计划）
+        - id: j7-outgoods-route
+          uri: lb://${sn.outgoodsmanage}
+          predicates:
+            - Path=/task-confirm/**,/adpick/**,/out-goods-manager/**,/out-detail/**,/outbound/**,/outgoodsmanage/**,/zc-check/**,/yc-outbound/**,/plat-io/**
+        # C++ 计费配置 wms-c4-billingconfig（/rm、/rm_more 为费用类型删除）
+        - id: c4-billingconfig-route
+          uri: http://127.0.0.1:8105
+          predicates:
+            - Path=/billing-configuration/**,/billing-name/**,/rm/**,/rm_more/**
+        # C++ 计费类型 wms-c4-billingtype
+        - id: c4-billingtype-route
+          uri: http://127.0.0.1:8106
+          predicates:
+            - Path=/cost-type/**,/expense/**
+        # C++ 计费配置(二) wms-c5-costconfig（客户计费属性/计费方式/计费商品分类/客户计费方式/计量类型/价格类型/费用模板/仓储费率）
+        - id: c5-costconfig-route
+          uri: http://127.0.0.1:8108
+          predicates:
+            - Path=/cost-config/**
+        # C++ 计费管理 wms-c5-costmanagement
+        - id: c5-costmanagement-route
+          uri: http://127.0.0.1:8109
+          predicates:
+            - Path=/cost-management/**
+        # C++ 企业配置 wms-c2-comconfig（行业分类/企业属性/企业状态/企业等级/公司信息）
+        # C++ 服务不注册 Nacos，使用静态地址；端口与服务启动时 sp 参数保持一致。
+        - id: c2-comconfig-route
+          uri: http://127.0.0.1:8092
+          predicates:
+            - Path=/indclas/**,/entattr/**,/entstat/**,/entleve/**,/entlevel/**,/comstate/**,/cominfo/**,/enterprise/**
+zo:
+  cloud:
+    starter:
+      gateway:
+        # 配置是否开启鉴权
+        open-authorization: true
+        # 配置白名单路径
+        white-paths:
+          - "/actuator/**"
+          - "/captcha/**"
+          - "/auth/oauth/token"
+          - "/login/auth-login"
+          - "/login/refresh-token"
+        # 配置内部路径(需要用到凭证但不需要权限验证的请求)
+        inner-paths:
+          - "/login/current-user"
+          - "/login/get-menus"
+          - "/login/logout"
+          - "/login/modify-password"

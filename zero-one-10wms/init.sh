@@ -1,0 +1,449 @@
+#!/usr/bin/env bash
+# zero-one-10wms harness 入口：环境检查、状态检查、C++ 静态检查、按需构建。
+# 运行环境：Git Bash / Linux / macOS。Windows PowerShell 不能直接执行本脚本。
+
+set -u
+set -o pipefail
+
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PARENT_ROOT="$(cd "$ROOT/.." && pwd)"
+cd "$ROOT" || exit 1
+
+MODE="quick"
+JAVA_MODULE=""
+DO_SNAPSHOT=0
+DO_CPP=0
+DO_FRONTEND=0
+DO_JAVA=0
+FAILED=0
+
+usage() {
+	cat <<'EOF'
+用法: ./init.sh [选项]
+
+默认: --quick 环境/状态/基线/关键文件检查
+
+  --quick            快速检查（默认）
+  --verify           完整静态验证：Java 编译 + 前端构建 + C++ 静态检查
+  --snapshot         追加一条开工基线快照到 $WMS_STATE_DIR
+  --java [模块]      编译 Java；不带模块时编译整个 reactor
+  --frontend         前端构建（corepack pnpm build）
+  --cpp              C++ 静态检查（模块注册、词条重复键）
+  --help             显示帮助
+
+环境变量:
+  WMS_STATE_DIR      仓库外状态目录，默认 $HOME/.wms-harness-state
+
+说明:
+  - 本机无 C++ 编译器时只做静态检查，不把结果写成“通过”。
+  - --verify 会跑较慢的编译/构建；失败时按输出修复，不要跳过。
+EOF
+}
+
+say() { printf '[init] %s\n' "$*"; }
+ok() { printf '[PASS] %s\n' "$*"; }
+warn() { printf '[WARN] %s\n' "$*"; }
+skip() { printf '[SKIP] %s\n' "$*"; }
+fail() {
+	printf '[FAIL] %s\n' "$*" >&2
+	FAILED=$((FAILED + 1))
+}
+
+have() { command -v "$1" >/dev/null 2>&1; }
+
+while [ "$#" -gt 0 ]; do
+	case "$1" in
+		--quick)
+			MODE="quick"
+			;;
+		--verify | --full)
+			MODE="verify"
+			DO_JAVA=1
+			DO_FRONTEND=1
+			DO_CPP=1
+			;;
+		--snapshot)
+			DO_SNAPSHOT=1
+			;;
+		--cpp)
+			DO_CPP=1
+			;;
+		--frontend)
+			DO_FRONTEND=1
+			;;
+		--java)
+			DO_JAVA=1
+			if [ "$#" -ge 2 ] && [ "${2#--}" = "$2" ]; then
+				JAVA_MODULE="$2"
+				shift
+			fi
+			;;
+		--help | -h)
+			usage
+			exit 0
+			;;
+		*)
+			printf '未知参数: %s\n' "$1" >&2
+			usage
+			exit 2
+			;;
+	esac
+	shift
+done
+
+check_tools() {
+	say "检查工具链"
+
+	if have git; then
+		ok "git: $(git --version 2>/dev/null | head -n 1)"
+	else
+		fail "缺少 git"
+	fi
+
+	if have java; then
+		ok "java: $(java -version 2>&1 | head -n 1)"
+	else
+		warn "缺少 java；Java 编译不可用"
+	fi
+
+	if have mvn; then
+		ok "mvn: $(mvn -v 2>/dev/null | head -n 1)"
+	else
+		warn "缺少 mvn；Java 编译不可用"
+	fi
+
+	if have node; then
+		ok "node: $(node -v 2>/dev/null)"
+	else
+		warn "缺少 node；前端构建不可用"
+	fi
+
+	if have corepack; then
+		ok "corepack: $(corepack -v 2>/dev/null)"
+	elif have pnpm; then
+		ok "pnpm: $(pnpm -v 2>/dev/null)"
+	else
+		warn "缺少 corepack/pnpm；前端构建不可用"
+	fi
+
+	if have python; then
+		ok "python: $(python --version 2>&1 | head -n 1)"
+	elif have py; then
+		ok "python: $(py --version 2>&1 | head -n 1)"
+	else
+		warn "缺少 python；JSON/词条静态检查会跳过"
+	fi
+
+	if have cmake; then
+		ok "cmake: $(cmake --version 2>/dev/null | head -n 1)"
+	else
+		warn "缺少 cmake；C++ 只做静态检查，结果记 runtime_unverified"
+	fi
+}
+
+check_key_files() {
+	say "检查关键文件"
+
+	local files=(
+		"$PARENT_ROOT/AGENTS.md"
+		"$ROOT/AGENTS.md"
+		"$ROOT/architecture.md"
+		"$ROOT/process.md"
+		"$ROOT/feature_list.json"
+		"$ROOT/PROGRESS.md"
+		"$ROOT/wms-java/pom.xml"
+		"$ROOT/wms-frontend/package.json"
+		"$ROOT/wms-cpp/CMakeLists.txt"
+	)
+	local f
+	for f in "${files[@]}"; do
+		if [ -f "$f" ]; then
+			ok "存在: ${f#"$PARENT_ROOT/"}"
+		else
+			fail "缺少关键文件: ${f#"$PARENT_ROOT/"}"
+		fi
+	done
+}
+
+check_json() {
+	say "检查 feature_list.json"
+
+	if [ ! -f "$ROOT/feature_list.json" ]; then
+		fail "feature_list.json 不存在"
+		return
+	fi
+
+	if have python; then
+		if python -c 'import json,sys; json.load(open(sys.argv[1], encoding="utf-8"))' "$ROOT/feature_list.json"; then
+			ok "feature_list.json 是合法 JSON"
+		else
+			fail "feature_list.json 不是合法 JSON"
+		fi
+	elif have py; then
+		if py -3 -c 'import json,sys; json.load(open(sys.argv[1], encoding="utf-8"))' "$ROOT/feature_list.json"; then
+			ok "feature_list.json 是合法 JSON"
+		else
+			fail "feature_list.json 不是合法 JSON"
+		fi
+	elif have node; then
+		if node -e 'JSON.parse(require("fs").readFileSync(process.argv[1],"utf8"))' "$ROOT/feature_list.json"; then
+			ok "feature_list.json 是合法 JSON"
+		else
+			fail "feature_list.json 不是合法 JSON"
+		fi
+	else
+		skip "没有 python/node，无法校验 JSON"
+	fi
+}
+
+check_git() {
+	say "检查 Git 基线"
+
+	if ! have git; then
+		fail "缺少 git，无法检查基线"
+		return
+	fi
+
+	if ! git -C "$PARENT_ROOT" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+		fail "父仓库不是 Git 工作区: $PARENT_ROOT"
+		return
+	fi
+
+	if ! git -C "$ROOT" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+		fail "子模块不是 Git 工作区: $ROOT"
+		return
+	fi
+
+	local parent_branch parent_head sub_branch sub_head gitlink
+	parent_branch="$(git -C "$PARENT_ROOT" rev-parse --abbrev-ref HEAD 2>/dev/null)"
+	parent_head="$(git -C "$PARENT_ROOT" rev-parse HEAD 2>/dev/null)"
+	sub_branch="$(git -C "$ROOT" rev-parse --abbrev-ref HEAD 2>/dev/null)"
+	sub_head="$(git -C "$ROOT" rev-parse HEAD 2>/dev/null)"
+	gitlink="$(git -C "$PARENT_ROOT" ls-tree HEAD zero-one-10wms 2>/dev/null | awk '{print $3}')"
+
+	ok "父仓库: $parent_branch @ ${parent_head:0:7}"
+	ok "子模块: $sub_branch @ ${sub_head:0:7}"
+
+	if [ -z "$gitlink" ]; then
+		warn "父仓库 HEAD 中没有 zero-one-10wms gitlink"
+	elif [ "$gitlink" = "$sub_head" ]; then
+		ok "gitlink 与子模块 HEAD 一致"
+	else
+		fail "gitlink ($gitlink) 与子模块 HEAD ($sub_head) 不一致；结构性漂移，先报告不自动修复"
+	fi
+
+	local parent_dirty sub_dirty
+	parent_dirty="$(git -C "$PARENT_ROOT" status --porcelain 2>/dev/null | wc -l | tr -d ' ')"
+	sub_dirty="$(git -C "$ROOT" status --porcelain 2>/dev/null | wc -l | tr -d ' ')"
+	ok "父仓库脏改动: $parent_dirty 项；子模块脏改动: $sub_dirty 项"
+}
+
+run_frontend_pm() {
+	if have corepack; then
+		corepack pnpm "$@"
+	elif have pnpm; then
+		pnpm "$@"
+	elif have npm; then
+		npm "$@"
+	else
+		return 127
+	fi
+}
+
+check_frontend() {
+	say "检查前端"
+
+	if [ ! -f "$ROOT/wms-frontend/package.json" ]; then
+		fail "wms-frontend/package.json 不存在"
+		return
+	fi
+
+	if [ ! -d "$ROOT/wms-frontend/node_modules" ]; then
+		if [ "$MODE" = "verify" ]; then
+			say "node_modules 不存在，尝试安装依赖"
+			if ! (cd "$ROOT/wms-frontend" && run_frontend_pm install --frozen-lockfile); then
+				fail "前端依赖安装失败"
+				return
+			fi
+		else
+			warn "node_modules 不存在；跳过前端构建"
+			return
+		fi
+	fi
+
+	if [ ! -e "$ROOT/wms-frontend/node_modules/.bin/vite" ] && [ ! -e "$ROOT/wms-frontend/node_modules/.bin/vite.cmd" ]; then
+		warn "未找到 vite 可执行文件；跳过前端构建"
+		return
+	fi
+
+	say "执行前端生产构建（vite build --mode production）"
+	if (cd "$ROOT/wms-frontend" && run_frontend_pm build); then
+		ok "前端生产构建通过"
+	else
+		fail "前端生产构建失败"
+	fi
+}
+
+check_java() {
+	say "检查 Java"
+
+	if ! have mvn; then
+		fail "缺少 mvn，无法编译 Java"
+		return
+	fi
+
+	if [ -n "$JAVA_MODULE" ]; then
+		say "编译模块: $JAVA_MODULE"
+		if (cd "$ROOT/wms-java" && mvn -o -q -pl "$JAVA_MODULE" -am compile -DskipTests); then
+			ok "Java 模块编译通过: $JAVA_MODULE"
+		else
+			fail "Java 模块编译失败: $JAVA_MODULE"
+		fi
+	else
+		say "编译整个 wms-java reactor（离线模式）"
+		if (cd "$ROOT/wms-java" && mvn -o -q -DskipTests compile); then
+			ok "Java reactor 编译通过"
+		else
+			fail "Java reactor 编译失败"
+		fi
+	fi
+}
+
+check_cpp() {
+	say "检查 C++ 静态一致性"
+
+	local module_dir base
+	for module_dir in "$ROOT"/wms-cpp/wms-c*; do
+		[ -d "$module_dir" ] || continue
+		base="${module_dir##*/}"
+		if [ ! -f "$module_dir/CMakeLists.txt" ]; then
+			fail "$base 缺少 CMakeLists.txt"
+		fi
+		if ! grep -Fq "add_subdirectory (\"$base\")" "$ROOT/wms-cpp/CMakeLists.txt"; then
+			fail "$base 未注册到 wms-cpp/CMakeLists.txt"
+		fi
+	done
+	ok "C++ 模块目录与 CMake 注册检查完成"
+
+	local yaml_file
+	while IFS= read -r -d '' yaml_file; do
+		if have python; then
+			if python - "$yaml_file" <<'PY'
+import sys
+from collections import Counter
+
+path = sys.argv[1]
+keys = []
+with open(path, "r", encoding="utf-8-sig", errors="replace") as fh:
+    for line in fh:
+        stripped = line.lstrip()
+        if not stripped or stripped.startswith("#") or stripped.startswith("-") or stripped.startswith("---"):
+            continue
+        if line[:1].isspace() or ":" not in line:
+            continue
+        key = line.split(":", 1)[0].strip().strip("\"'")
+        if key:
+            keys.append(key)
+
+duplicates = sorted(k for k, count in Counter(keys).items() if count > 1)
+if duplicates:
+    print("重复顶层键: " + ", ".join(duplicates))
+    sys.exit(1)
+PY
+			then
+				ok "无重复顶层键: ${yaml_file#"$ROOT/"}"
+			else
+				fail "存在重复顶层键: ${yaml_file#"$ROOT/"}"
+			fi
+		else
+			skip "没有 python，跳过词条重复键检查: ${yaml_file#"$ROOT/"}"
+		fi
+	done < <(find "$ROOT/wms-cpp" -maxdepth 2 -type f -name 'zh-dict.yaml' -print0 2>/dev/null)
+
+	if ! have cmake; then
+		warn "本机无 cmake；C++ 结果只能记 static_pass + runtime_unverified"
+	fi
+}
+
+hash_file() {
+	local file="$1"
+	if [ -f "$file" ] && have sha256sum; then
+		sha256sum "$file" | awk '{print $1}'
+	else
+		printf 'unavailable'
+	fi
+}
+
+write_snapshot() {
+	say "写入开工基线快照"
+
+	local state_dir="${WMS_STATE_DIR:-$HOME/.wms-harness-state}"
+	local history="$state_dir/history.jsonl"
+	mkdir -p "$state_dir" 2>/dev/null || {
+		fail "无法创建状态目录: $state_dir"
+		return
+	}
+
+	local ts parent_branch parent_head sub_branch sub_head gitlink dirty_total prev_hash body hash
+	ts="$(date -Iseconds 2>/dev/null || date)"
+	parent_branch="$(git -C "$PARENT_ROOT" rev-parse --abbrev-ref HEAD 2>/dev/null)"
+	parent_head="$(git -C "$PARENT_ROOT" rev-parse HEAD 2>/dev/null)"
+	sub_branch="$(git -C "$ROOT" rev-parse --abbrev-ref HEAD 2>/dev/null)"
+	sub_head="$(git -C "$ROOT" rev-parse HEAD 2>/dev/null)"
+	gitlink="$(git -C "$PARENT_ROOT" ls-tree HEAD zero-one-10wms 2>/dev/null | awk '{print $3}')"
+	dirty_total="$(git -C "$ROOT" status --porcelain 2>/dev/null | wc -l | tr -d ' ')"
+	prev_hash=""
+	if [ -f "$history" ]; then
+		prev_hash="$(tail -n 1 "$history" 2>/dev/null | sed -n 's/.*"hash":"\([^"]*\)".*/\1/p')"
+	fi
+
+	body="$(printf '{"ts":"%s","event":"session_start","parent":{"branch":"%s","head":"%s"},"submodule":{"branch":"%s","head":"%s"},"gitlink":"%s","dirty":{"total":%s},"files":{"AGENTS.md":"%s","process.md":"%s","architecture.md":"%s","feature_list.json":"%s","PROGRESS.md":"%s"},"prev_hash":"%s"' \
+		"$ts" "$parent_branch" "$parent_head" "$sub_branch" "$sub_head" "$gitlink" \
+		"$dirty_total" \
+		"$(hash_file "$ROOT/AGENTS.md")" \
+		"$(hash_file "$ROOT/process.md")" \
+		"$(hash_file "$ROOT/architecture.md")" \
+		"$(hash_file "$ROOT/feature_list.json")" \
+		"$(hash_file "$ROOT/PROGRESS.md")" \
+		"$prev_hash")"
+
+	if have sha256sum; then
+		hash="$(printf '%s' "$body" | sha256sum | awk '{print $1}')"
+	else
+		hash="unavailable"
+	fi
+
+	printf '%s,"hash":"%s"}\n' "$body" "$hash" >>"$history"
+	ok "快照已追加: $history"
+}
+
+say "root: $ROOT"
+check_tools
+check_key_files
+check_json
+check_git
+
+if [ "$DO_CPP" = 1 ]; then
+	check_cpp
+fi
+
+if [ "$DO_JAVA" = 1 ]; then
+	check_java
+fi
+
+if [ "$DO_FRONTEND" = 1 ]; then
+	check_frontend
+fi
+
+if [ "$DO_SNAPSHOT" = 1 ]; then
+	write_snapshot
+fi
+
+echo
+if [ "$FAILED" -eq 0 ]; then
+	printf '结果: PASS\n'
+	exit 0
+else
+	printf '结果: FAIL (%s 项)\n' "$FAILED" >&2
+	exit 1
+fi

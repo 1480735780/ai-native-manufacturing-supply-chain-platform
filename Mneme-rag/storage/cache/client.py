@@ -1,0 +1,349 @@
+# -*- coding: utf-8 -*-
+"""
+缓存访问抽象 + 进程内/Redis 实现（对应 Java StringRedisTemplate / RedissonClient 的字符串缓存用法）
+
+storage/cache 是 C 层「外部设施」的公共底座之一：给 rag/ 各子包提供
+「读 / 写（带 TTL）+ 删除」的缓存边界，JSON 序列化、异常兜底统一收口在
+实现内完成，消费方（AgentPromptCacheManager、QueryTermMappingCacheManager、
+IntentTreeCacheManager …）面向 CacheManager 抽象编程，不感知介质差异。
+
+接口对齐 Java 侧缓存管理器的共同用法（StringRedisTemplate 存 JSON 字符串）：
+    - CacheManager.get     → 读 JSON 字符串并反序列化；未命中 / 已过期 / 异常 → None
+    - CacheManager.set     → JSON 序列化后写入并设 TTL；异常 → False
+    - CacheManager.delete  → 删除；异常 → False
+
+MVP 阶段默认以 MemoryCacheManager（进程内 dict + 单调时钟过期）兜底，不接真实 Redis；
+真实实现 RedisCacheManager 是项目中唯一依赖 redis-py 的一处，构造时惰性加载依赖，
+捕获 redis.exceptions.RedisError / ConnectionError 兜底返回 None / False（对齐 Java 的
+catch(Exception) 语义）。消费方无感知介质差异，见「5.0 步骤 2」。
+
+对应 ragent 源码：
+    - rag/core/prompt/AgentPromptCacheManager（StringRedisTemplate + ObjectMapper）
+    - rag/core/rewrite/QueryTermMappingCacheManager / rag/core/intent/IntentTreeCacheManager
+"""
+from __future__ import annotations
+
+import asyncio
+import json
+import logging
+import threading
+import time
+from abc import ABC, abstractmethod
+from typing import Any, Callable, Dict, Optional, Tuple
+
+logger = logging.getLogger(__name__)
+
+
+class _RedisSubscription:
+    """Redis 订阅句柄：close() 取消消费任务并关闭 pubsub 连接（幂等）"""
+
+    def __init__(self, listen_task, pubsub):
+        self._task = listen_task
+        self._pubsub = pubsub
+        self._closed = False
+
+    async def close(self) -> None:
+        if self._closed:
+            return
+        self._closed = True
+        self._task.cancel()
+        try:
+            await self._pubsub.aclose()
+        except Exception:  # noqa: BLE001 —— 关闭失败仅告警
+            logger.warning("关闭 Redis pubsub 连接失败", exc_info=True)
+
+
+class CacheCodec:
+    """JSON 序列化编解码（对齐 Java ObjectMapper 的 JSON 字符串存取）"""
+
+    def serialize(self, value: Any) -> str:
+        """序列化为 JSON 字符串；不支持的取值类型抛 TypeError / ValueError"""
+        return json.dumps(value, ensure_ascii=False)
+
+    def deserialize(self, raw: str) -> Any:
+        """反序列化 JSON 字符串；格式非法抛 ValueError"""
+        return json.loads(raw)
+
+
+class CacheManager(ABC):
+    """缓存访问抽象：读 / 写（带 TTL）/ 删除，JSON 序列化与异常兜底在实现内收口"""
+
+    @abstractmethod
+    async def get(self, key: str) -> Optional[Any]:
+        """
+        读取并反序列化
+
+        Args:
+            key: 缓存键
+
+        Returns:
+            Optional[Any]: 命中返回反序列化值；未命中 / 已过期 / 反序列化失败 / 后端异常 → None
+        """
+        ...
+
+    @abstractmethod
+    async def set(self, key: str, value: Any, ttl: Optional[float] = None) -> bool:
+        """
+        序列化后写入并设置过期时间
+
+        Args:
+            key:   缓存键
+            value: 任意 JSON 可序列化对象
+            ttl:   过期秒数（整数秒）；None = 不设过期；<=0 视为非法参数
+
+        Returns:
+            bool: 写入成功返回 True；序列化失败 / TTL 非法 / 后端异常 → False
+        """
+        ...
+
+    @abstractmethod
+    async def delete(self, key: str) -> bool:
+        """
+        删除键
+
+        Returns:
+            bool: 键存在且删除成功返回 True；键不存在 / 后端异常 → False
+        """
+        ...
+
+    async def publish(self, channel: str, message: str) -> bool:
+        """
+        向频道发布一条消息（P3-2 跨节点广播能力；可选能力，默认不支持）
+
+        Args:
+            channel: 频道名（原样使用，不加缓存键前缀——频道与键是两类命名空间）
+            message: 字符串载荷
+
+        Returns:
+            bool: 发布成功返回 True；后端不支持广播 / 后端异常 → False（调用方自行兜底）
+        """
+        return False
+
+    async def subscribe(self, channel: str, handler: Callable[[str], None]) -> Optional[Any]:
+        """
+        订阅频道，收到消息后在订阅侧回调 handler（P3-2；可选能力，默认不支持）
+
+        Args:
+            channel: 频道名（原样使用，不加缓存键前缀）
+            handler: 同步回调 Callable[[str], None]（消费循环内同步执行，自行兜异常）
+
+        Returns:
+            订阅句柄（须支持 ``await handle.close()``）；后端不支持广播 / 订阅失败 → None
+        """
+        return None
+
+    async def set_if_absent(self, key: str, value: Any, ttl: Optional[float] = None) -> bool:
+        """
+        原子「不存在才写入」（R-C；对齐 Java Redisson setIfAbsent / Redis SET NX EX）
+
+        基类实现为 get-then-set 近似语义，仅供自定义桩兜底——跨实例原子性必须由子类覆写：
+        MemoryCacheManager 以实例锁保证进程内原子，RedisCacheManager 走服务端 SET NX EX
+        （AgentRunGate 槽位占位 / 消费幂等令牌是两个强原子消费者）。
+
+        Args:
+            key:   缓存键
+            value: 任意 JSON 可序列化对象
+            ttl:   过期秒数；None = 不设过期；<=0 视为非法参数
+
+        Returns:
+            bool: 键不存在且写入成功 → True；键已存在 / 序列化失败 / TTL 非法 / 后端异常 → False
+        """
+        if await self.get(key) is not None:
+            return False
+        return await self.set(key, value, ttl=ttl)
+
+
+class MemoryCacheManager(CacheManager):
+    """
+    进程内缓存实现：dict + 单调时钟过期（对齐 Redis 的过期语义，读时惰性清除）
+
+    Args:
+        codec: 序列化编解码器，默认 JSON
+    """
+
+    def __init__(self, codec: Optional[CacheCodec] = None):
+        self._codec = codec or CacheCodec()
+        self._store: Dict[str, Tuple[str, Optional[float]]] = {}
+        # set_if_absent 的进程内原子性：get/set 本体无真实挂起点，锁内调用不会跨 await 悬挂
+        self._setnx_lock = threading.Lock()
+
+    async def get(self, key: str) -> Optional[Any]:
+        entry = self._store.get(key)
+        if entry is None:
+            return None
+        raw, expires_at = entry
+        if expires_at is not None and time.monotonic() > expires_at:
+            self._store.pop(key, None)
+            return None
+        try:
+            return self._codec.deserialize(raw)
+        except Exception:
+            return None
+
+    async def set(self, key: str, value: Any, ttl: Optional[float] = None) -> bool:
+        if ttl is not None and ttl <= 0:
+            return False
+        try:
+            raw = self._codec.serialize(value)
+        except Exception:
+            return False
+        expires_at = None if ttl is None else time.monotonic() + ttl
+        self._store[key] = (raw, expires_at)
+        return True
+
+    async def delete(self, key: str) -> bool:
+        if key in self._store:
+            self._store.pop(key, None)
+            return True
+        return False
+
+    async def set_if_absent(self, key: str, value: Any, ttl: Optional[float] = None) -> bool:
+        """进程内原子「不存在才写入」：实例锁互斥（get/set 本体无真实挂起点，锁内不跨 await 悬挂）"""
+        with self._setnx_lock:
+            if await self.get(key) is not None:
+                return False
+            return await self.set(key, value, ttl=ttl)
+
+    def size(self) -> int:
+        """当前缓存条目数（测试 / 诊断用）"""
+        return len(self._store)
+
+
+class RedisCacheManager(CacheManager):
+    """
+    真实 Redis 实现（redis-py asyncio）——项目中唯一依赖 redis-py 的一处
+
+    Args:
+        redis: redis.asyncio.Redis 客户端实例（必须注入，连接串等经配置/环境变量）
+        codec: 序列化编解码器，默认 JSON
+        key_prefix: 物理 Redis 键前缀（经 RedisKeySerializer 统一加前缀，默认空 = 行为不变）
+    """
+
+    def __init__(
+        self,
+        redis: Any = None,
+        codec: Optional[CacheCodec] = None,
+        key_prefix: str = "",
+    ):
+        if redis is None:
+            raise ValueError("RedisCacheManager 需要注入 redis.asyncio.Redis 客户端")
+        try:
+            from redis.exceptions import ConnectionError as RedisConnectionError
+            from redis.exceptions import RedisError
+        except ImportError as exc:  # 惰性加载：未安装 redis-py 时给出明确指引
+            raise ImportError(
+                "RedisCacheManager 依赖 redis-py（redis>=5.0,<6.0），请先安装"
+            ) from exc
+        self._redis = redis
+        self._codec = codec or CacheCodec()
+        # 注意：redis.exceptions.ConnectionError 是 RedisError 的子类，两者同捕对齐计划约束
+        self._redis_error = RedisError
+        self._connection_error = RedisConnectionError
+
+        from storage.cache.key_serializer import RedisKeySerializer
+
+        self._key_serializer = RedisKeySerializer(key_prefix)
+
+    async def get(self, key: str) -> Optional[Any]:
+        try:
+            raw = await self._redis.get(self._real_key(key))
+        except (self._redis_error, self._connection_error):
+            return None
+        if raw is None:
+            return None
+        if isinstance(raw, (bytes, bytearray)):
+            raw = raw.decode("utf-8")
+        try:
+            return self._codec.deserialize(raw)
+        except Exception:
+            return None
+
+    async def set(self, key: str, value: Any, ttl: Optional[float] = None) -> bool:
+        if ttl is not None and ttl <= 0:
+            return False
+        try:
+            raw = self._codec.serialize(value)
+        except Exception:
+            return False
+        try:
+            if ttl is None:
+                await self._redis.set(self._real_key(key), raw)
+            else:
+                # EX 仅支持整秒；TTL 已在上面排除 <=0，int() 后仍 >0 才合法
+                await self._redis.set(self._real_key(key), raw, ex=int(ttl))
+        except (self._redis_error, self._connection_error, ValueError):
+            return False
+        return True
+
+    async def delete(self, key: str) -> bool:
+        try:
+            result = await self._redis.delete(self._real_key(key))
+            return bool(result)
+        except (self._redis_error, self._connection_error):
+            return False
+
+    async def set_if_absent(self, key: str, value: Any, ttl: Optional[float] = None) -> bool:
+        """服务端原子 SET NX EX（对齐 Java Redisson setIfAbsent(key, value, ttl)）；语义同 set() 的 TTL 口径"""
+        if ttl is not None and ttl <= 0:
+            return False
+        try:
+            raw = self._codec.serialize(value)
+        except Exception:
+            return False
+        try:
+            if ttl is None:
+                result = await self._redis.set(self._real_key(key), raw, nx=True)
+            else:
+                result = await self._redis.set(self._real_key(key), raw, nx=True, ex=int(ttl))
+            return bool(result)
+        except (self._redis_error, self._connection_error, ValueError):
+            return False
+
+    async def publish(self, channel: str, message: str) -> bool:
+        """Redis Pub/Sub 发布（频道原样使用，不加缓存键前缀；对齐 Java RTopic.publish）"""
+        try:
+            receivers = await self._redis.publish(channel, message)
+            return receivers is not None
+        except (self._redis_error, self._connection_error):
+            return False
+
+    async def subscribe(self, channel: str, handler: Callable[[str], None]) -> Optional[Any]:
+        """
+        Redis Pub/Sub 订阅：后台消费循环任务逐条派发给 handler（同步回调，异常仅告警）
+
+        Redis Pub/Sub 语义：发布者自身若已订阅同样收到（对齐 Java RTopic 监听器统一处理）；
+        返回的句柄 close() 会取消消费任务并关闭 pubsub 连接。订阅失败（后端异常）→ None，
+        调用方须自带本地兜底。
+        """
+        try:
+            pubsub = self._redis.pubsub()
+            await pubsub.subscribe(channel)
+        except (self._redis_error, self._connection_error):
+            logger.warning("Redis 订阅频道失败: %s", channel, exc_info=True)
+            return None
+
+        async def _listen() -> None:
+            while True:
+                try:
+                    message = await pubsub.get_message(ignore_subscribe_messages=True, timeout=1.0)
+                except (self._redis_error, self._connection_error):
+                    logger.warning("Redis 订阅消费异常，频道: %s", channel, exc_info=True)
+                    await asyncio.sleep(1.0)
+                    continue
+                if message is None:
+                    continue
+                if message.get("type") != "message":
+                    continue
+                data = message.get("data")
+                if isinstance(data, (bytes, bytearray)):
+                    data = data.decode("utf-8")
+                try:
+                    handler(data)
+                except Exception:  # noqa: BLE001 —— 单条派发失败不终止消费循环
+                    logger.warning("订阅回调执行失败，频道: %s", channel, exc_info=True)
+
+        return _RedisSubscription(asyncio.create_task(_listen()), pubsub)
+
+    def _real_key(self, key: str) -> str:
+        """物理 Redis 键：经 RedisKeySerializer 加前缀（空前缀 = 原键，行为不变）"""
+        return self._key_serializer.serialize(key).decode("utf-8")

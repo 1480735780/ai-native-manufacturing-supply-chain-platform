@@ -1,0 +1,50 @@
+# ============================================================
+# Nacos 共享配置: system.yaml
+# data-id: system.yaml  group: DEFAULT_GROUP
+# namespace: 4833404f-4b82-462e-889a-3c508160c6b4
+# ============================================================
+
+# 服务端口（sp.*）
+sp:
+  doc: 9999
+  gateway: 10001
+  login: 10200
+  auth: 10400
+  dashboard: 10010
+  sysmgr: 10100
+  message: 10210
+  notice: 10220
+  ws: 10230
+  msgmw: 10240
+  j3sysmanager: 10310
+  daycheck: 10320
+  parameterType: 10410
+  basezl: 10510
+  stockln: 10610
+  outgoodsmanage: 10710
+  exportmana: 10810
+  othermana: 10820
+
+# 服务名称（sn.*），值为 Nacos 注册的服务名，gateway/doc 路由引用
+sn:
+  doc: DOC
+  gateway: GATEWAY
+  login: LOGIN
+  auth: OAUTH2
+  sample: SAMPLE
+  cpp: CPP
+  dashboard: DASHBOARD
+  sysmanager: SYSMANAGER
+  sysmgr: SYSMGR
+  message: MESSAGE
+  notice: NOTICE
+  ws: WS
+  msgmw: MSGMW
+  j3sysmanager: J3SYSMANAGER
+  daycheck: DAYCHECK
+  parameterType: PARAMETER
+  basezl: BASEZL
+  stockln: STOCKLN
+  outgoodsmanage: OUTGOODSMANAGE
+  exportmana: EXPORTMANA
+  othermana: OTHERMANA
