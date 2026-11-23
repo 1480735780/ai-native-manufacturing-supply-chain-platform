@@ -11,7 +11,7 @@
 - 推送范围：父仓库根新增 `.gitignore`，排除 `node_modules/`、`node_modules.bak/`（**2.55 GB**，本轮明确不入库）、`target/`、`dist/`、`*.class`、`*.jar`、`*.pdb`、`*.log`、`__pycache__/`、`*.pyc`、`.venv/`、`.env`/`.env.*`、`.idea/`、`.vs/`、`.runtime_tmp/`（临时联调目录，含私钥/token/HAR）。其余文件全部入库（含 `.dsh-scratch/` 辅助脚本 6.4 MB / 210 文件）。
 - 标准启动路径：`cd zero-one-10wms && ./init.sh --quick`（Git Bash）
 - 标准验证路径：`./init.sh --quick` → `./init.sh --cpp` → 按功能跑 `--java <module>` / `--frontend` / `--verify` / `--agent`
-- 当前工作项：**AI-Agent 轨道 F-006~F-013 全部完成**（`F-006`/`F-007`/`F-011`/`F-012`/`F-013` 为 `e2e_pass`，`F-008`/`F-009`/`F-010` 为 `unit_pass`）；下一个候选 `F-002`（储位管理前端页面）
+- 当前工作项：**AI-Agent 轨道 F-006~F-013 全部完成**（`F-006`/`F-007`/`F-011`/`F-012`/`F-013` 为 `e2e_pass`，`F-008`/`F-009`/`F-010` 为 `unit_pass`）；F-008 追加真实 LLM（OpenRouter）手动 smoke 证据；下一个候选 `F-002`（储位管理前端页面）
 - AI-Agent 轨道顺序（已全部走完）：`F-006` 骨架 → `F-007` 网关路由 → `F-008` LLMProvider → `F-009` 6 工具 → `F-010` ReAct 循环与 `/agent/query` → `F-011` 前端悬浮窗 → `F-012` 状态持久化 → `F-013` `init.sh --agent`
 - 优先级决策（2026-11-23）：`priority` 改为唯一连续序号 1..13，features 数组按 id 升序、排序键为 priority；AI-Agent 轨道整体前置，传统功能队列后移（F-002=11、F-003=12、F-004=13；F-005=5 保持不变）。
 - 排队项：`F-002` 储位管理前端页面、`F-003` 商品明细只读页面（均 `not_started`）；`F-004` 运行时基线仍 `blocked`
@@ -63,6 +63,15 @@
   - 本机 `postgres/123456` 是明文口令且本轮在库中建了 `ragent` 库，属测试环境痕迹，交付前宜改口令或清理该库。
 
 ## 最近会话（append-only）
+
+### 2026-11-23 问数助手「库存查询完成。」答非所问修复（方案 A：真实 LLM）
+
+- 用户反馈：问数助手不管问什么都只回「库存查询完成。」，是否符合实施文档？结论：**不完全符合**。该句是 mock 回放 fixture（`tests/fixtures/llm/query_single_tool.json:12`）的占位文案；实施方案虽在 §8.2 规定「只断言工具调用序列、不逐字断言文案」（测试层允许占位），但产品层要求具体回答（方案 :220 样例「当前待上架 128 件。」）。
+- 根因：运行配置 `WMS_AGENT_LLM_PROVIDER=mock`，`MockProvider.complete()`（app/llm/mock.py:65-86）忽略 messages/tools 只按序吐 fixture 文本；真实作答链路（app/llm/openai_compatible.py + app/agent/react.py:40-50 工具结果回喂）代码早已存在但未启用。
+- 处置（用户选方案 A）：把真实 LLM key 只写入本地 `wms-agent/.env`（根 .gitignore:32-34 排除，未提交），设 `WMS_AGENT_LLM_PROVIDER=openai` + base_url + model + timeout，重启 11200 的 wms-agent。
+- 实测（合法 JWT 取自 Redis `admin:token`，经 public.pem RS256 验签有效至 2026-11-24）：三问三答全部 `code=10000`、答案各异且基于工具真实数据——①按仓库统计库存→共 540 件/成品库 6 行明细（STOCK-QUERY/success/6）；②临期批次→6 行效期表含已过期 -180/-27 天与 3 天临期（EXP-WARN-QUERY/success/6）；③A01 库位→0 件（STOCK-QUERY/empty/0）。彻底告别固定占位文案。
+- 模型供应商：先用 Agnes（agnes-3.0-flash）验证真实调用成功，但该账号 chat/completions 有 429 RPM 限流（密集提问偶发 code=9994，provider 如实报错非缺陷）；按用户要求换 OpenRouter（`baidu/ernie-5.5-flash-preview:free`），重跑三问全部成功无 429。最终生效配置即 OpenRouter，key 仍未入库。
+- 风险：Agnes key 与 OpenRouter key 均为用户直接提供的明文，已在本会话出现且曾落本地 .env；建议视为已泄露并择机轮换。feature_list F-008 证据已回填；F-006~F-013 状态不变。
 
 ### 2026-11-23 问数 Agent 实施方案设计
 

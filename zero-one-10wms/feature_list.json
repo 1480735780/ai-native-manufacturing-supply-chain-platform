@@ -209,7 +209,9 @@
         "2026-11-23 mock 回放断言：single_tool_stock.json 按序消费（先 tool_call STOCK-QUERY{page_index:1,page_size:20}，后 text）；第三次调用抛 ProviderError 且消息含 exhausted；同一 scenario 两次运行得到完全相同的工具调用序列 [STOCK-QUERY, DASH-TREND]；未知响应类型在构造期即抛错",
         "2026-11-23 OpenAI 兼容实现用 httpx.MockTransport 离线断言：请求 URL 为 https://example.invalid/v1/chat/completions、Authorization 头为 Bearer、payload 含 model=agnes-3.0-flash 与 messages/tools 映射；响应中的 tool_calls 被解析为 ToolCall(name=STOCK-QUERY, arguments={page_index:1})；超时与 HTTP 500 分别转成 ProviderError，异常消息不含 API Key",
         "2026-11-23 密钥卫生：build_provider 默认走 mock，未知 provider 直接抛 ProviderError；仓库扫描（排除 .venv/.uv/__pycache__）无 sk- 样式密钥字符串；仓内只有 .env.example，无 .env",
-        "2026-11-23 未验证：真实 agnes-3.0-flash 未调用（本机无本地密钥，方案规定真实模型只作手动 smoke，主要 passing 证据来自 mock 回放）"
+        "2026-11-23 真实模型手动 smoke 已执行：本地 .env（gitignore 排除）配置 WMS_AGENT_LLM_PROVIDER=openai / timeout=8，重启 wms-agent（11200）后以合法 JWT 调 /agent/query，三问三答均 code=10000 且各不相同、基于工具真实数据（证明切换真实 provider 后不再是 fixture 占位文案「库存查询完成。」）：①「按仓库统计库存件数」→ 结论「共 540 件、均在成品库」，6 行真实明细（KW-A-01 小蓝管 120 支等），toolCalls=[STOCK-QUERY/success/6]；②「哪些商品批次即将到期」→ 6 行效期表（KW-B-01/KW-C-01 已过期 -180/-27 天、KW-A-01 小蓝管 3 天临期等），toolCalls=[EXP-WARN-QUERY/success/6]；③「A01 库位多少件」→「A01 无库存数据 0 件」，toolCalls=[STOCK-QUERY/empty/0]。",
+        "2026-11-23 模型供应商变更：先用 Agnes（api.agnes-ai.cn / agnes-3.0-flash）跑通真实调用，但该账号 chat/completions 有 429 RPM 配额（/models 仍 200，密集提问时返回 code=9994，provider 正确转 ProviderError 并如实告知用户，非代码缺陷）；按用户要求改用 OpenRouter（base_url=https://openrouter.ai/api/v1 / model=baidu/ernie-5.5-flash-preview:free / key 仅本地 .env），重跑三问全部 10000 成功、无 429、答案带真实数字，作为真实 LLM 链路的最终 smoke 证据。",
+        "2026-11-23 历史项「真实 agnes-3.0-flash 未调用（本机无本地密钥）」已被本轮手动 smoke 取代；mock 回放仍是 unit_pass 的主要证据；真实 key 只在本地 gitignore 的 .env，未进任何提交/日志/快照。"
       ],
       "notes": "依据 ADR-010。首版不做 Mneme-rag 复杂模型路由；Provider 只做统一配置、OpenAI 兼容调用与 mock 回放。真实 agnes-3.0-flash 仅作手动 smoke，主要 passing 证据来自 mock。",
       "adr_refs": [
