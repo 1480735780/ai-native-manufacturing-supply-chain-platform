@@ -5,7 +5,7 @@
 ## 当前已验证状态
 
 - 日期：2026-11-23
-- 父仓库：`main` @ `fcbc02b`（本轮提交前基线；本轮新增提交见 `git log`）
+- 父仓库：`main` @ `799b9b0`（本轮：登记 F-006~F-013、重排 priority、加根 `.gitignore` 并全量提交）；其后仅追加一次基线同步提交
 - 子模块：`v1.0.0` @ `7ef08d88`（独立仓库仍在 `zero-one-10wms/.git`，但父仓库不再维护其指针）
 - 跟踪结构：**单仓模式**。父仓库索引中 `zero-one-10wms/*` 全部为 mode `100644` 普通文件，无 `160000` gitlink 条目；`zero-one-10wms/` 下的 ADR、`init.sh`、`AGENTS.md`、`architecture.md`、`process.md`、`feature_list.json`、`PROGRESS.md` 均已直接被父仓库跟踪。
 - 推送范围：父仓库根新增 `.gitignore`，排除 `node_modules/`、`node_modules.bak/`（**2.55 GB**，本轮明确不入库）、`target/`、`dist/`、`*.class`、`*.jar`、`*.pdb`、`*.log`、`__pycache__/`、`*.pyc`、`.venv/`、`.env`/`.env.*`、`.idea/`、`.vs/`。其余文件全部入库（含 `.dsh-scratch/` 辅助脚本 6.4 MB / 210 文件）。

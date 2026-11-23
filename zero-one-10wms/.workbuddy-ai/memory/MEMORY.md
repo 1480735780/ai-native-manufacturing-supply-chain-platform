@@ -9,7 +9,7 @@
 - 项目：`zero-one-10wms`，仓储管理系统（WMS），覆盖基础资料、入库、库内、出库、盘点、计费、报表。
 - 仓库关系（2026-11-23 起为单仓模式）：父仓库 `AIWMSproject` 直接跟踪 `zero-one-10wms/` 下的全部文件（普通文件，无 gitlink），并另含 `Mneme-rag/`、`AGENTS.md`、`.workbuddy-ai/`；`zero-one-10wms/.git` 这个独立仓库仍留在磁盘上，但父仓库不再维护它的指针。
 - 技术栈：Java（Spring Cloud Alibaba / Spring Boot 2.3 / MyBatis-Plus）、C++（oatpp / CMake）、Vue3（Vite / Element Plus / Pinia）、MySQL、Redis、Nacos、RocketMQ、FastDFS、Jenkins。
-- 当前基线（2026-11-23）：父仓库 `main` @ `fcbc02b`（单仓模式，索引内 `zero-one-10wms/*` 全为 100644 普通文件，无 160000 gitlink）；独立子模块仓库 `v1.0.0` @ `7ef08d88` 仍在磁盘，但父仓库不再同步其指针。
+- 当前基线（2026-11-23）：父仓库 `main` @ `799b9b0`（单仓模式，索引内 `zero-one-10wms/*` 全为 100644 普通文件，无 160000 gitlink；该提交一次性入库 207 个文件，含 F-006~F-013 登记与根 `.gitignore`）；独立子模块仓库 `v1.0.0` @ `7ef08d88` 仍在磁盘，但父仓库不再同步其指针。
 
 ## 已验证的工程事实
 
