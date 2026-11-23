@@ -1,0 +1,21 @@
+{
+  "name": "query-two-steps",
+  "responses": [
+    {
+      "type": "tool_call",
+      "id": "call_1",
+      "tool": "STOCK-QUERY",
+      "arguments": { "page_index": 1, "page_size": 20 }
+    },
+    {
+      "type": "tool_call",
+      "id": "call_2",
+      "tool": "DASH-TREND",
+      "arguments": { "metric": "up_top", "count": 7 }
+    },
+    {
+      "type": "text",
+      "content": "已结合库存明细与待入库趋势给出结论。"
+    }
+  ]
+}

@@ -5,44 +5,53 @@
 ## 当前已验证状态
 
 - 日期：2026-11-23
-- 父仓库：`main` @ `799b9b0`（本轮：登记 F-006~F-013、重排 priority、加根 `.gitignore` 并全量提交）；其后仅追加一次基线同步提交
-- 子模块：`v1.0.0` @ `7ef08d88`（独立仓库仍在 `zero-one-10wms/.git`，但父仓库不再维护其指针）
+- 父仓库：`main` @ `9a5260c`（本轮开工基线；尚未提交本轮设计文档改动）
+- 嵌套历史仓库：`zero-one-10wms/.git` 仍存在，HEAD `7ef08d8`，但父仓库不维护其指针，不作为提交目标
 - 跟踪结构：**单仓模式**。父仓库索引中 `zero-one-10wms/*` 全部为 mode `100644` 普通文件，无 `160000` gitlink 条目；`zero-one-10wms/` 下的 ADR、`init.sh`、`AGENTS.md`、`architecture.md`、`process.md`、`feature_list.json`、`PROGRESS.md` 均已直接被父仓库跟踪。
 - 推送范围：父仓库根新增 `.gitignore`，排除 `node_modules/`、`node_modules.bak/`（**2.55 GB**，本轮明确不入库）、`target/`、`dist/`、`*.class`、`*.jar`、`*.pdb`、`*.log`、`__pycache__/`、`*.pyc`、`.venv/`、`.env`/`.env.*`、`.idea/`、`.vs/`。其余文件全部入库（含 `.dsh-scratch/` 辅助脚本 6.4 MB / 210 文件）。
 - 标准启动路径：`cd zero-one-10wms && ./init.sh --quick`（Git Bash）
 - 标准验证路径：`./init.sh --quick` → `./init.sh --cpp` → 按功能跑 `--java <module>` / `--frontend` / `--verify`；Agent 轨道后续加 `--agent`（见 `F-013`）
-- 当前工作项：`F-006` wms-agent Python 服务骨架与 `/agent/health` 健康检查（`in_progress`，`not_started`）
+- 当前工作项：`F-011` 前端全局悬浮 AI 对话框（`in_progress`）；`F-006`（服务骨架+health）、`F-007`（网关 `/agent/**` 路由）已 `e2e_pass`，`F-008`（LLMProvider+mock 回放）、`F-009`（6 工具接入）、`F-010`（ReAct + `/agent/query`）已 `passing`（`unit_pass`）
 - AI-Agent 轨道顺序：`F-006` 骨架 → `F-007` 网关路由 → `F-008` LLMProvider → `F-009` 6 工具 → `F-010` ReAct 循环与 `/agent/query` → `F-011` 前端悬浮窗 → `F-012` 状态持久化 → `F-013` `init.sh --agent`
 - 优先级决策（2026-11-23）：`priority` 改为唯一连续序号 1..13，features 数组按 id 升序、排序键为 priority；AI-Agent 轨道整体前置，传统功能队列后移（F-002=11、F-003=12、F-004=13；F-005=5 保持不变）。
 - 排队项：`F-002` 储位管理前端页面、`F-003` 商品明细只读页面（均 `not_started`）；`F-004` 运行时基线仍 `blocked`
-- 已通过项：`F-001` harness 入口、`F-005` 其他配置 25 项（均 `passing` + `static_pass`）
-- 当前 blocker：本机无 cmake/MSVC，C++ 只能 `static_pass + runtime_unverified`；运行时/端到端环境未就绪（`F-004`）；本机无 `bash` 在 PATH，`init.sh` 需用 Git Bash 执行；`uv` 是否可用尚未核实（`F-006`/`F-013` 前提）
+- 已通过项：`F-001` harness 入口、`F-005` 其他配置 25 项（均 `passing` + `static_pass`）、`F-006`（`e2e_pass`）、`F-007`（`e2e_pass`）、`F-008`/`F-009`/`F-010`（`unit_pass`）
+- 运行时底座（本轮实测）：本机 `192.168.101.91`；虚拟机 `192.168.89.128` 提供 Nacos 8848、Redis 6379、MySQL 3306，**PG 5432 未起**（F-012 需要）；本机有原生 PostgreSQL 16（5432）但密码与 compose 凭证不同
+- 工具链实测：Python 3.14.7 = `D:\DownloadPackage\environment\python.exe`；uv 0.13.1 = `C:\Users\a\.local\bin\uv.exe`（**不在 PATH**）；JDK17 = `D:\DownloadPackage\environment\jdk-17.0.20.1+1`（PATH 上的 java 是 JDK8，不能用于 Spring Boot 3）；mvn = `D:\DownloadPackage\Maven\apache-maven-3.6.3-bin\apache-maven-3.6.3\bin\mvn.cmd`
+- 当前 blocker：本机无 cmake/MSVC，C++ 只能 `static_pass + runtime_unverified`；运行时/端到端环境未就绪（`F-004`）；`init.sh` 需用 Git Bash 执行；uv 用户级 cache 异常，F-006 起改用项目内 `.uv/cache`
 
 ## 本轮记录
 
-- 目标：以当前仓库为准真正登记 F-006 起的 Agent 功能；按规则解决 F-002 优先级冲突；取消 gitlink 思路，把整个 AIWMSproject 的文件正常提交并推送远端。
+- 目标：按 `wms-agent/docs/implement/问数Agent实施方案.md` 推进问数 Agent，本轮完成 `F-008`（LLMProvider + mock 回放）、`F-009`（6 工具接入 + Python 侧鉴权）、`F-010`（ReAct 循环 + `POST /agent/query` + `GET /agent/trace/{traceId}`）。
 - 已完成：
-  - `feature_list.json` 扩到 13 条：新增 `F-010` ReAct 循环 + `/agent/query`、`F-011` 前端悬浮 AI 对话框、`F-012` PostgreSQL `wms_agent` 状态持久化、`F-013` `init.sh --agent` harness 集成（对应 ADR 第 5 节第 5~8 步）。
-  - `F-006`~`F-009` 全部改成**仓库实证**写法：F-009 新增 `tool_endpoints` 字段，逐条记录 6 个工具的真实方法、路径与 Controller 文件行号（`StockQueryController.java:30,39`、`ExpiryWarningController.java:24,30`、`NoUpController.java:35,46`、`DashboardController.java:30,38,52,66,79,110,123,136,148`、`DelayController.java:24,51`）；F-007 记录网关 `application.yaml` 既有路由行号（`/dashboard/**` 37-40、`/stockln/**,/stock/**` 85-88、`/daycheck/**` 89-92、C++ 静态路由样式 103-106）与 agent-route 的新增位置。
-  - Agent 轨道条目新增 `adr_refs` 字段；`rules` 增加 `priority_rule` 与 `agent_track_order`。
-  - 优先级重排：`F-002` 2→11、`F-003` 3→12、`F-004` 4→13、`F-006` 6→2、`F-007` 7→3、`F-008` 8→4、`F-009` 9→6，新增 `F-010`=7、`F-011`=8、`F-012`=9、`F-013`=10；`F-001`=1、`F-005`=5 不变。
-  - 父仓库根新增 `.gitignore`（依赖/构建产物/密钥排除规则）。
-  - 全量 `git add -A` 后提交并推送（单仓模式，无 gitlink 操作）。
+  - F-008：`app/contracts.py`（Message/ToolCall/ToolSchema/ModelReply）、`app/llm/provider.py`（`LLMProvider` Protocol + `build_provider`）、`app/llm/mock.py`（有序回放、耗尽即报错）、`app/llm/openai_compatible.py`（httpx 直调 Chat Completions，异常不含 Key）、fixture `single_tool_stock.json` / `two_step.json`。
+  - F-009：`app/tools/registry.py`（6 工具 + Pydantic 参数模型，`extra="forbid"`）、`app/tools/gateway_client.py`（只 GET、透传 `Authorization: Bearer`、3s 超时）、`app/tools/adapter.py`（两套命名映射、分页转 `pageIndex/pageSize`、TREND count 截断、`{rows,total,empty}` 归一化、10000/9995/9994/9999 语义、9999→空结果、v1 只 1 次尝试）、`app/tools/sanitizer.py`（≤20 行/≤4000 字符、删除审计与体积面积字段、`imCarMobile`→`138****5678`、`imCarDri`→`王*`）、`app/security.py`（PyJWT RS256 + 强制 `exp`、`user` 头仅交叉校验记 warning）、`app/routers/tools.py`。
+  - F-010：`app/agent/react.py`（自研 ReAct，`MAX_TOOL_ROUNDS=2`，第 2 轮后强制最终答案，工具失败回喂模型不抛异常）、`app/agent/trace.py`（`sha256:` digest、不落完整结果与 JWT）、`app/agent/service.py`（提示词、traceId/sessionId、`{code,message,data}` 外壳、失败保留已完成的 toolCalls）、`app/routers/query.py`、`app/storage/{store,memory}.py`（F-012 前默认内存后端，`persisted=false`）。
+  - 配置补充：`WMS_AGENT_TOOL_TIMEOUT_SECONDS`（默认 3）、`WMS_AGENT_LLM_SCENARIO_PATH`（mock 回放场景文件，供运行时离线回放）。
 - 运行过的验证：
-  - `python -m json.tool feature_list.json`：PASS（可解析）
-  - 自检脚本 `.dsh-scratch/check_feature_list.py`：PASS（13 条功能、ID 无重复且升序、priority 唯一且连续 1..13、status/verification_level 取值合法、passing 均有 evidence、`in_progress` 唯一为 `F-006`、F-009 含 6 条 tool_endpoints）
-  - `git ls-files -s zero-one-10wms`：PASS，条目均为 `100644`，无 `160000` gitlink
-  - `git add -An` 干跑：PASS，共 205 项待加入，其中落在 `node_modules` 下的为 0 项
-- 未验证：本轮无代码改动，未执行 `init.sh --quick`、未跑 Java/前端构建；`F-006`~`F-013` 均无运行时证据，ADR 全部为设计时决策 `static_pass + runtime_unverified`。
-- 下一步：实现 `F-006`（`wms-agent/` 目录 + `pyproject.toml`/`uv.lock` + 最小 FastAPI + `/agent/health`），并按 `F-006.verification` 执行 `uv sync` / `pytest` 并写 evidence；随后 `F-007` 网关路由。
+  - `uv run pytest` → **61 passed**（F-008 11 例 + F-009 若干 + F-010 `tests/test_query_replay.py` 12 例）。
+  - 运行时（后台 job `pwsh-2c8e4c1c20a94844`，127.0.0.1:11200）：`/agent/health` → 200 `{"status":"ok"}`；`POST /agent/query` 无 token → 401 `{"code":401,"message":"缺少 Bearer token","data":null}`；无效签名 token → 401 `{"code":401,"message":"token 无效","data":null}`；带临时自签 RSA 测试密钥的合法 token → 200 `code=10000`，`toolCalls` 记录 `STOCK-QUERY → /stock/inventory-query/query-all`、`status=error`、`errorCode=401`（未编造数据）。
+  - 经网关 `POST http://127.0.0.1:10001/agent/query`（非仓库签名 token）→ 网关自身 401『暂未登录或TOKEN已经过期』：**网关会独立校验 `Authorization` 头**，即使 Nacos 把 `open-authorization` 设为 `false`。
+  - `python -m json.tool feature_list.json`：PASS。
+- 未验证：
+  - 真实用户 JWT 经网关 → Java 业务端点的完整链路：仓库只有 `public.pem`、无私钥，且 Java 业务服务（`wms-j6-stockln` 等）本机未启动；工具调用已实测到"发出请求并如实记录错误码"为止。
+  - 网关 `inner-paths` 与 `RESOURCE_ROLES_MAP` 的实际判定（判定在 starter jar 内，本环境鉴权开关关闭）。
+- 下一步：`F-011` 前端全局悬浮对话框（独立 axios 实例 timeout=60000）→ `F-012` PG 持久化 → `F-013` `init.sh --agent`。
+- 用户待办：F-012 需要 PostgreSQL，建议在虚拟机 `192.168.89.128` 用 `pgvector/pgvector:pg16` 起库（库名 `ragent`），连接串 `postgresql+psycopg://postgres:postgres@192.168.89.128:5432/ragent`；F-006~F-011/F-013 不依赖它，缺失时按 `persisted=false` 降级。
 - 已知风险：
-  - 推送范围为“除依赖与构建产物外的全部文件”；`wms-frontend/node_modules.bak/`（2.55 GB）仍在磁盘但未入库，如需归档请自行处理。
-  - `.dsh-scratch/` 内含文档抽取中间产物（emmx media PNG、txt/XML），本轮按“全部文件”原则入库，后续如需清理需重新提交删除。
-  - 前端构建通过不代表页面运行通过；储位管理页面尚未做浏览器冒烟。
-  - 本机 `pnpm` 不在 PATH，前端命令需 `corepack pnpm`；本机 `python` 不在 PATH（DSH 内置 Python 可用于 JSON 校验）。
-  - ADR 决策全部为设计时结论；Python 侧任何 `passing` 都必须有运行时/回放证据，不允许静态通过即判完成。
+  - **AgentScope 探针已通过**（`uv pip install --dry-run agentscope` → 97 包可解析、agentscope 2.0.12 兼容 Python 3.14.7，故 F-010 不记 blocked）；但 ReAct 循环按方案自研 `LLMProvider` + ToolSchema 契约实现，**未引入 AgentScope 依赖**（避免引入未被使用的 73 个传递依赖）——与 `feature_list.json` F-010 标题/notes 一致记录。
+  - Gateway `inner-paths` 通配符行为在 starter jar 内，本环境因鉴权开关关闭未能区分 white/inner 差异；F-010 用 Python 侧 401 实测兜底。
+  - JWT 签发私钥明文存在于仓库历史，是独立安全问题；后续需轮换密钥并清理历史。
+  - Python 不查 Redis 注销黑名单；已登出 token 在 JWT 过期前直连 Python 仍是理论风险。
 
 ## 最近会话（append-only）
+
+### 2026-11-23 问数 Agent 实施方案设计
+
+- 目标：基于技术选型 ADR 继续 grill 实施细节并形成可执行方案。
+- 决策：Python 3.14.7、独立 axios 60 秒、2 轮工具调用上限、Python 自验 JWT、health 匿名最小响应、单仓模式；不预留 `context`，不做 SSE 和多轮记忆。
+- 结果：ADR、实施方案、feature_list、init 单仓检查与进度文件已同步；`./init.sh --quick --snapshot` PASS。
+- 待办：实现 F-006 服务骨架；Gateway 配置必须等 F-006 直连 health 通过后再动。
 
 ### 2026-11-23 harness 文件重写
 

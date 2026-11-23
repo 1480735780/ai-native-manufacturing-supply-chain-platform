@@ -1,0 +1,27 @@
+{
+  "name": "query-round-limit",
+  "responses": [
+    {
+      "type": "tool_call",
+      "id": "call_1",
+      "tool": "STOCK-QUERY",
+      "arguments": { "page_index": 1, "page_size": 20 }
+    },
+    {
+      "type": "tool_call",
+      "id": "call_2",
+      "tool": "EXP-WARN-QUERY",
+      "arguments": { "page_index": 1, "page_size": 20 }
+    },
+    {
+      "type": "tool_call",
+      "id": "call_3",
+      "tool": "DAYCHECK-NOUP",
+      "arguments": { "page_index": 1, "page_size": 20 }
+    },
+    {
+      "type": "text",
+      "content": "（不应走到这里）"
+    }
+  ]
+}

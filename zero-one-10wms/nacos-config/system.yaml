@@ -1,10 +1,15 @@
 # ============================================================
-# Nacos 共享配置: system.yaml
+# Nacos shared config: system.yaml
 # data-id: system.yaml  group: DEFAULT_GROUP
 # namespace: 4833404f-4b82-462e-889a-3c508160c6b4
+# NOTE: keep this file ASCII-only. The Nacos client on Windows
+#       decodes config bytes with the platform default charset
+#       (GBK), and the Spring Cloud Alibaba YAML parser then
+#       fails with "MalformedInputException" on non-ASCII
+#       bytes, which silently empties the whole config source.
 # ============================================================
 
-# 服务端口（sp.*）
+# Service ports (sp.*)
 sp:
   doc: 9999
   gateway: 10001
@@ -24,8 +29,9 @@ sp:
   outgoodsmanage: 10710
   exportmana: 10810
   othermana: 10820
+  agent: 11200
 
-# 服务名称（sn.*），值为 Nacos 注册的服务名，gateway/doc 路由引用
+# Service names (sn.*), the value registered in Nacos, referenced by gateway/doc routes
 sn:
   doc: DOC
   gateway: GATEWAY
@@ -48,3 +54,7 @@ sn:
   outgoodsmanage: OUTGOODSMANAGE
   exportmana: EXPORTMANA
   othermana: OTHERMANA
+
+# wms-agent (python service, no nacos registration, static gateway route)
+agent:
+  url: http://127.0.0.1:11200

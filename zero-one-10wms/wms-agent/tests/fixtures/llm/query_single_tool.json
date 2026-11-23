@@ -1,0 +1,15 @@
+{
+  "name": "query-single-tool",
+  "responses": [
+    {
+      "type": "tool_call",
+      "id": "call_1",
+      "tool": "STOCK-QUERY",
+      "arguments": { "page_index": 1, "page_size": 20 }
+    },
+    {
+      "type": "text",
+      "content": "库存查询完成。"
+    }
+  ]
+}

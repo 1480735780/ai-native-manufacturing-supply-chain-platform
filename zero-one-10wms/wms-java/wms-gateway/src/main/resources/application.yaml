@@ -175,6 +175,11 @@ spring:
           uri: http://127.0.0.1:8092
           predicates:
             - Path=/indclas/**,/entattr/**,/entstat/**,/entleve/**,/entlevel/**,/comstate/**,/cominfo/**,/enterprise/**
+        # 问数 Agent wms-agent（Python 服务，不注册 Nacos，使用静态地址；端口由 sp.agent 决定）
+        - id: agent-route
+          uri: http://127.0.0.1:${sp.agent}
+          predicates:
+            - Path=/agent/**
 zo:
   cloud:
     starter:
@@ -188,9 +193,15 @@ zo:
           - "/auth/oauth/token"
           - "/login/auth-login"
           - "/login/refresh-token"
+          # 问数 Agent 健康检查（匿名可访问）
+          - "/agent/health"
         # 配置内部路径(需要用到凭证但不需要权限验证的请求)
         inner-paths:
           - "/login/current-user"
           - "/login/get-menus"
           - "/login/logout"
           - "/login/modify-password"
+          # 问数 Agent 业务端点（需要凭证）
+          - "/agent/query"
+          - "/agent/tools"
+          - "/agent/trace/**"

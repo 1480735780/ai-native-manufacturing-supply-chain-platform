@@ -32,7 +32,7 @@ usage() {
   --help             显示帮助
 
 环境变量:
-  WMS_STATE_DIR      仓库外状态目录，默认 $HOME/.wms-harness-state
+  WMS_STATE_DIR      状态目录，默认 $PARENT_ROOT/.wms-harness-state（已忽略）
 
 说明:
   - 本机无 C++ 编译器时只做静态检查，不把结果写成“通过”。
@@ -209,33 +209,21 @@ check_git() {
 		return
 	fi
 
-	if ! git -C "$ROOT" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
-		fail "子模块不是 Git 工作区: $ROOT"
+	path_mode="$(git -C "$PARENT_ROOT" ls-tree HEAD zero-one-10wms 2>/dev/null | awk '{print $1}')"
+	if [ "$path_mode" != "040000" ]; then
+		fail "zero-one-10wms 不是单仓普通目录树（mode=${path_mode:-missing}）；结构性漂移，先报告不自动修复"
 		return
 	fi
 
-	local parent_branch parent_head sub_branch sub_head gitlink
+	local parent_branch parent_head
 	parent_branch="$(git -C "$PARENT_ROOT" rev-parse --abbrev-ref HEAD 2>/dev/null)"
 	parent_head="$(git -C "$PARENT_ROOT" rev-parse HEAD 2>/dev/null)"
-	sub_branch="$(git -C "$ROOT" rev-parse --abbrev-ref HEAD 2>/dev/null)"
-	sub_head="$(git -C "$ROOT" rev-parse HEAD 2>/dev/null)"
-	gitlink="$(git -C "$PARENT_ROOT" ls-tree HEAD zero-one-10wms 2>/dev/null | awk '{print $3}')"
 
-	ok "父仓库: $parent_branch @ ${parent_head:0:7}"
-	ok "子模块: $sub_branch @ ${sub_head:0:7}"
+	ok "单仓模式: $parent_branch @ ${parent_head:0:7}；zero-one-10wms 为普通目录树"
 
-	if [ -z "$gitlink" ]; then
-		warn "父仓库 HEAD 中没有 zero-one-10wms gitlink"
-	elif [ "$gitlink" = "$sub_head" ]; then
-		ok "gitlink 与子模块 HEAD 一致"
-	else
-		fail "gitlink ($gitlink) 与子模块 HEAD ($sub_head) 不一致；结构性漂移，先报告不自动修复"
-	fi
-
-	local parent_dirty sub_dirty
+	local parent_dirty
 	parent_dirty="$(git -C "$PARENT_ROOT" status --porcelain 2>/dev/null | wc -l | tr -d ' ')"
-	sub_dirty="$(git -C "$ROOT" status --porcelain 2>/dev/null | wc -l | tr -d ' ')"
-	ok "父仓库脏改动: $parent_dirty 项；子模块脏改动: $sub_dirty 项"
+	ok "仓库脏改动: $parent_dirty 项"
 }
 
 run_frontend_pm() {
@@ -377,28 +365,25 @@ hash_file() {
 write_snapshot() {
 	say "写入开工基线快照"
 
-	local state_dir="${WMS_STATE_DIR:-$HOME/.wms-harness-state}"
+	local state_dir="${WMS_STATE_DIR:-$PARENT_ROOT/.wms-harness-state}"
 	local history="$state_dir/history.jsonl"
 	mkdir -p "$state_dir" 2>/dev/null || {
 		fail "无法创建状态目录: $state_dir"
 		return
 	}
 
-	local ts parent_branch parent_head sub_branch sub_head gitlink dirty_total prev_hash body hash
+	local ts parent_branch parent_head dirty_total prev_hash body hash
 	ts="$(date -Iseconds 2>/dev/null || date)"
 	parent_branch="$(git -C "$PARENT_ROOT" rev-parse --abbrev-ref HEAD 2>/dev/null)"
 	parent_head="$(git -C "$PARENT_ROOT" rev-parse HEAD 2>/dev/null)"
-	sub_branch="$(git -C "$ROOT" rev-parse --abbrev-ref HEAD 2>/dev/null)"
-	sub_head="$(git -C "$ROOT" rev-parse HEAD 2>/dev/null)"
-	gitlink="$(git -C "$PARENT_ROOT" ls-tree HEAD zero-one-10wms 2>/dev/null | awk '{print $3}')"
-	dirty_total="$(git -C "$ROOT" status --porcelain 2>/dev/null | wc -l | tr -d ' ')"
+	dirty_total="$(git -C "$PARENT_ROOT" status --porcelain 2>/dev/null | wc -l | tr -d ' ')"
 	prev_hash=""
 	if [ -f "$history" ]; then
 		prev_hash="$(tail -n 1 "$history" 2>/dev/null | sed -n 's/.*"hash":"\([^"]*\)".*/\1/p')"
 	fi
 
-	body="$(printf '{"ts":"%s","event":"session_start","parent":{"branch":"%s","head":"%s"},"submodule":{"branch":"%s","head":"%s"},"gitlink":"%s","dirty":{"total":%s},"files":{"AGENTS.md":"%s","process.md":"%s","architecture.md":"%s","feature_list.json":"%s","PROGRESS.md":"%s"},"prev_hash":"%s"' \
-		"$ts" "$parent_branch" "$parent_head" "$sub_branch" "$sub_head" "$gitlink" \
+	body="$(printf '{"ts":"%s","event":"session_start","repository":{"branch":"%s","head":"%s","layout":"single-repo"},"dirty":{"total":%s},"files":{"AGENTS.md":"%s","process.md":"%s","architecture.md":"%s","feature_list.json":"%s","PROGRESS.md":"%s"},"prev_hash":"%s"' \
+		"$ts" "$parent_branch" "$parent_head" \
 		"$dirty_total" \
 		"$(hash_file "$ROOT/AGENTS.md")" \
 		"$(hash_file "$ROOT/process.md")" \

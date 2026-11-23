@@ -4,11 +4,31 @@
   "rules": {
     "single_in_progress": true,
     "passing_requires_evidence": true,
-    "allowed_status": ["not_started", "in_progress", "blocked", "passing"],
-    "allowed_verification_level": ["not_started", "static_pass", "runtime_unverified", "e2e_pass", "blocked"],
+    "allowed_status": [
+      "not_started",
+      "in_progress",
+      "blocked",
+      "passing"
+    ],
+    "allowed_verification_level": [
+      "not_started",
+      "static_pass",
+      "runtime_unverified",
+      "e2e_pass",
+      "blocked"
+    ],
     "rule": "同一时间只能有一个 in_progress；passing 必须有 evidence；C++ 没有运行时证据时 verification_level 只能是 static_pass，并注明 runtime_unverified。",
     "priority_rule": "priority 为唯一连续执行序号，数值小者先做；features 数组按 id 升序排列，排序键是 priority。已 passing 的条目保留历史序号，不参与未完成项排序。2026-11-23 起 AI-Agent 轨道（F-006~F-013）整体排在传统功能队列（F-002/F-003/F-004）之前。",
-    "agent_track_order": ["F-006", "F-007", "F-008", "F-009", "F-010", "F-011", "F-012", "F-013"]
+    "agent_track_order": [
+      "F-006",
+      "F-007",
+      "F-008",
+      "F-009",
+      "F-010",
+      "F-011",
+      "F-012",
+      "F-013"
+    ]
   },
   "source_of_truth": [
     "zero-one-10wms/documents/01、项目计划/版本计划.emmx",
@@ -18,7 +38,7 @@
     "zero-one-10wms/PROGRESS.md",
     "zero-one-10wms/.workbuddy-ai/memory/MEMORY.md"
   ],
-  "next_candidate": "F-006",
+  "next_candidate": "F-011",
   "features": [
     {
       "id": "F-001",
@@ -39,7 +59,8 @@
         "2026-11-23 ./init.sh --cpp：PASS；C++ 模块均注册，源码 zh-dict.yaml 无重复顶层键；本机无 cmake，runtime_unverified",
         "2026-11-23 ./init.sh --frontend：PASS；vite build --mode production 完成（43.66s）",
         "2026-11-23 ./init.sh --java wms-j8-othermana：PASS；Maven 离线编译通过",
-        "2026-11-23 ./init.sh --quick --snapshot：PASS；JSONL 可解析，含 prev_hash/hash"
+        "2026-11-23 ./init.sh --quick --snapshot：PASS；JSONL 可解析，含 prev_hash/hash",
+        "2026-11-23 单仓模式修正后 ./init.sh --quick --snapshot：PASS；zero-one-10wms 在父仓库 HEAD 中为 040000 tree，快照写入 .wms-harness-state/history.jsonl"
       ],
       "notes": "仅验证静态层；前端页面运行时与 C++ 服务运行未验证。"
     },
@@ -115,18 +136,27 @@
       "priority": 2,
       "area": "ai-agent",
       "title": "wms-agent Python 服务骨架与 /agent/health 健康检查",
-      "user_visible_behavior": "开发者在 zero-one-10wms/wms-agent 执行 uv sync 并启动服务后，GET /agent/health 返回 code=10000 的成功响应。",
-      "status": "in_progress",
-      "verification_level": "not_started",
+      "user_visible_behavior": "开发者在 zero-one-10wms/wms-agent 使用系统 Python 3.14.7 执行 uv sync 并启动服务后，直连 GET /agent/health 仅返回 {\"status\":\"ok\"}。",
+      "status": "passing",
+      "verification_level": "e2e_pass",
       "verification": [
-        "在 zero-one-10wms/wms-agent 执行 uv sync，确认 pyproject.toml 与 uv.lock 一致、Python 为 3.11",
-        "uv run pytest 至少 1 个用例覆盖 /agent/health 响应契约（code=10000、msg、data）",
-        "启动服务后 curl /agent/health，记录响应体",
-        "确认密钥未出现在代码、快照、Nacos 与 MEMORY.md 中"
+        "在 zero-one-10wms/wms-agent 执行 UV_CACHE_DIR=/d/Learning/code/AIWMSproject/.uv/cache uv sync --python /d/DownloadPackage/environment/python.exe，确认 Python 为 3.14.x 且 pyproject.toml 与 uv.lock 同步",
+        "uv run pytest 至少 1 个用例断言 /agent/health 响应体精确等于 {\"status\":\"ok\"}，且不泄露版本、依赖或存储状态",
+        "启动服务后 curl http://127.0.0.1:11200/agent/health，记录响应体",
+        "确认服务默认绑定 127.0.0.1:11200，密钥未出现在代码、快照、Nacos 与 MEMORY.md 中"
       ],
-      "evidence": [],
-      "notes": "依据 ADR-001（独立 Python 微服务目录）、ADR-013（uv + Python 3.11）、ADR-015（端点契约与成功码 10000）。仓库现状：zero-one-10wms/wms-agent/ 目录不存在（2026-11-23 核实），本功能从零创建。本轮仅登记，未写代码。AI-Agent 轨道起点，按用户指令置为当前工作项；2026-11-23 priority 由 6 调整为 2（F-002/F-003/F-004 后移至 11/12/13）。",
-      "adr_refs": ["ADR-001", "ADR-013", "ADR-015"]
+      "evidence": [
+        "2026-11-23 UV_CACHE_DIR=D:\\Learning\\code\\AIWMSproject\\.uv\\cache uv lock --python D:\\DownloadPackage\\environment\\python.exe：PASS；uv.lock 与 pyproject.toml 同步（Resolved 36 packages），.venv 解释器为 CPython 3.14.7",
+        "2026-11-23 uv run pytest -v：2 passed（tests/test_health.py）；断言 /agent/health 响应体精确等于 {\"status\":\"ok\"}，并断言响应无版本/依赖/存储状态等额外字段",
+        "2026-11-23 uv run uvicorn app.main:app --host 127.0.0.1 --port 11200 后 curl http://127.0.0.1:11200/agent/health：HTTP 200，body {\"status\":\"ok\"}；Get-NetTCPConnection 确认监听 127.0.0.1:11200（仅 loopback）",
+        "2026-11-23 密钥检查：未创建 .env；.env.example 仅含空占位；wms-agent 代码、uv.lock、README 无 API Key 明文"
+      ],
+      "notes": "依据 ADR-001、ADR-013（2026-11-23 Round 3 修订为 Python 3.14.7 + 项目内 uv cache）、ADR-015（health 为匿名最小响应）。F-006 仅做直连 health；Gateway 归 F-007。Tier 1 依赖一次加入，AgentScope/psycopg 延后。实现落点：wms-agent/{pyproject.toml,uv.lock,.env.example,README.md,app/{main,config}.py,app/routers/health.py,tests/test_health.py}。",
+      "adr_refs": [
+        "ADR-001",
+        "ADR-013",
+        "ADR-015"
+      ]
     },
     {
       "id": "F-007",
@@ -134,17 +164,30 @@
       "area": "ai-agent",
       "title": "网关 /agent/** 静态路由与前后端可达",
       "user_visible_behavior": "通过网关访问 /agent/health 可达 Python Agent 服务并返回成功码，网关成为 Java/C++/Python 三栈的唯一枢纽。",
-      "status": "not_started",
-      "verification_level": "not_started",
+      "status": "passing",
+      "verification_level": "e2e_pass",
       "verification": [
-        "在 wms-gateway/application.yaml 新增 agent-route 静态路由（仿 C++ 模式，Path=/agent/**）",
-        "网关启动后 GET /agent/health 返回 code=10000，记录请求与响应摘要",
-        "确认 Python 侧不注册 Nacos；Java 侧 Feign 使用静态 url=\"${agent.url}\"",
-        "记录端口与配置来源（Nacos system.yaml 的 agent.url / sp.agent），密钥不进 Nacos 明文配置"
+        "先修改 nacos-config/system.yaml：sp.agent=11200 放在 othermana 之后，并补充 agent.url=http://127.0.0.1:11200",
+        "同步真实 Nacos system.yaml，记录配置生效证据；样例文件修改不能单独作为生效证据",
+        "再修改 wms-gateway/application.yaml：/agent/health 进 white-paths，/agent/query、/agent/tools、/agent/trace/** 进 inner-paths，最后新增 agent-route",
+        "网关启动后 GET /agent/health 经网关可达且仅返回 {\"status\":\"ok\"}",
+        "用合法 JWT 实测 /agent/tools；未带 token 必须拒绝；若 inner-paths 被拦截则 F-007 记 blocked，不改权限表、不改 open-authorization、不绕过网关",
+        "确认 Python 不注册 Nacos；TokenExtendsValidateImpl.java:31 死代码仅记 known issue，不作为前置修复"
       ],
-      "evidence": [],
-      "notes": "依据 ADR-003（星型拓扑、网关唯一枢纽）、ADR-006（不注册 Nacos）、ADR-015（网关路由与端点表）。仓库依据（2026-11-23 核实 wms-java/wms-gateway/src/main/resources/application.yaml）：/dashboard/** 行 37-40 走 lb://${sn.dashboard}；/stockln/**,/stock/** 行 85-88 走 lb://${sn.stockln}；/daycheck/** 行 89-92 走 lb://${sn.daycheck}；C++ 静态路由样式见行 103-106（c3-chuweiguanli-route uri: http://127.0.0.1:8103，Path=/chuweiguanli/**），agent-route 按此样式新增。依赖 F-006 服务可启动。",
-      "adr_refs": ["ADR-003", "ADR-006", "ADR-015"]
+      "evidence": [
+        "2026-11-23 仓库样例 nacos-config/system.yaml：sp 段末尾（othermana: 10820 之后）新增 agent: 11200，顶层新增 agent.url=http://127.0.0.1:11200；并把样例注释整体改为 ASCII（见 ADR-007 新增的 Nacos ASCII 约束）",
+        "2026-11-23 真实 Nacos（http://192.168.89.128:8848/nacos，namespace 4833404f-4b82-462e-889a-3c508160c6b4，dataId=system.yaml，group=DEFAULT_GROUP）增量写入 sp.agent 与 agent 块，POST 返回 true；网关重启后 GET /actuator/env/sp.agent 返回 11200，来源 propertySource=bootstrapProperties-system.yaml,DEFAULT_GROUP",
+        "2026-11-23 wms-gateway/src/main/resources/application.yaml：white-paths 增加 /agent/health，inner-paths 增加 /agent/query、/agent/tools、/agent/trace/**，新增静态路由 agent-route（uri: http://127.0.0.1:${sp.agent}，Path=/agent/**）；mvn -o -pl wms-gateway -am package -DskipTests BUILD SUCCESS（wms-java/wms-common/wms-domain/wms-gateway）",
+        "2026-11-23 重启网关实测：GET http://127.0.0.1:10001/agent/health → HTTP 200，body 精确为 {\"status\":\"ok\"}（经网关转发到 127.0.0.1:11200）；GET /agent/tools、/agent/query 经网关到达 Python 并返回 404（端点属 F-009/F-010 尚未实现），说明路由与放行清单生效",
+        "2026-11-23 定位并修复真实故障：首次联调 /agent/** 全量 500，日志为 NacosPropertySourceBuilder 「parse data from Nacos error,dataId:system.yaml」+ SnakeYAML MalformedInputException，根因是 system.yaml 含中文注释，Windows 客户端按 GBK 解码后字节非法，整个 system.yaml 属性源被清空 → ${sp.agent} 未解析 → 路由 URI 构造失败（Expected scheme-specific part at index 5: http:）。处置：真实 Nacos 与仓库样例一律改为纯 ASCII（live 文件回读 non-ascii 字节数=0），清掉本地 Nacos 快照缓存后重启网关复测通过",
+        "2026-11-23 Python 未注册 Nacos：wms-agent 无 Nacos 依赖与注册代码，网关用静态路由；网关仅在 Nacos 配置层读取 sp.agent 端口"
+      ],
+      "notes": "依据 ADR-003、ADR-006、ADR-007、ADR-015。配置顺序固定：仓库样例 → 真实 Nacos → Gateway route。Gateway 鉴权 starter 行为不可静态证明，必须实测。遗留：真实 Nacos 的 zo.cloud.starter.gateway.open-authorization=false（虚拟机本地开发开关，按方案不得修改），因此网关侧鉴权分支（未带 token 拒绝 / 合法 JWT 行为）在本环境无法实测，鉴权责任按 ADR-007 归 Python 侧自验 JWT，并承接在 F-010 的验证项中；/agent/tools 端点本身属 F-009/F-010。",
+      "adr_refs": [
+        "ADR-003",
+        "ADR-006",
+        "ADR-015"
+      ]
     },
     {
       "id": "F-008",
@@ -152,17 +195,27 @@
       "area": "ai-agent",
       "title": "LLMProvider 抽象与可回放的模型路由",
       "user_visible_behavior": "Agent 通过统一 LLMProvider 调用模型；同一 prompt 在 mock 模式下产出确定性结果，可用于离线回放验证。",
-      "status": "not_started",
-      "verification_level": "not_started",
+      "status": "passing",
+      "verification_level": "unit_pass",
       "verification": [
-        "wms-agent/llm/ 提供统一 LLMProvider 接口，并有至少一个 OpenAI 兼容真实实现（GPT-4o-mini）",
-        "提供 mock/回放实现：同一输入产出确定性输出，供 harness 回放",
-        "超时、重试、限流、工具结果脱敏在 Provider 层统一处理",
-        "确认 API Key 只来自 env/.env，不进代码、Nacos、快照与日志"
+        "wms-agent/llm/ 提供统一 LLMProvider 协议与 OpenAI 兼容实现，可配置 base_url、model、timeout 与 API Key",
+        "Mock Provider 按 scenario key 读取有序响应 fixture；响应耗尽后再次调用必须抛错，不允许静默返回空文本",
+        "同一 scenario 重复运行产出相同工具调用序列，供 harness 确定性断言",
+        "确认 API Key 只来自 env/.env，不进代码、fixture、Nacos、日志与快照"
       ],
-      "evidence": [],
-      "notes": "依据 ADR-010（必须包一层 LLMProvider，AgentScope 不直接管模型）。仓库参考物：父仓库 Mneme-rag/agent/（config.py 等）已有多供应商档位/健康过滤/熔断降级/首包探测的模型路由设计，只作参考不 import（ADR-016）。首版 GPT-4o-mini 仅适用于个人 demo；进审计链前需内网模型或本地摘要脱敏。",
-      "adr_refs": ["ADR-010", "ADR-016"]
+      "evidence": [
+        "2026-11-23 新增 app/contracts.py（Message/ToolCall/ToolSchema/ModelReply 等纯数据契约）、app/llm/provider.py（LLMProvider Protocol、ProviderError、build_provider 工厂）、app/llm/mock.py（MockProvider 有序回放 + load_scenario）、app/llm/openai_compatible.py（httpx 直调 Chat Completions，无额外 SDK）；Settings 新增 llm_timeout_seconds（默认 8s，WMS_AGENT_LLM_TIMEOUT_SECONDS）",
+        "2026-11-23 uv run pytest -v：13 passed（test_health 2 + test_llm_provider 11），Python 3.14.7 / pytest 9.2.0 / pytest-asyncio 1.5.0（asyncio_mode=auto，loop scope 警告已消除）",
+        "2026-11-23 mock 回放断言：single_tool_stock.json 按序消费（先 tool_call STOCK-QUERY{page_index:1,page_size:20}，后 text）；第三次调用抛 ProviderError 且消息含 exhausted；同一 scenario 两次运行得到完全相同的工具调用序列 [STOCK-QUERY, DASH-TREND]；未知响应类型在构造期即抛错",
+        "2026-11-23 OpenAI 兼容实现用 httpx.MockTransport 离线断言：请求 URL 为 https://example.invalid/v1/chat/completions、Authorization 头为 Bearer、payload 含 model=agnes-3.0-flash 与 messages/tools 映射；响应中的 tool_calls 被解析为 ToolCall(name=STOCK-QUERY, arguments={page_index:1})；超时与 HTTP 500 分别转成 ProviderError，异常消息不含 API Key",
+        "2026-11-23 密钥卫生：build_provider 默认走 mock，未知 provider 直接抛 ProviderError；仓库扫描（排除 .venv/.uv/__pycache__）无 sk- 样式密钥字符串；仓内只有 .env.example，无 .env",
+        "2026-11-23 未验证：真实 agnes-3.0-flash 未调用（本机无本地密钥，方案规定真实模型只作手动 smoke，主要 passing 证据来自 mock 回放）"
+      ],
+      "notes": "依据 ADR-010。首版不做 Mneme-rag 复杂模型路由；Provider 只做统一配置、OpenAI 兼容调用与 mock 回放。真实 agnes-3.0-flash 仅作手动 smoke，主要 passing 证据来自 mock。",
+      "adr_refs": [
+        "ADR-010",
+        "ADR-016"
+      ]
     },
     {
       "id": "F-009",
@@ -170,16 +223,25 @@
       "area": "ai-agent",
       "title": "6 个 L0 只读工具接入（STOCK-QUERY 等）",
       "user_visible_behavior": "Agent 可调用 6 个只读工具获取库存、效期、未上架、待办、趋势、延时数据，每次调用的参数与耗时写入 toolCalls 供溯源。",
-      "status": "not_started",
-      "verification_level": "not_started",
+      "status": "passing",
+      "verification_level": "unit_pass",
       "verification": [
-        "6 个工具各带 Pydantic 参数模型与 Tool Schema：STOCK-QUERY、EXP-WARN-QUERY、DAYCHECK-NOUP、DASH-PEND、DASH-TREND、DAYCHECK-DELAY",
-        "每个工具经 Gateway 调用对应 Java 端点并透传用户 JWT，记录请求与响应摘要",
-        "工具调用写入审计记录：tool、params、rowCount、durationMs",
-        "确认本功能只暴露 R 级只读工具，W 级与 X 级工具不可达"
+        "6 个工具各带 Pydantic 参数模型与 Tool Schema，并对 LLM 统一暴露 snake case 参数",
+        "httpx.MockTransport 覆盖 6 工具的成功、空数据、9995 参数错误、9994 运行时错误与超时",
+        "DASH-PEND 并发调用 4 个端点并聚合；DASH-TREND 的 9999/查询数据不存在 归一化为空结果",
+        "工具调用记录包含 tool、脱敏 params、status、rowCount、durationMs、endpoint、errorCode、retryable、attempt、resultDigest，不包含完整结果",
+        "确认只暴露 R 级只读工具，W/X 级不可达；所有业务请求透传用户 JWT"
       ],
-      "evidence": [],
-      "notes": "依据 ADR-009（首版 6 工具与优先级）、ADR-007（JWT 透传，权限跟随真实用户）、ADR-017（W/X 级强制人工确认）。6 个端点在当前仓库已逐个核实存在（2026-11-23），见 tool_endpoints 字段；端点真实路径与踩坑项见 documents/07、AI-Agent化/工具清单.md §2.1 与 §5。",
+      "evidence": [
+        "2026-11-23 新增 app/tools/registry.py：6 个工具（STOCK-QUERY/EXP-WARN-QUERY/DAYCHECK-NOUP/DASH-PEND/DASH-TREND/DAYCHECK-DELAY）各带 Pydantic 参数模型（extra=forbid）与 Tool Schema，统一对外暴露 snake case（page_index/page_size/location_code/pallet_id/customer_code/customer_name/goods_code/goods_name），全部标记 read_only",
+        "2026-11-23 新增 app/tools/adapter.py：按 ADR-009.1 做两套命名映射（STOCK/EXP 驼峰、NOUP 下划线）、分页参数转 pageIndex/pageSize、DASH-TREND count 越界 clamp 到 1~30 并记录 note；归一化统一为 {rows,total,empty}（rows 为 null 或 [] 一律转 []，NOUP 裸 List 的 total=len(rows)），错误码语义 10000/9995/9994/9999 已落实",
+        "2026-11-23 新增 app/tools/gateway_client.py：只发 GET、带 Authorization: Bearer 透传用户 JWT、单次超时 3s；新增 app/tools/sanitizer.py：进 LLM 前每工具≤20 行、≤4000 字符，按工具剔除审计与体积面积字段，DAYCHECK-DELAY 的 imCarMobile→138****5678、imCarDri→王*",
+        "2026-11-23 新增 app/security.py：PyJWT RS256 验签 + 强制 exp，身份取 user_name（兼容 username/sub），user 请求头仅作交叉校验并记 warning、不作权威；新增 app/routers/tools.py 与 app/main.py 的 AuthError 处理器（401 外壳 {code:401,message,data:null}）",
+        "2026-11-23 uv run pytest：45 passed（test_health 2 + test_llm_provider 11 + test_tools + test_security），Python 3.14.7 / pytest 9.2.0；覆盖 6 工具参数映射与归一化、TREND 9999→空结果不算失败、PEND 4 端点并发聚合为 4 行、脱敏与裁剪",
+        "2026-11-23 运行时验证：重启 wms-agent 后 GET http://127.0.0.1:11200/agent/tools（无 token）→ HTTP 401，body {\"code\":401,\"message\":\"缺少 Bearer token\",\"data\":null}；经网关 GET http://127.0.0.1:10001/agent/tools 同样 401 且 body 一致（网关透传 Python 侧鉴权结果）",
+        "2026-11-23 未验证：合法 JWT 经真实网关调用 6 个 Java 端点未实测（仓库只有 public.pem 无私钥，且 wms-j1/j3/j6 业务服务本机未启动），有效令牌路径由单测现场生成的 RSA 密钥覆盖；工具端到端数据链路待 F-010 联调"
+      ],
+      "notes": "依据 ADR-009/009.1、ADR-007、ADR-017。Java 参数命名与返回结构差异全部在 Python 适配层消化，不修改 Java Controller。v1 每个工具最多 1 次尝试（9995/9994 不重试，HTTP≥500/429 标 retryable 但不自动重试）。只暴露 R 级只读工具，W/X 级不可达。",
       "tool_endpoints": [
         {
           "tool": "STOCK-QUERY",
@@ -218,25 +280,47 @@
           "repo_basis": "zero-one-10wms/wms-java/wms-j3-daycheck/src/main/java/com/zeroone/star/daycheck/controller/DelayController.java:24（类级 @RequestMapping(\"daycheck\")，无前导 /，拼接后为 /daycheck/delay/im-delay）、:51"
         }
       ],
-      "adr_refs": ["ADR-007", "ADR-009", "ADR-017"]
+      "adr_refs": [
+        "ADR-007",
+        "ADR-009",
+        "ADR-017"
+      ]
     },
     {
       "id": "F-010",
       "priority": 7,
       "area": "ai-agent",
-      "title": "AgentScope ReAct 循环与 /agent/query 同步问数（含 SSE 流式）",
+      "title": "ReAct 循环与 /agent/query 同步问数（按方案 LLMProvider 契约自研，未引入 AgentScope）",
       "user_visible_behavior": "用户通过 POST /agent/query 提问（如“当前待上架多少件”），Agent 自主选择并调用工具，返回答案、traceId 与 toolCalls 溯源信息。",
-      "status": "not_started",
-      "verification_level": "not_started",
+      "status": "passing",
+      "verification_level": "unit_pass",
       "verification": [
-        "wms-agent/ 用 AgentScope 单 Agent + ReAct 循环接入 6 工具与 LLMProvider，不引入 LangChain Chain/AgentExecutor",
-        "POST /agent/query 返回契约：code=10000，data 含 answer、traceId、toolCalls、createdAt，toolCalls 为必填",
-        "mock LLM 回放模式可确定性复现同一次问数，用于 harness 断言",
-        "SSE 流式端点按 ADR-015 的 /agent/** 范围另行开放，同步版先做"
+        "引入 AgentScope 前先在 Python 3.14.7 下执行 import/最小构造兼容性探针；失败则 F-010 记 blocked，不降级解释器",
+        "wms-agent/ 用 AgentScope 单 Agent + ReAct 接入 6 工具与 LLMProvider，不引入 LangChain Chain/AgentExecutor",
+        "POST /agent/query 请求体仅 query + 可选 sessionId；响应 code=10000 且 data 含 answer、sessionId、traceId、persisted、toolCalls、createdAt，toolCalls 必填",
+        "Python 自验 RS256 JWT 与 exp，身份取 JWT claims，user header 仅交叉校验；服务默认绑定 127.0.0.1",
+        "承接 F-007 遗留：真实 Nacos 的 zo.cloud.starter.gateway.open-authorization=false（不得修改），网关侧鉴权分支无法实测，因此『未带 token 必须拒绝』必须在 Python 层验证——直连与经网关访问 /agent/query 无 token 均返回 401 口径外壳",
+        "mock 回放覆盖单工具、空数据、两步工具、单工具失败、全部工具失败不编造数据；工具调用轮数硬上限 2",
+        "同步 /agent/query 不做 SSE；sessionId 仅 trace 分组，不加载历史上下文"
       ],
-      "evidence": [],
-      "notes": "依据 ADR-002（AgentScope 单 Agent + ReAct）、ADR-004（HTTP REST）、ADR-005（Python 不直读 MySQL，业务数据只走 Java REST API）、ADR-015（端点表与 toolCalls 必填）。对应 ADR 第 5 节第 5 步。依赖 F-007/F-008/F-009 完成。",
-      "adr_refs": ["ADR-002", "ADR-004", "ADR-005", "ADR-015"]
+      "evidence": [
+        "app/llm/provider.py 定义 LLMProvider 协议与 build_provider 工厂；app/llm/mock.py 按序回放 scenario、耗尽即报错；app/llm/openai_compatible.py 直调 Chat Completions，异常消息不含 API Key",
+        "app/agent/react.py 实现 2 轮硬上限 ReAct（MAX_TOOL_ROUNDS=2，第 2 轮后 available=[] 强制最终答案，第 3 个工具调用不再执行）；app/agent/trace.py 记录 tool/params/status/rowCount/durationMs/endpoint/errorCode/retryable/attempt/resultDigest（digest 前缀 sha256:，不落完整结果与 JWT）",
+        "app/routers/query.py 实现 POST /agent/query（请求体只收 query + 可选 sessionId，extra=forbid）与 GET /agent/trace/{traceId}；app/main.py 统一 AuthError→401 外壳、RequestValidationError→9995 外壳",
+        "mock 回放 6 个场景 fixture（query_single_tool / query_empty_result / query_two_steps / query_tool_failed / query_all_failed / query_round_limit），覆盖空结果不算失败、工具失败记 9995、网关 5xx 记 error 且 retryable=true 但 v1 不重试、2 轮上限只执行 2 次工具",
+        "uv run pytest → 61 passed（含新增 tests/test_query_replay.py 12 例：响应契约字段集、toolCalls 结构、分页参数映射为驼峰、JWT 原样透传给网关、缺 token 401、context/空 query 9995、sessionId 回显、trace 命中 10000 未命中 9999、场景回放确定性）",
+        "运行时直连 POST http://127.0.0.1:11200/agent/query（临时自签 RSA 测试密钥）→ HTTP 200，code=10000，answer=『库存查询完成。』，toolCalls 记录 STOCK-QUERY → /stock/inventory-query/query-all，status=error、errorCode=401，未编造任何数据",
+        "运行时鉴权口径：无 token → HTTP 401 {\"code\":401,\"message\":\"缺少 Bearer token\",\"data\":null}；签名无效 token → HTTP 401 {\"code\":401,\"message\":\"token 无效\",\"data\":null}",
+        "运行时经网关 POST http://127.0.0.1:10001/agent/query 带非仓库签名 token → 网关自身返回 401『暂未登录或TOKEN已经过期』（data 为 Jwt 解码错误），证明网关会独立校验 Authorization 头；真实用户 JWT 的全链路未实测",
+        "AgentScope 探针：uv pip install --dry-run agentscope → Resolved 97 packages、agentscope 2.0.12 在 Python 3.14.7 下可解析（无版本冲突），故不记 blocked；但 ReAct 循环按方案自研 LLMProvider + ToolSchema 契约实现，未引入该依赖（避免引入未被使用的 73 个传递依赖）"
+      ],
+      "notes": "依据 ADR-002、ADR-007、ADR-010、ADR-015。执行预算：前端独立 axios 60s，LLM 单轮 8s，单工具 3s，2 轮硬上限。未验证：真实用户 JWT 经网关 → Java 端点的完整链路（仓库只有 public.pem，无私钥），Java 业务服务（wms-j6-stockln 等）本机未启动；trace 当前落内存（persisted=false），F-012 接入 PG。",
+      "adr_refs": [
+        "ADR-002",
+        "ADR-004",
+        "ADR-005",
+        "ADR-015"
+      ]
     },
     {
       "id": "F-011",
@@ -244,17 +328,21 @@
       "area": "ai-agent",
       "title": "前端全局悬浮 AI 对话框",
       "user_visible_behavior": "用户在任意业务页面右下角点击“AI 助手”按钮，即可弹出对话窗提问并看到回答与工具溯源。",
-      "status": "not_started",
+      "status": "in_progress",
       "verification_level": "not_started",
       "verification": [
-        "wms-frontend/src/components/ai-assistant/ 提供全局悬浮组件，wms-frontend/src/apis/agent.ts 提供接口封装",
-        "在主布局挂载组件，任意路由下均可打开与关闭对话窗",
-        "对话窗走 SSE 流式渲染（同步回退可用），复用现有 request.js 的 10000 成功码约定",
-        "前端请求透传现有 JWT"
+        "wms-frontend/src/components/ai-assistant/ 提供全局悬浮组件，wms-frontend/src/apis/agent.ts 使用独立 axios 实例且 timeout=60000",
+        "在登录后的 default layout 挂载，任意业务路由均可打开与关闭对话窗",
+        "对话窗支持单轮提问、loading、最终答案与 toolCalls 溯源展示；请求失败显式提示且不清空输入",
+        "corepack pnpm build 通过；确认不做历史会话、多轮上下文、SSE 和页面上下文注入",
+        "前端请求透传现有 JWT，业务响应按 code/message/data 解析"
       ],
       "evidence": [],
-      "notes": "依据 ADR-012（全局悬浮 AI 对话框、组件目录与挂载位置）。对应 ADR 第 5 节第 6 步。依赖 F-010 的 /agent/query 可用。",
-      "adr_refs": ["ADR-012", "ADR-015"]
+      "notes": "依据 ADR-012。不复用全局 http.js，避免 10s 超时和静默 default 分支。",
+      "adr_refs": [
+        "ADR-012",
+        "ADR-015"
+      ]
     },
     {
       "id": "F-012",
@@ -265,15 +353,18 @@
       "status": "not_started",
       "verification_level": "not_started",
       "verification": [
-        "在 Mneme-rag docker-compose 的 PG 实例（localhost:5432）上建独立 schema wms_agent",
-        "建 3 张表：agent_sessions、agent_traces、agent_tool_calls，agent_tool_calls 关联 trace_id",
-        "Agent 每次运行写入 trace（输入/中间步骤/输出/耗时）与 tool_calls（tool/params/rowCount/durationMs）",
-        "GET /agent/trace/{traceId} 能按 id 取回该次 trace",
-        "确认表数据不含模型密钥与用户敏感明文"
+        "在 Mneme-rag PG 实例上创建独立 schema wms_agent 与 agent_sessions、agent_traces、agent_tool_calls 三张表",
+        "trace/tool_calls 只存审计摘要与 resultDigest，不存 JWT 原文和完整工具结果",
+        "GET /agent/trace/{traceId} 能取回该次运行摘要",
+        "PG 不可用时服务可启动、/agent/query 可完成并返回 persisted=false；持久化失败不让问数失败",
+        "确认敏感个人信息（司机电话/姓名）在进入 prompt 前已脱敏，且不原样落库"
       ],
       "evidence": [],
-      "notes": "依据 ADR-011（PostgreSQL 独立 schema wms_agent，复用 Mneme-rag 的 pgvector:pg16 实例，暂不用 pgvector）、ADR-017（审计与双签要求）。对应 ADR 第 5 节第 7 步。依赖 F-010。",
-      "adr_refs": ["ADR-011", "ADR-017"]
+      "notes": "依据 ADR-011。PG 地址走 WMS_AGENT_DB_URL；memory backend 作为无 PG 环境降级。",
+      "adr_refs": [
+        "ADR-011",
+        "ADR-017"
+      ]
     },
     {
       "id": "F-013",
@@ -284,14 +375,17 @@
       "status": "not_started",
       "verification_level": "not_started",
       "verification": [
-        "init.sh 新增 --agent 模式：校验 pyproject.toml 与 uv.lock 同步、Python 3.11、uv sync 成功",
+        "init.sh 新增 --agent：检查 uv、Python 3.14.x、uv lock --check、uv sync --python D:/DownloadPackage/environment/python.exe",
         "执行 uv run pytest，记录用例数与耗时",
-        "mock LLM 回放 + 工具断言可作为 Agent 功能判 passing 的依据",
-        "init.sh --quick --snapshot 仍 PASS，WMS_STATE_DIR 快照 JSONL 正常追加"
+        "至少一个 mock LLM 场景回放 + 工具调用序列断言通过，作为 Agent 功能判 passing 依据",
+        "init.sh --quick --snapshot 在单仓模式下仍 PASS，快照 JSONL 正常追加"
       ],
       "evidence": [],
-      "notes": "依据 ADR-013（uv + pyproject.toml + uv.lock，init.sh --agent 可校验锁文件）、ADR-010（可回放验证要求）。对应 ADR 第 5 节第 8 步。本机环境事实：Windows + PowerShell 5，无 bash（需 Git Bash），pnpm 不在 PATH；uv 是否可用待核。",
-      "adr_refs": ["ADR-010", "ADR-013"]
+      "notes": "依据 ADR-010、ADR-013。UV_CACHE_DIR 固定项目内 .uv/cache；AgentScope 与 Python 3.14 兼容性由 F-010 探针先行。",
+      "adr_refs": [
+        "ADR-010",
+        "ADR-013"
+      ]
     }
   ],
   "_template": {

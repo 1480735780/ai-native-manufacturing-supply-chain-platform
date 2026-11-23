@@ -4,9 +4,9 @@
 
 ## 1. 强制等级与边界
 
-- 仓库层：父/子模块可配 `core.hooksPath` + `pre-commit` / `post-checkout`；当前仓库尚未落地 `.githooks/`，以固定流程为准。
+- 仓库层：单仓可配 `core.hooksPath` + `pre-commit` / `post-checkout`；当前仓库尚未落地 `.githooks/`，以固定流程为准。
 - 会话层：WorkBuddy 支持 `PreToolUse` / `SessionStart`；项目级 hook 的桌面端生效性见 `../enforcement-capability.md`。在正式复验前按 B 档（Git 层 + 固定流程）执行，不宣称 A 档。
-- 威胁模型：防无意识漏跑、半自动外部进程切分支/改 HEAD/动子模块指针、会话间漂移；不防本地有意篡改，审计链不是安全签名。
+- 威胁模型：防无意识漏跑、半自动外部进程切分支/改 HEAD/恢复 gitlink、会话间漂移；不防本地有意篡改，审计链不是安全签名。
 - hook 挡不住 `--no-verify`、plumbing；所以开工、暂存前、提交前、疑似干扰后四个时机必须人工复核。
 
 ## 2. 任务类型与 WIP=1
@@ -25,26 +25,26 @@
 2. 读 `AGENTS.md`（父/子）、`PROGRESS.md`、`feature_list.json`。
 3. 记录基线快照（见第 4 节），写入 `<STATE_DIR>`。
 4. 在 Git Bash 执行 `cd zero-one-10wms && ./init.sh --quick --snapshot`。
-5. 复核：父/子分支与 HEAD、gitlink、脏改动分类、关键文件存在性。
+5. 复核：单仓分支与 HEAD、`zero-one-10wms` 普通目录树、脏改动分类、关键文件存在性。
 6. 若基础状态损坏（构建/启动路径坏了），先修基础状态，不叠新功能。
 7. 选一个最高优先级功能，置为 `in_progress`，写清验证步骤；开始前把本轮目标写入 `PROGRESS.md`。
 
 ## 4. 基线快照（5 类字段）
 
-`<STATE_DIR>` 为仓库外 append-only 状态目录；优先读环境变量 `WMS_STATE_DIR`，默认 `$HOME/.wms-harness-state`。`init.sh --snapshot` 负责写入。
+`<STATE_DIR>` 为 append-only 状态目录；优先读环境变量 `WMS_STATE_DIR`。当前受桌面工作区权限限制，默认 `$PARENT_ROOT/.wms-harness-state`（已 ignore）；生产/CI 可指向仓库外路径。
 
 字段：
 
 1. 仓库身份：父仓库路径、关键 remote（只记名称 + URL 指纹，去掉 userinfo/query/token）。
-2. 父仓库状态：分支、HEAD。
-3. 子模块状态：分支、HEAD、父仓库记录的 gitlink。
+2. 单仓状态：分支、HEAD。
+3. 目录结构：`zero-one-10wms` 在父仓库 HEAD 中必须是 `040000 tree`，不得出现 `160000` gitlink。
 4. 脏改动清单：完整 porcelain 列表，分类 baseline / expected / unexpected。
 5. 关键文件守卫：存在性 + 内容哈希（授权修改例外）。
 
 记录示例（JSONL，一行一条）：
 
 ```json
-{"ts":"2026-11-23T12:00:00+08:00","event":"session_start","parent":{"branch":"main","head":"2def349"},"submodule":{"branch":"v1.0.0","head":"7ef08d8"},"gitlink":"7ef08d8","dirty":{"baseline":3,"expected":1,"unexpected":0},"files":{"AGENTS.md":"<sha256>","process.md":"<sha256>"},"prev_hash":"<sha256>","hash":"<sha256>"}
+{"ts":"2026-11-23T12:00:00+08:00","event":"session_start","repository":{"branch":"main","head":"2def349","layout":"single-repo"},"dirty":{"baseline":3,"expected":1,"unexpected":0},"files":{"AGENTS.md":"<sha256>","process.md":"<sha256>"},"prev_hash":"<sha256>","hash":"<sha256>"}
 ```
 
 ## 5. 四个守卫时机
@@ -52,15 +52,15 @@
 - 开工时：写快照。
 - 暂存前：确认暂存路径属于 expected。
 - 提交前：复核基线，结构性漂移即停。
-- 执行过分支切换、子模块更新、疑似外部干扰后：立即复核。
+- 执行过分支切换、疑似外部干扰后：立即复核。
 
-**结构性漂移即停**：父/子分支变化、HEAD 变化、gitlink 不匹配、关键文件丢失、预期外批量修改。
+**结构性漂移即停**：分支/HEAD 变化、`zero-one-10wms` 变成 gitlink、关键文件丢失、预期外批量修改。
 
 **允许变化**：本轮目标文件的增删改，只要能精确暂存。
 
 ## 6. 审计链（append-only）
 
-每条记录含：时间、事件类型（`session_start` / `before_stage` / `before_commit` / `post_checkout` / `suspected_drift`）、父/子分支与 HEAD、gitlink、脏改动分类、关键文件哈希、本条哈希、上一条哈希。
+每条记录含：时间、事件类型（`session_start` / `before_stage` / `before_commit` / `post_checkout` / `suspected_drift`）、单仓分支与 HEAD、目录模式、脏改动分类、关键文件哈希、本条哈希、上一条哈希。
 
 - 只追加，不修改历史记录。
 - 链路断裂（上一条哈希对不上）时报告并停止，不静默重建。
@@ -113,7 +113,7 @@
 
 ## 10. 提交规则
 
-- 父仓库与子模块分开提交；先提交子模块，再在父仓库精确 `git add -- zero-one-10wms` 更新 gitlink。
+- 单仓模式只在父仓库提交；禁止恢复 `zero-one-10wms` gitlink 或提交嵌套仓库指针。
 - 禁止 `git add .` / `git add -A` / 未审查整目录暂存。
 - 用户既有改动不覆盖、不 stash、不 checkout。
 - 提交前跑 `git diff --cached --stat` 和 `git diff --cached`，确认只含本轮目标。
@@ -121,9 +121,9 @@
 
 ## 11. 异常处理
 
-- **分支漂移**：以 reflog 与 gitlink 祖先关系裁定权威侧；只读摆证据，由用户拍板，不自动 checkout / reset。
+- **分支漂移**：以 reflog 与提交图裁定权威侧；只读摆证据，由用户拍板，不自动 checkout / reset。
 - **文档丢失**：从 git 历史找回，不凭记忆重建。
-- **备份被破坏**：`<STATE_DIR>` 在仓库外，不受 clean/reset/切分支影响；链路断裂时报告并停止。
+- **备份被破坏**：`<STATE_DIR>` 链路断裂时报告并停止；当前默认在仓库内且 ignore，执行 clean/reset 前必须先迁移或备份。
 - **构建/启动坏了**：先修基础状态，不继续叠功能；记录最小复现。
 
 ## 12. 双实验（档位确认）

@@ -1,0 +1,21 @@
+{
+  "name": "two-step-stock-and-trend",
+  "responses": [
+    {
+      "type": "tool_call",
+      "id": "call_1",
+      "tool": "STOCK-QUERY",
+      "arguments": { "page_index": 1, "page_size": 20 }
+    },
+    {
+      "type": "tool_call",
+      "id": "call_2",
+      "tool": "DASH-TREND",
+      "arguments": { "metric": "up_top", "count": 6 }
+    },
+    {
+      "type": "text",
+      "content": "库存与趋势均已查询。"
+    }
+  ]
+}

@@ -15,18 +15,23 @@ dist/
 *.pdb
 *.log
 
-# Python / Agent 相关（ADR-013 uv + Python 3.11）
+# Python / Agent 相关（ADR-013 uv + Python 3.14.7）
 __pycache__/
 *.pyc
 .pytest_cache/
+.pytest-of-*/
 .ruff_cache/
 .venv/
 venv/
+.uv/
 
 # 密钥与本地环境（ADR-014：.env 不进 git）
 .env
 .env.*
 !.env.example
+
+# 本地 harness 快照（受限于当前工作区权限，默认放仓库内但不入库）
+.wms-harness-state/
 
 # IDE / 系统
 .idea/
