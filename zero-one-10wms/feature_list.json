@@ -329,7 +329,7 @@
       "title": "前端全局悬浮 AI 对话框",
       "user_visible_behavior": "用户在任意业务页面右下角点击“AI 助手”按钮，即可弹出对话窗提问并看到回答与工具溯源。",
       "status": "passing",
-      "verification_level": "runtime_unverified",
+      "verification_level": "e2e_pass",
       "verification": [
         "wms-frontend/src/components/ai-assistant/ 提供全局悬浮组件，wms-frontend/src/apis/agent.ts 使用独立 axios 实例且 timeout=60000",
         "在登录后的 default layout 挂载，任意业务路由均可打开与关闭对话窗",
@@ -342,9 +342,10 @@
         "2026-11-23 挂载：src/layouts/default.vue 末尾引入 <AiAssistant />；vitest.config.ts 补 @vitejs/plugin-vue 插件（组件级测试需要 SFC 编译）",
         "2026-11-23 vitest run src/apis/agent.test.ts src/components/ai-assistant/index.test.ts：13 passed（外壳解析与错误归一化 9 例 + 组件 4 例：默认只显示按钮、点击展开面板、空问题不请求、成功渲染答案与 toolCalls 与 traceId、失败保留输入且不渲染答案区）",
         "2026-11-23 node node_modules/vite/bin/vite.js build --mode production：✓ built in 39.46s，EXIT=0（仅既存 chunk>1000kB 警告）",
-        "2026-11-23 未验证（浏览器链路）：仓库与 .m2 的 wms-common jar 均无 private.pem（只有 public.pem 460B），无法签发合法 JWT；Nacos 无 wms-login 实例，路由守卫 src/routers/index.ts:139 会因 loadUser 抛错到不了 default layout，故需用户提供 private.pem 或启动 wms-login 后用 agent-browser 复测"
+        "2026-11-23 浏览器端到端已实测通过：启动 wms-login(10200)+wms-gateway(10001)+3 个 Java 业务服务+wms-agent(11200)+vite(5173)，利用仓库 jwt.pfx（密码 123456，alias 01star，与 public.pem 同一把钥匙）签发合法 JWT，或以 Redis admin:token 中 wms-login 真实登录 token 注入 localStorage；agent-browser 打开 http://127.0.0.1:5173/home → default layout 与右下角『问数助手』可见 → 点击展开 → 输入『查询 A01 库位的库存情况』→ 点击提问；HAR 捕获 POST /api/agent/query → HTTP 200 {code:10000,message:ok,data:{answer,sessionId,traceId,persisted:false,toolCalls:[STOCK-QUERY/success/rowCount=6/endpoint=/stock/inventory-query/query-all/resultDigest]}}，页面实际渲染出『库存查询完成。』『工具调用（1）STOCK-QUERY 成功 6 行 62 ms』与 traceId，证明前端悬浮窗、独立 axios 60000ms 超时、Bearer 透传、envelope 解包、答案与溯源渲染全链打通",
+        "2026-11-23 此前『无私钥』结论已纠正：私钥在仓库 wms-java/wms-oauth2/src/main/resources/jwt.jks/jwt.pfx（密码 123456、alias 01star），modulus 与 public.pem 一致；网关 TokenExtendsValidateImpl 校验 Redis <user_name>:token，值必须是 JSON 字符串（带引号）才能被网关 JSON 序列化器读取，存裸串→SerializationException 500、键不存在→401『用户凭证已注销』；真实 wms-login 登录态满足该格式"
       ],
-      "notes": "依据 ADR-012。不复用全局 http.js，避免 10s 超时和静默 default 分支。修正此前表述：前端实际存在 src/apis/request.js（axios 薄封装），响应码约定与拦截器在 src/plugins/http.js。浏览器端到端链路未验证，故 verification_level=runtime_unverified。",
+      "notes": "依据 ADR-012。不复用全局 http.js，避免 10s 超时和静默 default 分支。修正此前表述：前端实际存在 src/apis/request.js（axios 薄封装），响应码约定与拦截器在 src/plugins/http.js。浏览器端到端已用 agent-browser 实测通过（真实 Java 服务 + 网关 + Python Agent + 合法 JWT），verification_level=e2e_pass。",
       "adr_refs": [
         "ADR-012",
         "ADR-015"

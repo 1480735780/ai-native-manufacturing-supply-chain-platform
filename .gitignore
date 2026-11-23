@@ -25,6 +25,9 @@ __pycache__/
 venv/
 .uv/
 
+# 临时联调目录（含私钥/token/HAR，绝不入库）
+.runtime_tmp/
+
 # 密钥与本地环境（ADR-014：.env 不进 git）
 .env
 .env.*

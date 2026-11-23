@@ -5,22 +5,33 @@
 ## 当前已验证状态
 
 - 日期：2026-11-23
-- 父仓库：`main` @ `c988cd5`（F-006~F-010 已提交；F-011~F-013 改动待提交）
+- 父仓库：`main`（F-006~F-013 已提交；本轮追加 F-011 浏览器 e2e 证据并单独提交，HEAD 见 `git log`）
 - 嵌套历史仓库：`zero-one-10wms/.git` 仍存在，HEAD `7ef08d8`，但父仓库不维护其指针，不作为提交目标
 - 跟踪结构：**单仓模式**。父仓库索引中 `zero-one-10wms/*` 全部为 mode `100644` 普通文件，无 `160000` gitlink 条目；`zero-one-10wms/` 下的 ADR、`init.sh`、`AGENTS.md`、`architecture.md`、`process.md`、`feature_list.json`、`PROGRESS.md` 均已直接被父仓库跟踪。
-- 推送范围：父仓库根新增 `.gitignore`，排除 `node_modules/`、`node_modules.bak/`（**2.55 GB**，本轮明确不入库）、`target/`、`dist/`、`*.class`、`*.jar`、`*.pdb`、`*.log`、`__pycache__/`、`*.pyc`、`.venv/`、`.env`/`.env.*`、`.idea/`、`.vs/`。其余文件全部入库（含 `.dsh-scratch/` 辅助脚本 6.4 MB / 210 文件）。
+- 推送范围：父仓库根新增 `.gitignore`，排除 `node_modules/`、`node_modules.bak/`（**2.55 GB**，本轮明确不入库）、`target/`、`dist/`、`*.class`、`*.jar`、`*.pdb`、`*.log`、`__pycache__/`、`*.pyc`、`.venv/`、`.env`/`.env.*`、`.idea/`、`.vs/`、`.runtime_tmp/`（临时联调目录，含私钥/token/HAR）。其余文件全部入库（含 `.dsh-scratch/` 辅助脚本 6.4 MB / 210 文件）。
 - 标准启动路径：`cd zero-one-10wms && ./init.sh --quick`（Git Bash）
 - 标准验证路径：`./init.sh --quick` → `./init.sh --cpp` → 按功能跑 `--java <module>` / `--frontend` / `--verify` / `--agent`
-- 当前工作项：**AI-Agent 轨道 F-006~F-013 全部完成**（`F-006`/`F-007`/`F-012`/`F-013` 为 `e2e_pass`，`F-008`/`F-009`/`F-010` 为 `unit_pass`，`F-011` 为 `passing` + `runtime_unverified`）；下一个候选 `F-002`（储位管理前端页面）
+- 当前工作项：**AI-Agent 轨道 F-006~F-013 全部完成**（`F-006`/`F-007`/`F-011`/`F-012`/`F-013` 为 `e2e_pass`，`F-008`/`F-009`/`F-010` 为 `unit_pass`）；下一个候选 `F-002`（储位管理前端页面）
 - AI-Agent 轨道顺序（已全部走完）：`F-006` 骨架 → `F-007` 网关路由 → `F-008` LLMProvider → `F-009` 6 工具 → `F-010` ReAct 循环与 `/agent/query` → `F-011` 前端悬浮窗 → `F-012` 状态持久化 → `F-013` `init.sh --agent`
 - 优先级决策（2026-11-23）：`priority` 改为唯一连续序号 1..13，features 数组按 id 升序、排序键为 priority；AI-Agent 轨道整体前置，传统功能队列后移（F-002=11、F-003=12、F-004=13；F-005=5 保持不变）。
 - 排队项：`F-002` 储位管理前端页面、`F-003` 商品明细只读页面（均 `not_started`）；`F-004` 运行时基线仍 `blocked`
-- 已通过项：`F-001` harness 入口、`F-005` 其他配置 25 项（均 `passing` + `static_pass`）、`F-006`（`e2e_pass`）、`F-007`（`e2e_pass`）、`F-008`/`F-009`/`F-010`（`unit_pass`）、`F-011`（`passing` + `runtime_unverified`）、`F-012`（`e2e_pass`）、`F-013`（`e2e_pass`）
+- 已通过项：`F-001` harness 入口、`F-005` 其他配置 25 项（均 `passing` + `static_pass`）、`F-006`（`e2e_pass`）、`F-007`（`e2e_pass`）、`F-008`/`F-009`/`F-010`（`unit_pass`）、`F-011`（`e2e_pass`，本轮真实浏览器实测）、`F-012`（`e2e_pass`）、`F-013`（`e2e_pass`）
 - 运行时底座（本轮实测）：本机 `192.168.101.91`；虚拟机 `192.168.89.128` 提供 Nacos 8848、Redis 6379、MySQL 3306，**PG 5432 未起**；本机原生 PostgreSQL 16.15 在 5432（库 `ragent`，`postgres`/`123456`，本轮 F-012 落库用它）
 - 工具链实测：Python 3.14.7 = `D:\DownloadPackage\environment\python.exe`；uv 0.13.1 = `C:\Users\a\.local\bin\uv.exe`（**不在 PATH**）；JDK17 = `D:\DownloadPackage\environment\jdk-17.0.20.1+1`（PATH 上的 java 是 JDK8，不能用于 Spring Boot 3）；mvn = `D:\DownloadPackage\Maven\apache-maven-3.6.3-bin\apache-maven-3.6.3\bin\mvn.cmd`；Git Bash = `D:\DownloadPackage\environment\Git\Git\bin\bash.exe`（**不在 PATH**，本轮已用它跑通 `init.sh --agent`）
-- 当前 blocker：本机无 cmake/MSVC，C++ 只能 `static_pass + runtime_unverified`；运行时/端到端环境未就绪（`F-004`）；`init.sh` 需用 Git Bash 执行；仓库只有 `public.pem` 无签发私钥且无 `wms-login` 实例，前端浏览器链路无法端到端验证
+- 当前 blocker：本机无 cmake/MSVC，C++ 只能 `static_pass + runtime_unverified`；运行时/端到端环境未就绪（`F-004`）；`init.sh` 需用 Git Bash 执行。前端浏览器链路已用本轮实测打通（私钥就在仓库 jwt.pfx/jwt.jks + 现启 Java 服务），原 blocker 已解除。
 
 ## 本轮记录
+
+### 追加：F-011 浏览器端到端实测（解除 runtime_unverified，升级 e2e_pass）
+
+- 目标：用户要求实测此前 4 项未验证内容中的「浏览器端到端链路断」。结论：**不需要 C++**（6 个工具全是 Java 端点），需要 Java 业务服务 + 网关 + Python Agent + 前端。
+- 私钥结论纠正：私钥就在仓库 `wms-java/wms-oauth2/src/main/resources/jwt.jks` / `jwt.pfx`（密码 `123456`、alias `01star`），modulus 与 `wms-common/src/main/resources/public.pem` 一致；此前「无私钥」结论作废。
+- Redis 登录态关键事实：`TokenExtendsValidateImpl.isLogout`（`wms-gateway/.../TokenExtendsValidateImpl.java:38`）用 JSON 反序列化读 `<user_name>:token`，值必须是 **JSON 字符串（带引号）**；裸 JWT → `SerializationException` 500，键不存在 → 401「用户凭证已注销」。真实 wms-login 登录写同格式。
+- 启动实例（JDK17 + `--add-opens`）：wms-login 10200、wms-j3-daycheck 10320、wms-j6-stockln 10610、wms-oauth2 10400、wms-j1-dashboard 10010（Redisson 需 16 个 opens、oauth2 JAXB 需 6 个），网关 10001、wms-agent 11200（mock 场景）、vite 5173。
+- 6 个 Java 工具端点经网关全部 200/code=10000 拿到真实数据（STOCK total=6、EXP total=6、DAYCHECK-DELAY total=3、DASH-TREND 真实列表等）；agent `/agent/query` STOCK-QUERY status=success rowCount=6。
+- **浏览器 e2e 实测通过**：把 Redis `admin:token` 中的 wms-login 真实登录 token（700 字符、经 public.pem 验签通过、网关 `/login/current-user` 返回 code=10000）注入 localStorage → agent-browser 打开 `http://127.0.0.1:5173/home` → 点击「问数助手」→ 输入「查询 A01 库位的库存情况」→ 点击「提问」；HAR 捕获 `POST /api/agent/query` → HTTP 200 `{"code":10000,"message":"ok","data":{answer,sessionId,traceId,persisted:false,toolCalls:[STOCK-QUERY/success/rowCount=6/endpoint=/stock/inventory-query/query-all/resultDigest]}}`；页面实际渲染出「库存查询完成。」「工具调用（1）STOCK-QUERY 成功 6 行 62 ms」与 traceId。
+- feature_list F-011 `runtime_unverified` → `e2e_pass`；未粉饰：`persisted=false`（本轮 agent 用 memory backend，PG 持久化已由 F-012 单独 e2e 证明）。
+- 工具坑：PowerShell 5.1 向原生 exe 传参会吃内嵌双引号（写 Redis 值须用文件 `setfile`）；agent-browser console 会刷验证码 base64，改用 HAR 录制 + 定向过滤；harness 函数命名避开 `Get-History` 别名 `h`。
 
 - 目标：按 `wms-agent/docs/implement/问数Agent实施方案.md` 推进问数 Agent，本轮完成 `F-011`（前端全局悬浮对话框）、`F-012`（PostgreSQL `wms_agent` 持久化）、`F-013`（`init.sh --agent` harness 集成），收尾 AI-Agent 轨道（F-006~F-013）。
 - 已完成：
@@ -36,11 +47,12 @@
   - 数据库侧核对（`psql -d ragent`）：`wms_agent` 下 3 张表齐全；`agent_traces` 1 行（status=ok、tool_rounds=1）、`agent_tool_calls` 1 行（STOCK-QUERY/error）、`agent_sessions` 1 行（user_name=tester）。
   - F-013：Git Bash（`D:\DownloadPackage\environment\Git\Git\bin\bash.exe`）执行 `./init.sh --agent` → `uv sync` Resolved 39 packages、`uv run pytest` 69 passed 3 skipped、**结果 PASS**；`./init.sh --quick --snapshot --agent` → **结果 PASS** 且快照 JSONL 正常追加。
   - `feature_list.json` JSON 校验：PASS（13 条 feature）。
-- 未验证：
-  - 前端浏览器端到端链路：仓库与 `.m2` 的 wms-common jar 均无 `private.pem`（只有 460B `public.pem`），无法签发合法 JWT；Nacos 无 `wms-login` 实例，路由守卫 `src/routers/index.ts:139` 会因 `loadUser` 抛错到不了 default layout → `F-011` 记 `runtime_unverified`，需用户提供私钥或启动 `wms-login` 后用 agent-browser 复测。
-  - 真实用户 JWT 经网关 → Java 业务端点的完整链路（Java 业务服务 `wms-j6-stockln` 等本机未启动）。
-  - 网关 `inner-paths` 与 `RESOURCE_ROLES_MAP` 的实际判定（判定在 starter jar 内，本环境 `open-authorization=false`）。
+- 未验证（本轮已消除前 3 项，保留后 2 项）：
+  - ~~前端浏览器端到端链路~~ **本轮已实测打通**（见上「追加：F-011 浏览器端到端实测」），原「无私钥/无 wms-login 实例」结论作废。
+  - ~~真实用户 JWT 经网关 → Java 业务端点的完整链路~~ **本轮已实测**：wms-login 真实登录 token 经网关验签 + Redis 登出校验 → 6 个 Java 工具端点返回真实数据 → agent 拿到真实库存 rowCount=6。
+  - 网关 `inner-paths` 与 `RESOURCE_ROLES_MAP` 的实际判定（判定在 starter jar 内，本环境 `open-authorization=false`，无法区分 white/inner 差异；Python 侧 401 已兜底）。
   - F-012 落库用的是本机原生 PostgreSQL 16.15，**未在虚拟机 pgvector 镜像上复验**。
+  - 本轮浏览器 e2e 使用 `persisted=false`（memory backend），未与 PG 持久化同时打开；两条链路各自单独通过。
 - 下一步：`F-002` 储位管理前端页面（`next_candidate`）；`F-004` 运行时基线仍 `blocked`。
 - 用户待办（可选）：若要把 trace 落到虚拟机，`192.168.89.128` 用 `pgvector/pgvector:pg16` 起库（库名 `ragent`），连接串 `postgresql+psycopg://postgres:postgres@192.168.89.128:5432/ragent`；不拉也不阻塞，F-006~F-013 均已通过，缺失时按 `persisted=false` 降级。
 - 已知风险：
