@@ -1,0 +1,122 @@
+{
+  "schema_version": 1,
+  "updated_at": "2026-11-23",
+  "rules": {
+    "single_in_progress": true,
+    "passing_requires_evidence": true,
+    "allowed_status": ["not_started", "in_progress", "blocked", "passing"],
+    "allowed_verification_level": ["not_started", "static_pass", "runtime_unverified", "e2e_pass", "blocked"],
+    "rule": "同一时间只能有一个 in_progress；passing 必须有 evidence；C++ 没有运行时证据时 verification_level 只能是 static_pass，并注明 runtime_unverified。"
+  },
+  "source_of_truth": [
+    "zero-one-10wms/documents/01、项目计划/版本计划.emmx",
+    "父仓库《差距分析与补齐规划》报告",
+    "zero-one-10wms/PROGRESS.md",
+    "zero-one-10wms/.workbuddy-ai/memory/MEMORY.md"
+  ],
+  "next_candidate": "F-002",
+  "features": [
+    {
+      "id": "F-001",
+      "priority": 1,
+      "area": "harness",
+      "title": "建立可执行的初始化、状态与验证入口",
+      "user_visible_behavior": "新会话在 Git Bash 执行 zero-one-10wms/init.sh --quick 后，能得到工具链、Git 基线、状态文件和关键约束的检查结果。",
+      "status": "passing",
+      "verification_level": "static_pass",
+      "verification": [
+        "在 Git Bash 执行 ./init.sh --quick",
+        "执行 ./init.sh --cpp 检查 C++ 模块注册与 zh-dict.yaml 重复顶层键",
+        "确认 feature_list.json 可被 python -m json.tool 解析",
+        "确认 init.sh --snapshot 能向 WMS_STATE_DIR 追加 JSONL 记录"
+      ],
+      "evidence": [
+        "2026-11-23 ./init.sh --quick：PASS；父 main @ 2def349、子模块 v1.0.0 @ 7ef08d8、gitlink 一致",
+        "2026-11-23 ./init.sh --cpp：PASS；C++ 模块均注册，源码 zh-dict.yaml 无重复顶层键；本机无 cmake，runtime_unverified",
+        "2026-11-23 ./init.sh --frontend：PASS；vite build --mode production 完成（43.66s）",
+        "2026-11-23 ./init.sh --java wms-j8-othermana：PASS；Maven 离线编译通过",
+        "2026-11-23 ./init.sh --quick --snapshot：PASS；JSONL 可解析，含 prev_hash/hash"
+      ],
+      "notes": "仅验证静态层；前端页面运行时与 C++ 服务运行未验证。"
+    },
+    {
+      "id": "F-002",
+      "priority": 2,
+      "area": "wms-c3-chuweiguanli",
+      "title": "储位管理前端页面（仓位图/储位信息/空储位/可用储位）",
+      "user_visible_behavior": "用户可在储位管理菜单查看仓位图与储位信息，查询空储位和可用储位，并导入导出储位明细。",
+      "status": "not_started",
+      "verification_level": "not_started",
+      "verification": [
+        "启动前端，进入储位管理各页面，确认列表、条件查询、导入导出入口可见",
+        "调用 /chuweiguanli/chuweidingyi/query-chuwei、/chuweiguanli/kongchuwei/get-kongchuwei-list、/chuweiguanli/keyongchuwei/query-usefulbin-list，确认返回结构与页面字段一致",
+        "确认 wms-c3-chuweiguanli 服务在 8103 端口可用，网关 /chuweiguanli/** 路由可达"
+      ],
+      "evidence": [],
+      "notes": "前端文件已在工作区未跟踪目录：src/apis/chuweiguanli/、src/views/chuweiguanli/；尚未完成运行验证。"
+    },
+    {
+      "id": "F-003",
+      "priority": 3,
+      "area": "base-data",
+      "title": "商品明细只读页面",
+      "user_visible_behavior": "用户可在基础资料中按商品名称/编码查询商品明细，并打开详情抽屉查看字段。",
+      "status": "not_started",
+      "verification_level": "not_started",
+      "verification": [
+        "启动前端，进入商品明细页，按名称/编码查询",
+        "点击行打开详情抽屉，确认字段与后端返回一致",
+        "确认页面没有写操作入口（只读）"
+      ],
+      "evidence": [],
+      "notes": "页面文件已在工作区未跟踪目录：src/views/base-data/Commodity-detail/；依赖 base-data API。"
+    },
+    {
+      "id": "F-004",
+      "priority": 4,
+      "area": "runtime",
+      "title": "建立可复现的运行时/端到端验证基线",
+      "user_visible_behavior": "在具备 Nacos、MySQL、Redis 和 C++ 编译环境的机器上，可按文档启动并走通至少一条登录→基础资料→库存查询路径。",
+      "status": "blocked",
+      "verification_level": "blocked",
+      "verification": [
+        "按 documents/05、环境搭建 启动 Nacos/MySQL/Redis 等依赖",
+        "编译并启动 gateway、login 和一个业务服务",
+        "执行登录与一条业务查询，记录请求、响应和日志摘要"
+      ],
+      "evidence": [],
+      "notes": "当前本机无 cmake/MSVC，C++ 只能 static_pass + runtime_unverified；需要 CI 或 Linux 环境补齐。"
+    },
+    {
+      "id": "F-005",
+      "priority": 5,
+      "area": "other-config",
+      "title": "其他配置 25 项（品牌/港口/箱规/箱型）",
+      "user_visible_behavior": "用户可在其他配置菜单完成品牌、港口、箱规、箱型的列表、录入、修改、批量删除、导入、导出。",
+      "status": "passing",
+      "verification_level": "static_pass",
+      "verification": [
+        "后端：mvn -o -pl wms-domain,wms-apis,wms-j8-othermana -am compile -DskipTests",
+        "前端：vite build --mode production",
+        "启动服务后按 zowms_test_ba.sql 种子数据逐项点验（运行时未验证）"
+      ],
+      "evidence": [
+        "父仓库《其他配置差距分析与补齐规划.md》：25/25 功能点，后端编译通过、前端生产构建通过",
+        "子模块 commit 160d25a2：feat(j8-othermana): 补齐其他配置25项功能"
+      ],
+      "notes": "runtime_unverified：尚未完成启动 Nacos/网关/othermana 后的逐项点验。"
+    }
+  ],
+  "_template": {
+    "id": "F-XXX",
+    "priority": 99,
+    "area": "",
+    "title": "",
+    "user_visible_behavior": "",
+    "status": "not_started",
+    "verification_level": "not_started",
+    "verification": [],
+    "evidence": [],
+    "notes": ""
+  }
+}

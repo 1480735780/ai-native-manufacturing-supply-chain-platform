@@ -1,0 +1,124 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<fo:root xmlns:fo="http://www.w3.org/1999/XSL/Format">
+    <fo:layout-master-set>
+        <fo:simple-page-master master-name="A4" page-height="29.7cm" page-width="21cm"
+                               margin-top="1cm" margin-bottom="1cm" margin-left="1cm" margin-right="1cm">
+            <fo:region-body margin-top="1cm" margin-bottom="1cm"/>
+        </fo:simple-page-master>
+    </fo:layout-master-set>
+
+    <fo:page-sequence font-family="微软雅黑" master-reference="A4">
+        <fo:flow flow-name="xsl-region-body">
+            <fo:block font-size="16pt" font-weight="bold" text-align="center" space-after="5mm">
+                入库通知单
+            </fo:block>
+
+            <fo:table table-layout="fixed" width="100%" space-after="3mm">
+                <fo:table-column column-width="50%"/>
+                <fo:table-column column-width="50%"/>
+                <fo:table-body>
+                    <fo:table-row>
+                        <fo:table-cell>
+                            <fo:block font-size="10pt">通知单号：<fo:inline font-weight="bold">${noticeId!}</fo:inline></fo:block>
+                        </fo:table-cell>
+                        <fo:table-cell>
+                            <fo:block font-size="10pt">单据状态：<fo:inline font-weight="bold">${imSta!}</fo:inline></fo:block>
+                        </fo:table-cell>
+                    </fo:table-row>
+                    <fo:table-row>
+                        <fo:table-cell>
+                            <fo:block font-size="10pt">客户编码：<fo:inline font-weight="bold">${cusCode!}</fo:inline></fo:block>
+                        </fo:table-cell>
+                        <fo:table-cell>
+                            <fo:block font-size="10pt">客户订单号：<fo:inline font-weight="bold">${imCusCode!}</fo:inline></fo:block>
+                        </fo:table-cell>
+                    </fo:table-row>
+                    <fo:table-row>
+                        <fo:table-cell>
+                            <fo:block font-size="10pt">供应商：<fo:inline font-weight="bold">${supName!}</fo:inline></fo:block>
+                        </fo:table-cell>
+                        <fo:table-cell>
+                            <fo:block font-size="10pt">供应商编码：<fo:inline font-weight="bold">${supCode!}</fo:inline></fo:block>
+                        </fo:table-cell>
+                    </fo:table-row>
+                    <fo:table-row>
+                        <fo:table-cell>
+                            <fo:block font-size="10pt">预计到货：<fo:inline font-weight="bold">${imData!}</fo:inline></fo:block>
+                        </fo:table-cell>
+                        <fo:table-cell>
+                            <fo:block font-size="10pt">订单类型：<fo:inline font-weight="bold">${orderTypeCode!}</fo:inline></fo:block>
+                        </fo:table-cell>
+                    </fo:table-row>
+                    <fo:table-row>
+                        <fo:table-cell>
+                            <fo:block font-size="10pt">车号：<fo:inline font-weight="bold">${imCarNo!}</fo:inline></fo:block>
+                        </fo:table-cell>
+                        <fo:table-cell>
+                            <fo:block font-size="10pt">司机：<fo:inline font-weight="bold">${imCarDri!}</fo:inline>　电话：<fo:inline font-weight="bold">${imCarMobile!}</fo:inline></fo:block>
+                        </fo:table-cell>
+                    </fo:table-row>
+                    <fo:table-row>
+                        <fo:table-cell>
+                            <fo:block font-size="10pt">创建人：<fo:inline font-weight="bold">${createName!}</fo:inline></fo:block>
+                        </fo:table-cell>
+                        <fo:table-cell>
+                            <fo:block font-size="10pt">创建时间：<fo:inline font-weight="bold">${createDate!}</fo:inline></fo:block>
+                        </fo:table-cell>
+                    </fo:table-row>
+                </fo:table-body>
+            </fo:table>
+
+            <fo:table table-layout="fixed" width="100%" border-collapse="collapse" space-after="5mm">
+                <fo:table-column column-width="8%"/>
+                <fo:table-column column-width="22%"/>
+                <fo:table-column column-width="12%"/>
+                <fo:table-column column-width="8%"/>
+                <fo:table-column column-width="10%"/>
+                <fo:table-column column-width="12%"/>
+                <fo:table-column column-width="14%"/>
+                <fo:table-column column-width="14%"/>
+                <fo:table-body>
+                    <fo:table-row background-color="#EEEEEE">
+                        <fo:table-cell border="0.5pt solid black" padding="2pt"><fo:block font-weight="bold">商品编码</fo:block></fo:table-cell>
+                        <fo:table-cell border="0.5pt solid black" padding="2pt"><fo:block font-weight="bold">商品名称</fo:block></fo:table-cell>
+                        <fo:table-cell border="0.5pt solid black" padding="2pt"><fo:block font-weight="bold">数量</fo:block></fo:table-cell>
+                        <fo:table-cell border="0.5pt solid black" padding="2pt"><fo:block font-weight="bold">单位</fo:block></fo:table-cell>
+                        <fo:table-cell border="0.5pt solid black" padding="2pt"><fo:block font-weight="bold">计划库位</fo:block></fo:table-cell>
+                        <fo:table-cell border="0.5pt solid black" padding="2pt"><fo:block font-weight="bold">批次</fo:block></fo:table-cell>
+                        <fo:table-cell border="0.5pt solid black" padding="2pt"><fo:block font-weight="bold">生产日期</fo:block></fo:table-cell>
+                        <fo:table-cell border="0.5pt solid black" padding="2pt"><fo:block font-weight="bold">条码</fo:block></fo:table-cell>
+                    </fo:table-row>
+                    <#list items as item>
+                    <fo:table-row>
+                        <fo:table-cell border="0.5pt solid black" padding="2pt"><fo:block>${item.goodsCode!}</fo:block></fo:table-cell>
+                        <fo:table-cell border="0.5pt solid black" padding="2pt"><fo:block>${item.goodsName!}</fo:block></fo:table-cell>
+                        <fo:table-cell border="0.5pt solid black" padding="2pt"><fo:block>${item.goodsCount!}</fo:block></fo:table-cell>
+                        <fo:table-cell border="0.5pt solid black" padding="2pt"><fo:block>${item.goodsUnit!}</fo:block></fo:table-cell>
+                        <fo:table-cell border="0.5pt solid black" padding="2pt"><fo:block>${item.binPlan!}</fo:block></fo:table-cell>
+                        <fo:table-cell border="0.5pt solid black" padding="2pt"><fo:block>${item.goodsBatch!}</fo:block></fo:table-cell>
+                        <fo:table-cell border="0.5pt solid black" padding="2pt"><fo:block>${item.goodsPrdData!}</fo:block></fo:table-cell>
+                        <fo:table-cell border="0.5pt solid black" padding="2pt"><fo:block>${item.barcode!}</fo:block></fo:table-cell>
+                    </fo:table-row>
+                    </#list>
+                </fo:table-body>
+            </fo:table>
+
+            <fo:block font-size="10pt" space-after="5mm">
+                备注：${imBeiZhu!}
+            </fo:block>
+
+            <fo:table table-layout="fixed" width="100%">
+                <fo:table-column column-width="33%"/>
+                <fo:table-column column-width="33%"/>
+                <fo:table-column column-width="34%"/>
+                <fo:table-body>
+                    <fo:table-row>
+                        <fo:table-cell><fo:block font-size="10pt">制单人：</fo:block></fo:table-cell>
+                        <fo:table-cell><fo:block font-size="10pt" text-align="center">审核人：</fo:block></fo:table-cell>
+                        <fo:table-cell><fo:block font-size="10pt" text-align="right">日期：</fo:block></fo:table-cell>
+                    </fo:table-row>
+                </fo:table-body>
+            </fo:table>
+        </fo:flow>
+    </fo:page-sequence>
+</fo:root>

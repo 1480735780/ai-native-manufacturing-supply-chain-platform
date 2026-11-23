@@ -1,0 +1,50 @@
+# ============================================================
+# Nacos 共享配置: third-services.yaml
+# data-id: third-services.yaml  group: DEFAULT_GROUP
+# namespace: 4833404f-4b82-462e-889a-3c508160c6b4
+# ============================================================
+
+# RocketMQ（j2-message 引用 ${rocket-mq.name-server} 等）
+rocket-mq:
+  name-server: 192.168.89.128:9876
+rocketmq:
+  message:
+    topic: realtime-topic
+    group:
+      realtime:
+        consumer: realtime-consumer-group
+        producer: realtime-producer-group
+
+# FastDFS（多处代码 @Value 引用 fastdfs.nginx-servers）
+fastdfs:
+  charset: UTF-8
+  connect-timeout: 5
+  network-timeout: 30
+  http-secret-key: FastDFS1234567890
+  http-anti-steal-token: true
+  connection-pool-max-idle: 20
+  connection-pool-max-total: 20
+  connection-pool-min-idle: 2
+  nginx-servers: 192.168.89.128:8888
+  tracker-servers: 192.168.89.128:22122
+  # FastDFS 为 Docker 部署时 tracker 会返回容器内网 IP，此处显式指定宿主机存储节点地址
+  storage-ip: 192.168.89.128
+  storage-port: 23000
+
+# Sentinel 控制台（wms-login 引用 ${sentinel.dashboard}）
+sentinel:
+  dashboard: 192.168.89.128:8718
+
+# Seata 事务组地址（wms-j2-sysmgr 引用 ${seata.default}）
+seata:
+  default: 192.168.89.128:8091
+
+# Easy-ES / Elasticsearch（wms-j2-sysmgr 引用）
+easy-es:
+  address: 192.168.89.128:9200
+  username: elastic
+  password:
+
+# 登录验证码开关（wms-login @Value 引用）
+captcha:
+  enabled: true

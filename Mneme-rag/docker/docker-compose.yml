@@ -1,0 +1,146 @@
+# Mneme-rag 外部中间件编排（P6 real 栈 / pgvector 方案）
+#
+# 一键起 PG(带 pgvector) + Redis + MinIO + Neo4j + LightRAG。
+# 用法（本目录下）：
+#   docker compose up -d          # 启动全部服务
+#   docker compose ps             # 查看状态
+#   docker compose down -v        # 停止并删除数据卷（彻底重置）
+#
+# 连接信息（对应 app/config.py 的 RAGENT_* 环境变量）：
+#   RAGENT_DATABASE_URL = postgresql+psycopg://postgres:postgres@localhost:5432/ragent
+#   RAGENT_REDIS_URL    = redis://localhost:6379/0
+#   RAGENT_OBJECT_STORAGE_BACKEND = s3
+#   RAGENT_S3_ENDPOINT  = http://localhost:9000
+#   RAGENT_S3_ACCESS_KEY = minioadmin
+#   RAGENT_S3_SECRET_KEY = minioadmin
+#
+# 向量后端：RAGENT_VECTOR_STORE_TYPE=pgvector。
+#
+# 知识图谱：LightRAG server (9621) + Neo4j 5 (7474/7687)。
+#   ⚠️ 使用前必须在同目录 .env 文件中设置 DASHSCOPE_API_KEY=sk-xxx
+
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: ragent-pg
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: ragent
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d ragent"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    container_name: ragent-redis
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
+
+  minio:
+    image: minio/minio
+    container_name: ragent-minio
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio-data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
+
+  minio-init:
+    image: minio/mc
+    container_name: ragent-minio-init
+    depends_on:
+      minio:
+        condition: service_healthy
+    entrypoint: >
+      /bin/sh -c "
+      mc alias set local http://minio:9000 minioadmin minioadmin &&
+      mc mb --ignore-existing local/ragent-sources local/ragent-assets &&
+      mc anonymous set download local/ragent-assets &&
+      exit 0
+      "
+    restart: "no"
+
+  # ==================== 知识图谱（LightRAG + Neo4j）====================
+
+  neo4j:
+    image: neo4j:5
+    container_name: ragent-neo4j
+    environment:
+      # ⚠️ 自行设定：Neo4j 密码（生产环境请改为强密码，并同步修改下方 lightrag 的 NEO4J_PASSWORD）
+      NEO4J_AUTH: neo4j/ragent-neo4j-pass
+    ports:
+      - "7474:7474"   # Web UI（浏览器访问 http://<VM-IP>:7474）
+      - "7687:7687"   # Bolt 协议（LightRAG 连接用）
+    volumes:
+      - neo4j_data:/data
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:7474 || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 15
+    restart: unless-stopped
+
+  lightrag:
+    image: ghcr.io/hkuds/lightrag:latest
+    container_name: ragent-lightrag
+    ports:
+      - "9621:9621"   # LightRAG Web API
+    environment:
+      # ---- LLM 配置（实体抽取/关系构建）----
+      LIGHTRAG_LLM_BINDING: openai
+      # ⚠️ 自行设定：模型名称（按你实际使用的 provider 修改）
+      LIGHTRAG_LLM_MODEL: qwen-plus
+      # ⚠️ 自行设定：LLM API 地址（通义千问示例；OpenAI 改为 https://api.openai.com/v1）
+      OPENAI_API_BASE: https://dashscope.aliyuncs.com/compatible-mode/v1
+      # ⚠️ 必填：在同目录 .env 文件中设置 DASHSCOPE_API_KEY=sk-xxx
+      OPENAI_API_KEY: ${DASHSCOPE_API_KEY:-}
+
+      # 兼容不带前缀的变量名（LightRAG 部分版本读取不带 LIGHTRAG_ 前缀的 env）
+      LLM_BINDING: openai
+      LLM_MODEL: qwen-plus
+      EMBEDDING_BINDING: openai
+      EMBEDDING_MODEL: text-embedding-v3
+
+      # ---- Embedding 配置 ----
+      LIGHTRAG_EMBEDDING_BINDING: openai
+      LIGHTRAG_EMBEDDING_MODEL: text-embedding-v3
+
+      # ---- 存储后端 ----
+      LIGHTRAG_GRAPH_STORAGE: Neo4JStorage
+      NEO4J_URI: bolt://neo4j:7687
+      NEO4J_USERNAME: neo4j
+      # 与上方 neo4j service 的 NEO4J_AUTH 保持一致
+      NEO4J_PASSWORD: ragent-neo4j-pass
+    depends_on:
+      neo4j:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  pgdata:
+  minio-data:
+  neo4j_data:

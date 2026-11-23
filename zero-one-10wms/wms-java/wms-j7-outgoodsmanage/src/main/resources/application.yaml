@@ -1,0 +1,21 @@
+server:
+  port: ${sp.outgoodsmanage}
+spring:
+  application:
+    name: ${sn.outgoodsmanage}
+#    name: ${j7name.test}
+  cloud:
+    stream:
+      rocketmq:
+        binder:
+          name-server: 192.168.89.128:9876
+          group: ExcelGroup
+pdf:
+  # fop配置文件路径（classpath 相对路径，x-easypdf 通过 ClassLoader 查找）
+  conf: ${PDF_CONF:fop.xconf}
+  # xsl-fo模板路径（classpath 目录）
+  template: ${PDF_TEMPLATE:freemarker}
+
+
+
+

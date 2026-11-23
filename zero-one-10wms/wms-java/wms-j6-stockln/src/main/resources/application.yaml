@@ -1,0 +1,12 @@
+server:
+  port: ${sp.stockln}
+spring:
+  application:
+    name: ${sn.stockln}
+
+# pdf配置
+pdf:
+  # fop配置文件路径（classpath 相对路径，x-easypdf 会通过 ClassLoader 查找）
+  conf: ${PDF_CONF:fop.xconf}
+  # xsl-fo模板路径（classpath 目录，x-easypdf 会通过 ClassLoader 查找）
+  template: ${PDF_TEMPLATE:freemarker}
