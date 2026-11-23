@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Document Version="12.2.3" DocVersion="12.2" DocGuid="{047bddd8-da28-41de-a2fb-8aacf155b817}">
+    <Properties>
+        <AutoLayout V="1"/>
+        <TimelineWidth V="1000"/>
+        <CalloutLayout V="1"/>
+        <ShowGroupName V="0"/>
+        <Dpi V="1.25"/>
+        <ActiveIndex V="0"/>
+        <ScreenWidth V="1536"/>
+        <ScreenHeight V="864"/>
+        <Platform V="win"/>
+        <ModifyPlatform V="win"/>
+        <CreatedVersion V="10.0.2"/>
+        <Creator V="听说你很牛逼"/>
+        <Modifier V="阿伟"/>
+        <CreatedDate V="2018-07-06 11:31:34"/>
+        <ModifiedDate V="2025-02-06 20:11:33"/>
+        <Pages V="page"/>
+        <DocViewMode V="1"/>
+        <KanbanFreeFile V="0"/>
+    </Properties>
+    <GanttOption>
+        <WorkDay V="1;1;1;1;1;0;0"/>
+        <MajorTick V="3"/>
+        <MinorTick V="0"/>
+        <StartDate V="0"/>
+        <FinishDate V="0"/>
+        <StartTime V="28800"/>
+        <FinishTime V="57600"/>
+        <UnitWidth V="100"/>
+        <ChangeMinor V="0"/>
+    </GanttOption>
+    <MarkSheet>
+        <MarkGroup Name="priority" Display="优先级" Mutex="1" Text="0" Predefine="1" Resource="0">
+            <Mark Name="priority1" Display="优先级 1" Shapes="1901;2028;997;1136;1169;572;596;608;680;706;708;710;712;714;716;718;730;732;736;738;740;742;744;746;748;750"/>
+            <Mark Name="priority2" Display="优先级 2" Shapes="770;774;784;1107;605;665;691;700;727;734"/>
+            <Mark Name="priority3" Display="优先级 3" Shapes="2999;788;790;703;752;754"/>
+        </MarkGroup>
+        <MarkGroup Name="face" Display="表情" Mutex="1" Text="0" Predefine="1" Resource="0">
+            <Mark Name="happy" Display="高兴" Shapes="2538;2542;2545;2548;2670"/>
+        </MarkGroup>
+    </MarkSheet>
+    <OutlineBkSetting OutlineIsSheetMode="1" OutlineIsNarrowMode="1" OutlineBkMode="NoBk"/>
+    <KanbanRightPanelSetting KanbanSimpleMode="0" KanbanRPShowItem="255" KanbanRPCardColorScheme="0" KanbanRPCardSolidColorStr="" KanbanRPCardMixedColorIndex="0" KanbanRPCardStyle="0" KanbanRPColumnTitleFontSizeIndex="1" KanbanRPCardTitleFontSizeIndex="1" KanbanRPCardContentFontSizeIndex="1" KanbanRPBackgroundType="0" KanbanRPBackgroundSolidColor="" KanbanRPBackgroundGradientIndex="0" KanbanRPBackgroundTransparency="0"/>
+</Document>

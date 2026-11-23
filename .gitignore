@@ -1,0 +1,35 @@
+# AIWMSproject 单仓推送忽略规则（父仓库根）
+# 说明：本仓库按“整个项目一个仓库”方式推送（无 gitlink）。
+# 依赖目录、构建产物、密钥类文件一律不入库。
+
+# 前端依赖（node_modules.bak 为 2.55GB 备份目录，必须排除）
+node_modules/
+node_modules.bak/
+
+# 构建产物
+target/
+dist/
+*.class
+*.jar
+*.war
+*.pdb
+*.log
+
+# Python / Agent 相关（ADR-013 uv + Python 3.11）
+__pycache__/
+*.pyc
+.pytest_cache/
+.ruff_cache/
+.venv/
+venv/
+
+# 密钥与本地环境（ADR-014：.env 不进 git）
+.env
+.env.*
+!.env.example
+
+# IDE / 系统
+.idea/
+.vs/
+.DS_Store
+Thumbs.db
