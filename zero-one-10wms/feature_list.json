@@ -11,10 +11,12 @@
   "source_of_truth": [
     "zero-one-10wms/documents/01、项目计划/版本计划.emmx",
     "父仓库《差距分析与补齐规划》报告",
+    "zero-one-10wms/documents/07、AI-Agent化/技术选型ADR.md",
+    "zero-one-10wms/documents/07、AI-Agent化/工具清单.md",
     "zero-one-10wms/PROGRESS.md",
     "zero-one-10wms/.workbuddy-ai/memory/MEMORY.md"
   ],
-  "next_candidate": "F-002",
+  "next_candidate": "F-006",
   "features": [
     {
       "id": "F-001",
@@ -105,6 +107,74 @@
         "子模块 commit 160d25a2：feat(j8-othermana): 补齐其他配置25项功能"
       ],
       "notes": "runtime_unverified：尚未完成启动 Nacos/网关/othermana 后的逐项点验。"
+    },
+    {
+      "id": "F-006",
+      "priority": 6,
+      "area": "ai-agent",
+      "title": "wms-agent Python 服务骨架与 /agent/health 健康检查",
+      "user_visible_behavior": "开发者在 zero-one-10wms/wms-agent 执行 uv sync 并启动服务后，GET /agent/health 返回 code=10000 的成功响应。",
+      "status": "in_progress",
+      "verification_level": "not_started",
+      "verification": [
+        "在 zero-one-10wms/wms-agent 执行 uv sync，确认 pyproject.toml 与 uv.lock 一致、Python 为 3.11",
+        "uv run pytest 至少 1 个用例覆盖 /agent/health 响应契约（code=10000、msg、data）",
+        "启动服务后 curl /agent/health，记录响应体",
+        "确认密钥未出现在代码、快照、Nacos 与 MEMORY.md 中"
+      ],
+      "evidence": [],
+      "notes": "依据 ADR-001（独立 Python 微服务目录）、ADR-013（uv + Python 3.11）、ADR-015（端点契约与成功码 10000）。本轮仅登记，未写代码。AI-Agent 轨道起点，按用户指令置为当前工作项；F-002/F-003 保持 not_started 排队，priority 数值未重排。"
+    },
+    {
+      "id": "F-007",
+      "priority": 7,
+      "area": "ai-agent",
+      "title": "网关 /agent/** 静态路由与前后端可达",
+      "user_visible_behavior": "通过网关访问 /agent/health 可达 Python Agent 服务并返回成功码，网关成为 Java/C++/Python 三栈的唯一枢纽。",
+      "status": "not_started",
+      "verification_level": "not_started",
+      "verification": [
+        "在 wms-gateway/application.yaml 新增 agent-route 静态路由（仿 C++ 模式，Path=/agent/**）",
+        "网关启动后 GET /agent/health 返回 code=10000，记录请求与响应摘要",
+        "确认 Python 侧不注册 Nacos；Java 侧 Feign 使用静态 url=\"${agent.url}\"",
+        "记录端口与配置来源（Nacos system.yaml 的 agent.url / sp.agent），密钥不进 Nacos 明文配置"
+      ],
+      "evidence": [],
+      "notes": "依据 ADR-003（星型拓扑、网关唯一枢纽）、ADR-006（不注册 Nacos）、ADR-015（网关路由与端点表）。依赖 F-006 服务可启动。"
+    },
+    {
+      "id": "F-008",
+      "priority": 8,
+      "area": "ai-agent",
+      "title": "LLMProvider 抽象与可回放的模型路由",
+      "user_visible_behavior": "Agent 通过统一 LLMProvider 调用模型；同一 prompt 在 mock 模式下产出确定性结果，可用于离线回放验证。",
+      "status": "not_started",
+      "verification_level": "not_started",
+      "verification": [
+        "wms-agent/llm/ 提供统一 LLMProvider 接口，并有至少一个 OpenAI 兼容真实实现（GPT-4o-mini）",
+        "提供 mock/回放实现：同一输入产出确定性输出，供 harness 回放",
+        "超时、重试、限流、工具结果脱敏在 Provider 层统一处理",
+        "确认 API Key 只来自 env/.env，不进代码、Nacos、快照与日志"
+      ],
+      "evidence": [],
+      "notes": "依据 ADR-010（必须包一层 LLMProvider，AgentScope 不直接管模型）。首版 GPT-4o-mini 仅适用于个人 demo；进审计链前需内网模型或本地摘要脱敏。"
+    },
+    {
+      "id": "F-009",
+      "priority": 9,
+      "area": "ai-agent",
+      "title": "6 个 L0 只读工具接入（STOCK-QUERY 等）",
+      "user_visible_behavior": "Agent 可调用 6 个只读工具获取库存、效期、未上架、待办、趋势、延时数据，每次调用的参数与耗时写入 toolCalls 供溯源。",
+      "status": "not_started",
+      "verification_level": "not_started",
+      "verification": [
+        "6 个工具各带 Pydantic 参数模型与 Tool Schema：STOCK-QUERY、EXP-WARN-QUERY、DAYCHECK-NOUP、DASH-PEND、DASH-TREND、DAYCHECK-DELAY",
+        "每个工具经 Gateway 调用对应 Java 端点并透传用户 JWT，记录请求与响应摘要",
+        "工具调用写入审计记录：tool、params、rowCount、durationMs",
+        "确认本功能只暴露 R 级只读工具，W 级与 X 级工具不可达"
+      ],
+      "evidence": [],
+      "notes": "依据 ADR-009（首版 6 工具与优先级）、ADR-007（JWT 透传，权限跟随真实用户）、ADR-017（W/X 级强制人工确认）。端点真实路径与踩坑项见 documents/07、AI-Agent化/工具清单.md §2.1 与 §5。"
     }
   ],
   "_template": {
