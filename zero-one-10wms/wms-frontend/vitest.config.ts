@@ -1,5 +1,6 @@
 import { fileURLToPath } from "node:url";
 
+import vue from "@vitejs/plugin-vue";
 import tsAlias from "vite-plugin-ts-alias";
 import AutoImport from "unplugin-auto-import/vite";
 
@@ -15,6 +16,9 @@ const testConfig = defineConfig({
 	},
 
 	plugins: [
+		// 支持 .vue 单文件组件测试（组件级测试需要 SFC 编译）
+		vue(),
+
 		AutoImport({
 			imports: [
 				// VueRouterAutoImports,

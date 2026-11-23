@@ -15,6 +15,7 @@ DO_SNAPSHOT=0
 DO_CPP=0
 DO_FRONTEND=0
 DO_JAVA=0
+DO_AGENT=0
 FAILED=0
 
 usage() {
@@ -29,14 +30,17 @@ usage() {
   --java [模块]      编译 Java；不带模块时编译整个 reactor
   --frontend         前端构建（corepack pnpm build）
   --cpp              C++ 静态检查（模块注册、词条重复键）
+  --agent            问数 Agent（wms-agent）依赖同步 + pytest
   --help             显示帮助
 
 环境变量:
   WMS_STATE_DIR      状态目录，默认 $PARENT_ROOT/.wms-harness-state（已忽略）
+  WMS_AGENT_PYTHON   问数 Agent 使用的解释器（路径或版本，如 3.14）；缺省由 uv 自行选择
 
 说明:
   - 本机无 C++ 编译器时只做静态检查，不把结果写成“通过”。
   - --verify 会跑较慢的编译/构建；失败时按输出修复，不要跳过。
+  - --agent 需要 uv；依赖缓存写在 wms-agent/.uv/cache，不污染用户目录。
 EOF
 }
 
@@ -67,6 +71,9 @@ while [ "$#" -gt 0 ]; do
 			;;
 		--cpp)
 			DO_CPP=1
+			;;
+		--agent)
+			DO_AGENT=1
 			;;
 		--frontend)
 			DO_FRONTEND=1
@@ -176,24 +183,23 @@ check_json() {
 	if have python; then
 		if python -c 'import json,sys; json.load(open(sys.argv[1], encoding="utf-8"))' "$ROOT/feature_list.json"; then
 			ok "feature_list.json 是合法 JSON"
-		else
-			fail "feature_list.json 不是合法 JSON"
+			return
 		fi
-	elif have py; then
+		# Windows 上 PATH 上的 python 可能是 Microsoft Store 存根，失败时改用其它解释器
+	fi
+	if have py; then
 		if py -3 -c 'import json,sys; json.load(open(sys.argv[1], encoding="utf-8"))' "$ROOT/feature_list.json"; then
 			ok "feature_list.json 是合法 JSON"
-		else
-			fail "feature_list.json 不是合法 JSON"
+			return
 		fi
-	elif have node; then
+	fi
+	if have node; then
 		if node -e 'JSON.parse(require("fs").readFileSync(process.argv[1],"utf8"))' "$ROOT/feature_list.json"; then
 			ok "feature_list.json 是合法 JSON"
-		else
-			fail "feature_list.json 不是合法 JSON"
+			return
 		fi
-	else
-		skip "没有 python/node，无法校验 JSON"
 	fi
+	fail "feature_list.json 不是合法 JSON"
 }
 
 check_git() {
@@ -353,6 +359,65 @@ PY
 	fi
 }
 
+check_agent() {
+	say "检查问数 Agent（wms-agent）"
+
+	local agent_dir="$ROOT/wms-agent"
+	if [ ! -d "$agent_dir" ]; then
+		fail "缺少 wms-agent 目录"
+		return
+	fi
+
+	local f
+	for f in pyproject.toml app/main.py app/agent/react.py app/tools/registry.py app/storage/store.py; do
+		if [ -f "$agent_dir/$f" ]; then
+			ok "存在: wms-agent/$f"
+		else
+			fail "缺少 wms-agent/$f"
+		fi
+	done
+
+	local gateway_yaml="$ROOT/wms-java/wms-gateway/src/main/resources/application.yaml"
+	if [ -f "$gateway_yaml" ] && grep -Fq "agent-route" "$gateway_yaml"; then
+		ok "网关已配置 agent-route"
+	else
+		fail "网关 application.yaml 缺少 agent-route"
+	fi
+
+	local nacos_yaml="$ROOT/nacos-config/system.yaml"
+	if [ -f "$nacos_yaml" ] && grep -Fq "agent:" "$nacos_yaml"; then
+		ok "nacos-config/system.yaml 含 agent 端口配置"
+	else
+		fail "nacos-config/system.yaml 缺少 agent 端口配置"
+	fi
+
+	if ! have uv; then
+		fail "缺少 uv；问数 Agent 无法同步依赖或运行测试"
+		return
+	fi
+	ok "uv: $(uv --version 2>/dev/null | head -n 1)"
+
+	local py_args=()
+	if [ -n "${WMS_AGENT_PYTHON:-}" ]; then
+		py_args=(--python "$WMS_AGENT_PYTHON")
+	fi
+
+	say "同步问数 Agent 依赖（uv sync）"
+	if (cd "$agent_dir" && UV_CACHE_DIR="$agent_dir/.uv/cache" uv sync "${py_args[@]+"${py_args[@]}"}"); then
+		ok "wms-agent 依赖同步完成"
+	else
+		fail "uv sync 失败"
+		return
+	fi
+
+	say "运行问数 Agent 测试（uv run pytest）"
+	if (cd "$agent_dir" && UV_CACHE_DIR="$agent_dir/.uv/cache" uv run "${py_args[@]+"${py_args[@]}"}" pytest); then
+		ok "wms-agent 测试通过"
+	else
+		fail "wms-agent 测试失败"
+	fi
+}
+
 hash_file() {
 	local file="$1"
 	if [ -f "$file" ] && have sha256sum; then
@@ -418,6 +483,10 @@ fi
 
 if [ "$DO_FRONTEND" = 1 ]; then
 	check_frontend
+fi
+
+if [ "$DO_AGENT" = 1 ]; then
+	check_agent
 fi
 
 if [ "$DO_SNAPSHOT" = 1 ]; then

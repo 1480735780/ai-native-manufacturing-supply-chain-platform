@@ -11,6 +11,7 @@ from cryptography.hazmat.primitives.asymmetric import rsa
 from fastapi.testclient import TestClient
 
 from app.main import create_app
+from app.security import decode_principal
 
 
 def _client(monkeypatch, public_key_file) -> TestClient:
@@ -111,3 +112,26 @@ def test_user_header_alone_cannot_authorize(monkeypatch, public_key_file):
         "/agent/tools", headers={"user": json.dumps({"user_name": "alice"})}
     )
     assert response.status_code == 401
+
+
+def test_principal_reads_java_token_claims(rsa_keypair, token_factory):
+    """Java 侧 JWT 写 `id`/`orgCode`/`realname`，用户名在 `sub`（JwtTokenEnhancerDataServiceImpl.java:38-41）。"""
+    _, public_pem = rsa_keypair
+    token = token_factory(
+        id="u-42",
+        sub="zhangsan",
+        realname="张三",
+        orgCode="ORG01",
+        user_name="",
+    )
+    principal = decode_principal(token, public_pem)
+    assert principal.user_id == "u-42"
+    assert principal.user_name == "zhangsan"
+
+
+def test_principal_prefers_user_name_claim(rsa_keypair, token_factory):
+    _, public_pem = rsa_keypair
+    token = token_factory(user_name="alice", id="u-7")
+    principal = decode_principal(token, public_pem)
+    assert principal.user_name == "alice"
+    assert principal.user_id == "u-7"

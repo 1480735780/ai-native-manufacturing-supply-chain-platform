@@ -12,6 +12,8 @@ dependencies = [
     "pydantic-settings>=2.3",
     "pyjwt>=2.8",
     "cryptography>=42",
+    # F-012：trace 持久化（schema wms_agent）；未安装时自动降级为内存存储
+    "psycopg[binary]>=3.2",
 ]
 
 [dependency-groups]

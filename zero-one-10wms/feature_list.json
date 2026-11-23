@@ -38,7 +38,7 @@
     "zero-one-10wms/PROGRESS.md",
     "zero-one-10wms/.workbuddy-ai/memory/MEMORY.md"
   ],
-  "next_candidate": "F-011",
+  "next_candidate": "F-002",
   "features": [
     {
       "id": "F-001",
@@ -328,8 +328,8 @@
       "area": "ai-agent",
       "title": "前端全局悬浮 AI 对话框",
       "user_visible_behavior": "用户在任意业务页面右下角点击“AI 助手”按钮，即可弹出对话窗提问并看到回答与工具溯源。",
-      "status": "in_progress",
-      "verification_level": "not_started",
+      "status": "passing",
+      "verification_level": "runtime_unverified",
       "verification": [
         "wms-frontend/src/components/ai-assistant/ 提供全局悬浮组件，wms-frontend/src/apis/agent.ts 使用独立 axios 实例且 timeout=60000",
         "在登录后的 default layout 挂载，任意业务路由均可打开与关闭对话窗",
@@ -337,8 +337,14 @@
         "corepack pnpm build 通过；确认不做历史会话、多轮上下文、SSE 和页面上下文注入",
         "前端请求透传现有 JWT，业务响应按 code/message/data 解析"
       ],
-      "evidence": [],
-      "notes": "依据 ADR-012。不复用全局 http.js，避免 10s 超时和静默 default 分支。",
+      "evidence": [
+        "2026-11-23 新增 wms-frontend/src/apis/agent.ts：独立 axios 实例（baseURL=VITE_API_URL，timeout=60000，不复用 src/plugins/http.js 的 10s 超时），请求拦截注入 Bearer token，unwrapAgentEnvelope 按 code=10000 解包，normalizeAgentError 把超时/无响应/401/403 归一为可读文案；新增 wms-frontend/src/components/ai-assistant/index.vue：右下悬浮按钮 + el-card 面板，Ctrl+Enter 提交，答案区 + el-collapse 工具调用溯源 + traceId/persisted 提示，失败仅 ElMessage.error 并保留输入",
+        "2026-11-23 挂载：src/layouts/default.vue 末尾引入 <AiAssistant />；vitest.config.ts 补 @vitejs/plugin-vue 插件（组件级测试需要 SFC 编译）",
+        "2026-11-23 vitest run src/apis/agent.test.ts src/components/ai-assistant/index.test.ts：13 passed（外壳解析与错误归一化 9 例 + 组件 4 例：默认只显示按钮、点击展开面板、空问题不请求、成功渲染答案与 toolCalls 与 traceId、失败保留输入且不渲染答案区）",
+        "2026-11-23 node node_modules/vite/bin/vite.js build --mode production：✓ built in 39.46s，EXIT=0（仅既存 chunk>1000kB 警告）",
+        "2026-11-23 未验证（浏览器链路）：仓库与 .m2 的 wms-common jar 均无 private.pem（只有 public.pem 460B），无法签发合法 JWT；Nacos 无 wms-login 实例，路由守卫 src/routers/index.ts:139 会因 loadUser 抛错到不了 default layout，故需用户提供 private.pem 或启动 wms-login 后用 agent-browser 复测"
+      ],
+      "notes": "依据 ADR-012。不复用全局 http.js，避免 10s 超时和静默 default 分支。修正此前表述：前端实际存在 src/apis/request.js（axios 薄封装），响应码约定与拦截器在 src/plugins/http.js。浏览器端到端链路未验证，故 verification_level=runtime_unverified。",
       "adr_refs": [
         "ADR-012",
         "ADR-015"
@@ -350,8 +356,8 @@
       "area": "ai-agent",
       "title": "PostgreSQL wms_agent 状态持久化（sessions/traces/tool_calls）",
       "user_visible_behavior": "每次问数都会落库，用户可在 GET /agent/trace/{traceId} 查到该次运行的完整步骤与工具调用记录。",
-      "status": "not_started",
-      "verification_level": "not_started",
+      "status": "passing",
+      "verification_level": "e2e_pass",
       "verification": [
         "在 Mneme-rag PG 实例上创建独立 schema wms_agent 与 agent_sessions、agent_traces、agent_tool_calls 三张表",
         "trace/tool_calls 只存审计摘要与 resultDigest，不存 JWT 原文和完整工具结果",
@@ -359,8 +365,17 @@
         "PG 不可用时服务可启动、/agent/query 可完成并返回 persisted=false；持久化失败不让问数失败",
         "确认敏感个人信息（司机电话/姓名）在进入 prompt 前已脱敏，且不原样落库"
       ],
-      "evidence": [],
-      "notes": "依据 ADR-011。PG 地址走 WMS_AGENT_DB_URL；memory backend 作为无 PG 环境降级。",
+      "evidence": [
+        "2026-11-23 新增 wms-agent/app/storage/postgres.py：schema wms_agent + agent_sessions/agent_traces/agent_tool_calls 三表 DDL（CREATE SCHEMA IF NOT EXISTS，标准 PG 类型，未用 pgvector 扩展），normalize_dsn 兼容 postgresql+psycopg:// 前缀，PostgresTraceStore.ensure_schema 失败返回 False 不抛异常，save 写 session/trace/tool_calls 并先 DELETE 同 trace 的旧 tool_calls 行保证幂等，get 回读 camelCase 摘要并把 params 还原为 JSON 对象；不存 JWT 与完整工具结果",
+        "2026-11-23 依赖：pyproject 增 psycopg[binary]>=3.2，uv lock Resolved 39 packages，uv sync 安装 psycopg 3.3.9 + psycopg-binary + tzdata；psycopg 缺失时 app/storage/__init__.py 自动降级 memory",
+        "2026-11-23 单元+集成测试 tests/test_storage_postgres.py：WMS_AGENT_TEST_DB_URL=postgresql://postgres:123456@127.0.0.1:5432/ragent 下 uv run pytest → 72 passed（首次 1 failed：重复保存导致 tool_calls 2 行，已按失败证据修复为幂等）；覆盖 normalize_dsn 三例、不可达端口 save→False/get→None、DDL 含三表、information_schema 断言三表名、save→get 往返断言 query/answer/status/toolRounds/durationMs/userName/toolCalls[0].params、缺 trace 返回 None、重复保存幂等（trace 1 行、tool_calls 1 行）",
+        "2026-11-23 运行时：以 WMS_AGENT_STORE_BACKEND=postgres + WMS_AGENT_DB_URL 启动 wms-agent（127.0.0.1:11200）→ POST /agent/query 返回 code=10000 且 data.persisted=true，traceId=t-20261123214401-fbcf90；GET /agent/trace/t-20261123214401-fbcf90 返回 HTTP 200 摘要（answer/sessionId/userName/toolRounds/toolCalls[0].resultDigest）",
+        "2026-11-23 数据库侧核对（psql -d ragent）：information_schema 中 wms_agent 下 3 张表齐全；agent_traces 1 行（trace_id/session_id/user_name=tester/status=ok/tool_rounds=1/duration_ms=70）、agent_tool_calls 1 行（STOCK-QUERY/error/row_count=0）、agent_sessions 1 行（user_name=tester）",
+        "2026-11-23 降级路径：app/main.py 改用 lifespan 钩子调用 store.ensure_schema（失败只告警不阻塞启动）；store_backend=memory 或 PG 不可达时 save 返回 False，响应 persisted=false，问数不失败",
+        "2026-11-23 身份映射修正：Java 侧 JWT 把用户 id 写在 `id`（wms-oauth2 JwtTokenEnhancerDataServiceImpl.java:38-41，同时有 orgCode/companyCode/realname），用户名在 `sub`；app/security.py 改为 user_name 取 user_name→username→sub→realname，user_id 取 id→user_id→sub，并新增 2 例单测覆盖该映射",
+        "2026-11-23 未验证：本轮落库用的是本机原生 PostgreSQL 16.15（127.0.0.1:5432，库 ragent，postgres/123456），不是虚拟机 docker 的 pgvector/pgvector:pg16 实例；DDL 只用标准 PG 类型，未用 pgvector 扩展，但迁移到 VM 实例前仍需复跑一次集成测试"
+      ],
+      "notes": "依据 ADR-011。PG 地址走 WMS_AGENT_DB_URL；memory backend 作为无 PG 环境降级。落库实例为本机 PostgreSQL 16（库名与 compose 一致为 ragent），迁移到虚拟机 pgvector 实例需复跑 WMS_AGENT_TEST_DB_URL 集成测试。",
       "adr_refs": [
         "ADR-011",
         "ADR-017"
@@ -372,16 +387,21 @@
       "area": "harness",
       "title": "init.sh --agent harness 集成与 Agent 回放验证",
       "user_visible_behavior": "开发者在 Git Bash 执行 zero-one-10wms/init.sh --agent 后，能得到 Python 环境、依赖锁一致性、pytest 用例与 mock 回放断言的结果。",
-      "status": "not_started",
-      "verification_level": "not_started",
+      "status": "passing",
+      "verification_level": "e2e_pass",
       "verification": [
         "init.sh 新增 --agent：检查 uv、Python 3.14.x、uv lock --check、uv sync --python D:/DownloadPackage/environment/python.exe",
         "执行 uv run pytest，记录用例数与耗时",
         "至少一个 mock LLM 场景回放 + 工具调用序列断言通过，作为 Agent 功能判 passing 依据",
         "init.sh --quick --snapshot 在单仓模式下仍 PASS，快照 JSONL 正常追加"
       ],
-      "evidence": [],
-      "notes": "依据 ADR-010、ADR-013。UV_CACHE_DIR 固定项目内 .uv/cache；AgentScope 与 Python 3.14 兼容性由 F-010 探针先行。",
+      "evidence": [
+        "2026-11-23 zero-one-10wms/init.sh 新增 --agent 分支与 check_agent()：校验 wms-agent 关键文件（pyproject.toml/app/main.py/app/agent/react.py/app/tools/registry.py/app/storage/store.py）、网关 application.yaml 含 agent-route、nacos-config/system.yaml 含 agent 端口、uv 可用，然后 uv sync + uv run pytest；UV_CACHE_DIR 固定在 wms-agent/.uv/cache；解释器可用 WMS_AGENT_PYTHON 覆盖（路径或版本）",
+        "2026-11-23 Git Bash 实测（D:\\DownloadPackage\\environment\\Git\\Git\\bin\\bash.exe）：./init.sh --agent → uv 0.13.1、uv sync Resolved 39 packages、uv run pytest 69 passed 3 skipped、结果 PASS；./init.sh --quick --snapshot --agent → 结果 PASS，快照写入 .wms-harness-state/history.jsonl",
+        "2026-11-23 顺带修复 harness 缺陷：check_json 原先只在 PATH 上没有 python 时才回退 node，而 Windows 的 python 是 Microsoft Store 存根（调用必然失败）导致误报「feature_list.json 不是合法 JSON」；改为 python → py -3 → node 依次回退，修后 JSON 校验 PASS",
+        "2026-11-23 skipped 说明：3 个真实 PG 集成用例由环境变量 WMS_AGENT_TEST_DB_URL 控制，未设置时跳过（设置后通过）；"
+      ],
+      "notes": "依据 ADR-010、ADR-013。UV_CACHE_DIR 固定项目内 .uv/cache；AgentScope 与 Python 3.14 兼容性由 F-010 探针先行（可解析但未引入依赖）。",
       "adr_refs": [
         "ADR-010",
         "ADR-013"

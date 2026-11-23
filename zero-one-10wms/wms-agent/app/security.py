@@ -2,7 +2,8 @@
 
 约定：
 - 只认 `Authorization: Bearer <JWT>`，用 public.pem 验 RS256 签名并校验 exp；
-- 身份优先取 JWT 里的 `user_name`（兼容 `username`），`sub` 作用户 ID 候选；
+- 身份优先取 JWT 里的 `user_name`（兼容 `username`、`sub`、`realname`），
+  用户 id 取 `id`（Java 侧 JwtTokenEnhancerDataServiceImpl.java:38 写入），其次 `user_id`、`sub`；
 - 网关下发的 `user` 请求头只作交叉校验，不作权威；不一致只记 warning，不拒绝；
 - 缺 token / 签名无效 / 过期一律拒绝，不 fallback 到 user 头。
 """
@@ -78,13 +79,26 @@ def decode_principal(token: str, public_key: str) -> Principal:
     except jwt.InvalidTokenError as exc:
         raise AuthError("token 无效") from exc
 
-    user_name = claims.get("user_name") or claims.get("username") or ""
-    user_id = claims.get("sub")
+    user_name = (
+        claims.get("user_name")
+        or claims.get("username")
+        or claims.get("sub")
+        or claims.get("realname")
+        or ""
+    )
+    # Java 侧把用户 id 放进 `id`（JwtTokenEnhancerDataServiceImpl.java:38），
+    # `sub` 在 Spring Security 中通常是用户名，仅作兜底候选。
+    raw_user_id = claims.get("id")
+    if raw_user_id is None:
+        raw_user_id = claims.get("user_id")
+    if raw_user_id is None:
+        raw_user_id = claims.get("sub")
+    user_id = str(raw_user_id) if raw_user_id is not None else None
     raw_authorities = claims.get("authorities") or []
     if isinstance(raw_authorities, str):
         raw_authorities = [raw_authorities]
     return Principal(
-        user_id=str(user_id) if user_id is not None else None,
+        user_id=user_id,
         user_name=str(user_name),
         authorities=tuple(str(item) for item in raw_authorities),
     )

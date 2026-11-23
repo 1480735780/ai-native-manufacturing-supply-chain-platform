@@ -14,7 +14,7 @@ WMS 问数 Agent 微服务（Python 3.14.7 + uv + FastAPI）。
 ## 环境准备
 
 ```bash
-export UV_CACHE_DIR=/d/Learning/code/AIWMSproject/.uv/cache
+export UV_CACHE_DIR=$(pwd)/.uv/cache
 uv sync --python /d/DownloadPackage/environment/python.exe
 ```
 
@@ -34,6 +34,36 @@ uv run pytest                                   # 单元/契约测试
 curl http://127.0.0.1:11200/agent/health       # => {"status":"ok"}
 ```
 
+harness 一键校验（Git Bash，仓库根 `zero-one-10wms`）：
+
+```bash
+./init.sh --agent        # 检查关键文件 + 网关路由 + uv + uv sync + uv run pytest
+```
+
+`WMS_AGENT_PYTHON` 可覆盖解释器（路径或版本，如 `3.14`）；缺省由 uv 自行选择。
+
+## trace 持久化（F-012）
+
+默认后端为内存（`persisted=false`）。接 PostgreSQL 时：
+
+```bash
+export WMS_AGENT_STORE_BACKEND=postgres
+export WMS_AGENT_DB_URL=postgresql://postgres:postgres@192.168.89.128:5432/ragent
+```
+
+服务启动时自动创建 schema `wms_agent` 与 `agent_sessions` / `agent_traces` /
+`agent_tool_calls` 三张表（只用标准 PG 类型，不依赖 pgvector 扩展）；
+建表失败只告警不阻塞启动，PG 不可达时问数照常返回并标 `persisted=false`。
+只落审计摘要与 `resultDigest`，不落 JWT 原文与完整工具结果。
+
+真实 PG 集成测试需显式给出连接串：
+
+```bash
+WMS_AGENT_TEST_DB_URL=postgresql://postgres:123456@127.0.0.1:5432/ragent uv run pytest
+```
+
+未设置该变量时，3 个集成用例自动跳过。
+
 ## 配置
 
 复制 `.env.example` 为 `.env` 后按需修改；`.env` 已被仓库根 `.gitignore` 排除，
@@ -46,7 +76,7 @@ curl http://127.0.0.1:11200/agent/health       # => {"status":"ok"}
 | GET | `/agent/health` | 匿名 | 固定返回 `{"status":"ok"}`（F-006） |
 | GET | `/agent/tools` | JWT | 6 个工具 Schema（F-009） |
 | POST | `/agent/query` | JWT | 同步问数（F-010） |
-| GET | `/agent/trace/{traceId}` | JWT | 调用审计摘要（F-010 内存后端；F-012 起持久化） |
+| GET | `/agent/trace/{traceId}` | JWT | 调用审计摘要（F-010 起可用；F-012 起可落 PG） |
 
 ### 问数请求/响应
 

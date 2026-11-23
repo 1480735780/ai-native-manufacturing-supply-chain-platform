@@ -18,6 +18,8 @@ import HomeStyleDialog from "./components/HomeStyleDialog.vue";
 import ClearCacheDialog from "./components/ClearCacheDialog.vue";
 import LogoutDialog from "./components/LogoutDialog.vue";
 
+import AiAssistant from "@/components/ai-assistant/index.vue";
+
 import avatarImage from "@/assets/layoutIcon/avatar2.png";
 import guestImage from "@/assets/layoutIcon/游客.png";
 import noticeDetail from "./components/notice-detail.vue";
@@ -577,6 +579,8 @@ onMounted(() => {
 	<!-- 点击右上角按钮中的查看全部后显示的组件 -->
 	<TotalDialog v-model:visible="dialogVisible" :status="status"></TotalDialog>
 	<noticeDetail v-model:control="showDetail" :dialogTitle="dialogTitle" :noticeId="noticeId"></noticeDetail>
+	<!-- 问数助手悬浮窗 -->
+	<AiAssistant />
 </template>
 
 <style scoped>
