@@ -151,9 +151,9 @@ WMS_AGENT_LLM_API_KEY=
 # Nacos（可选，只读）
 WMS_AGENT_NACOS_ENABLED=false
 
-# PG（F-012）
-WMS_AGENT_STORE_BACKEND=memory
-WMS_AGENT_DB_URL=
+# PG（F-012）：默认 postgres 持久化；无 PG 环境可改 memory 降级（persisted=false）
+WMS_AGENT_STORE_BACKEND=postgres
+WMS_AGENT_DB_URL=postgresql://postgres:postgres@127.0.0.1:5432/ragent
 ```
 
 密钥只允许来自运行环境或 gitignored `.env`，不进代码、测试 fixture、Nacos 明文、日志、快照和 `MEMORY.md`。

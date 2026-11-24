@@ -21,6 +21,7 @@ from app.llm.mock import MockProvider, load_scenario
 from app.main import create_app
 from app.routers import query as query_router
 from app.security import Principal, require_principal
+from app.storage.memory import MemoryTraceStore
 from app.tools.gateway_client import GatewayClient
 
 FIXTURES = Path(__file__).parent / "fixtures" / "llm"
@@ -59,6 +60,8 @@ def _build_app(
         return httpx.Response(status, json=payload)
 
     app = create_app()
+    # 回放测试用内存存储，避免依赖本地 .env 的 PG 默认配置（不联网、不落库）。
+    app.state.store = MemoryTraceStore()
     app.dependency_overrides[query_router.get_provider] = lambda: provider
     app.dependency_overrides[query_router.get_client] = lambda: GatewayClient(
         "http://gateway.test", transport=httpx.MockTransport(handler)

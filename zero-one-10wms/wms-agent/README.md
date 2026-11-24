@@ -44,12 +44,17 @@ harness 一键校验（Git Bash，仓库根 `zero-one-10wms`）：
 
 ## trace 持久化（F-012）
 
-默认后端为内存（`persisted=false`）。接 PostgreSQL 时：
+默认后端为 PostgreSQL（`.env.example` 与本地 `.env` 均为 `WMS_AGENT_STORE_BACKEND=postgres`，
+`WMS_AGENT_DB_URL` 指向库 `ragent`），正常启动即持久化，响应 `persisted=true`。
+无 PG 环境可改回内存降级（`WMS_AGENT_STORE_BACKEND=memory`，`persisted=false`，问数不失败）：
 
 ```bash
-export WMS_AGENT_STORE_BACKEND=postgres
-export WMS_AGENT_DB_URL=postgresql://postgres:postgres@192.168.89.128:5432/ragent
+# 仅在需要降级到内存时设置（或修改本地 .env）
+export WMS_AGENT_STORE_BACKEND=memory
 ```
+
+连接串/口令属运行配置，只写入本地 `.env`（gitignore 排除），不入库；`.env.example`
+为非密模板，需按实际 PG 实例填写 `WMS_AGENT_DB_URL`。
 
 服务启动时自动创建 schema `wms_agent` 与 `agent_sessions` / `agent_traces` /
 `agent_tool_calls` 三张表（只用标准 PG 类型，不依赖 pgvector 扩展）；

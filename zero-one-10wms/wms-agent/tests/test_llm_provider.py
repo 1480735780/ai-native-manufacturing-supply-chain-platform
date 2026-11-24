@@ -184,7 +184,8 @@ async def test_openai_compatible_http_error_becomes_provider_error():
 
 
 def test_build_provider_selects_mock_by_default():
-    provider = build_provider(Settings())
+    # 不读本地 .env：本地 .env 可能配了真实 LLM（openai），那属于运行环境而非默认值。
+    provider = build_provider(Settings(_env_file=None))
     assert isinstance(provider, MockProvider)
 
 
@@ -197,11 +198,16 @@ def test_build_provider_rejects_unknown_provider():
 def test_no_api_key_material_in_repository():
     pattern = re.compile(r"sk-[A-Za-z0-9_\-]{12,}")
     skip_dirs = {".venv", ".uv", "__pycache__", ".git", ".pytest_cache"}
+    # 本地 .env / .env.local 是 gitignore 排除的运行配置，密钥按设计只应出现在那里，
+    # 不属于入库文件；.env.example 是入库模板，仍纳入扫描。
+    local_env_files = {".env", ".env.local"}
     offenders: list[str] = []
     for path in PROJECT_ROOT.rglob("*"):
         if not path.is_file():
             continue
         if any(part in skip_dirs for part in path.parts):
+            continue
+        if path.name in local_env_files:
             continue
         if path.suffix in {".pyc", ".pyo"}:
             continue

@@ -36,6 +36,10 @@ usage() {
 环境变量:
   WMS_STATE_DIR      状态目录，默认 $PARENT_ROOT/.wms-harness-state（已忽略）
   WMS_AGENT_PYTHON   问数 Agent 使用的解释器（路径或版本，如 3.14）；缺省由 uv 自行选择
+  WMS_AGENT_STORE_BACKEND / WMS_AGENT_DB_URL
+                      trace 持久化配置，默认在 wms-agent/.env 中为 postgres（库 ragent）；
+                      无 PG 环境可改回 memory 降级（persisted=false）。密钥与连接串只在
+                      .env（gitignore 排除），.env.example 为非密模板。
 
 说明:
   - 本机无 C++ 编译器时只做静态检查，不把结果写成“通过”。
@@ -389,6 +393,14 @@ check_agent() {
 		ok "nacos-config/system.yaml 含 agent 端口配置"
 	else
 		fail "nacos-config/system.yaml 缺少 agent 端口配置"
+	fi
+
+	# 持久化配置模板应默认 postgres（实际连接串/口令只在本地 .env）
+	local env_example="$agent_dir/.env.example"
+	if [ -f "$env_example" ] && grep -Fq "WMS_AGENT_STORE_BACKEND=postgres" "$env_example"; then
+		ok ".env.example 默认 postgres 持久化"
+	else
+		warn ".env.example 未默认 postgres 持久化（允许无 PG 环境改 memory 降级）"
 	fi
 
 	if ! have uv; then

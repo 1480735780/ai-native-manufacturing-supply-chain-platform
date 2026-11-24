@@ -5,6 +5,7 @@
 ## 当前已验证状态
 
 - 日期：2026-11-24
+- 问数 Agent 收尾（2026-11-24 晚）：默认持久化配置已固化到 `.env`（本地）与 `.env.example`/实施方案/README（入库模板），正常重启即从 `.env` 读 PG 配置，无需进程级临时覆盖；复验 `persisted=true`。相关测试隔离修复后 `uv run pytest` 72 passed、`init.sh --agent` 69 passed 3 skipped PASS。问数 Agent（F-006~F-013）就此结项。
 - 父仓库：`main`（F-006~F-013 已提交；本轮追加 F-011 浏览器 e2e 证据并单独提交，HEAD 见 `git log`）
 - 嵌套历史仓库：`zero-one-10wms/.git` 仍存在，HEAD `7ef08d8`，但父仓库不维护其指针，不作为提交目标
 - 跟踪结构：**单仓模式**。父仓库索引中 `zero-one-10wms/*` 全部为 mode `100644` 普通文件，无 `160000` gitlink 条目；`zero-one-10wms/` 下的 ADR、`init.sh`、`AGENTS.md`、`architecture.md`、`process.md`、`feature_list.json`、`PROGRESS.md` 均已直接被父仓库跟踪。

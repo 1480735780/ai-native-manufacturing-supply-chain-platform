@@ -405,7 +405,10 @@
         "2026-11-23 zero-one-10wms/init.sh 新增 --agent 分支与 check_agent()：校验 wms-agent 关键文件（pyproject.toml/app/main.py/app/agent/react.py/app/tools/registry.py/app/storage/store.py）、网关 application.yaml 含 agent-route、nacos-config/system.yaml 含 agent 端口、uv 可用，然后 uv sync + uv run pytest；UV_CACHE_DIR 固定在 wms-agent/.uv/cache；解释器可用 WMS_AGENT_PYTHON 覆盖（路径或版本）",
         "2026-11-23 Git Bash 实测（D:\\DownloadPackage\\environment\\Git\\Git\\bin\\bash.exe）：./init.sh --agent → uv 0.13.1、uv sync Resolved 39 packages、uv run pytest 69 passed 3 skipped、结果 PASS；./init.sh --quick --snapshot --agent → 结果 PASS，快照写入 .wms-harness-state/history.jsonl",
         "2026-11-23 顺带修复 harness 缺陷：check_json 原先只在 PATH 上没有 python 时才回退 node，而 Windows 的 python 是 Microsoft Store 存根（调用必然失败）导致误报「feature_list.json 不是合法 JSON」；改为 python → py -3 → node 依次回退，修后 JSON 校验 PASS",
-        "2026-11-23 skipped 说明：3 个真实 PG 集成用例由环境变量 WMS_AGENT_TEST_DB_URL 控制，未设置时跳过（设置后通过）；"
+        "2026-11-23 skipped 说明：3 个真实 PG 集成用例由环境变量 WMS_AGENT_TEST_DB_URL 控制，未设置时跳过（设置后通过）；",
+        "2026-11-24 持久化默认配置固化：wms-agent/.env（本地 gitignored）与 .env.example（入库模板）/实施方案 §4.1/README 均把 WMS_AGENT_STORE_BACKEND 改为 postgres、WMS_AGENT_DB_URL 指向库 ragent，正常启动即从 .env 读 PG 配置，无需进程级临时覆盖；init.sh check_agent() 增『.env.example 默认 postgres』检查并在 usage() 说明 PG 环境变量。",
+        "2026-11-24 测试隔离修复（此前 2 项失败为本地真实 LLM .env 引起的既有问题）：test_build_provider_selects_mock_by_default 改用 Settings(_env_file=None) 绕开本地 .env 测真正默认值；test_no_api_key_material_in_repository 排除 gitignored 本地 .env/.env.local（.env.example 仍扫描）；test_query_replay._build_app 显式注入 MemoryTraceStore 使回放测试不依赖默认后端。修复后 uv run pytest（无 TEST_DB_URL）= 69 passed 3 skipped；带 WMS_AGENT_TEST_DB_URL=postgresql://postgres:123456@127.0.0.1:5432/ragent = 72 passed；Git Bash ./init.sh --agent = 69 passed 3 skipped，结果 PASS，exit 0。",
+        "2026-11-24 正常重启复验：停掉全部旧 uvicorn 进程后，用仅 cd+wvicorn 的启动脚本（无 WMS_AGENT_STORE_BACKEND/DB_URL 进程级注入）单进程启动 11200，health 200；直接 POST /agent/query（真实 JWT，本地 .env 仍为 OpenRouter 真实 LLM）返回 code=10000、persisted=true、traceId=t-20261124095733-c350ca、真实 LLM 答案、toolCalls=1；psql 核对 wms_agent.agent_traces/agent_tool_calls 均新增该 trace 行（admin/ok、STOCK-QUERY/empty/0）。证明默认配置链路正常重启后即持久化，问数 Agent 彻底收尾。"
       ],
       "notes": "依据 ADR-010、ADR-013。UV_CACHE_DIR 固定项目内 .uv/cache；AgentScope 与 Python 3.14 兼容性由 F-010 探针先行（可解析但未引入依赖）。",
       "adr_refs": [
