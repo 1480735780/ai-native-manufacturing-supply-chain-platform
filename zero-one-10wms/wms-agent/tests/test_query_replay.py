@@ -351,6 +351,10 @@ def test_scenarios_are_deterministic(scenario: str) -> None:
             response = client.post(
                 "/agent/query", json={"query": "回放"}, headers=_headers()
             )
-        return response.json()["data"]["toolCalls"]
+        calls = response.json()["data"]["toolCalls"]
+        # durationMs 是真实耗时，两次回放必然可能差 1ms；只比对确定性字段
+        return [
+            {k: v for k, v in call.items() if k != "durationMs"} for call in calls
+        ]
 
     assert run_once() == run_once()
