@@ -4,7 +4,7 @@
 
 ## 当前已验证状态
 
-- 日期：2026-11-23
+- 日期：2026-11-24
 - 父仓库：`main`（F-006~F-013 已提交；本轮追加 F-011 浏览器 e2e 证据并单独提交，HEAD 见 `git log`）
 - 嵌套历史仓库：`zero-one-10wms/.git` 仍存在，HEAD `7ef08d8`，但父仓库不维护其指针，不作为提交目标
 - 跟踪结构：**单仓模式**。父仓库索引中 `zero-one-10wms/*` 全部为 mode `100644` 普通文件，无 `160000` gitlink 条目；`zero-one-10wms/` 下的 ADR、`init.sh`、`AGENTS.md`、`architecture.md`、`process.md`、`feature_list.json`、`PROGRESS.md` 均已直接被父仓库跟踪。
@@ -21,6 +21,16 @@
 - 当前 blocker：本机无 cmake/MSVC，C++ 只能 `static_pass + runtime_unverified`；运行时/端到端环境未就绪（`F-004`）；`init.sh` 需用 Git Bash 执行。前端浏览器链路已用本轮实测打通（私钥就在仓库 jwt.pfx/jwt.jks + 现启 Java 服务），原 blocker 已解除。
 
 ## 本轮记录
+
+### 追加：F-011 真实 LLM 浏览器 e2e 复跑（2026-11-23 晚）
+
+- 目标：用户要求用**真实 LLM**（而非之前的 mock 场景）重跑 F-011 浏览器端到端。
+- 前置确认：`wms-agent/.env` 为 `provider=openai` / OpenRouter `baidu/ernie-5.5-flash-preview:free`；env 写入 22:49:44、agent 22:50:07 启动，确认加载真实 LLM。直接 `POST /agent/query` 探针拿到 LLM 生成的 Markdown 答案（非 mock 固定文案），证明真实模型链路可用。
+- 浏览器链路：vite 重启到 `127.0.0.1:3000`（原 5173 进程已退出）；Redis `admin:token` 真实 JWT 经 base64 注入 localStorage → `/home` 登录态生效（`current-user`/`get-menus` 200）→ 点『问数助手』→ 输入『查询 A01 库位的库存情况』→ 提问。
+- 失败路径实测：首轮 OpenRouter 免费额度瞬时 429 → `POST /api/agent/query` 返回 `{code:9994,message:模型调用失败}`；页面未渲染答案区且保留输入，符合 F-011「失败显式提示且不清空输入」要求。
+- 成功路径实测：重试后 HAR 捕获 `{code:10000,answer:**结论：A01 库位当前没有库存数据。**...,traceId:t-20261123232712-583fb2,persisted:false,toolCalls:[STOCK-QUERY/empty/0 行/36 ms]}`；截图与 DOM 均显示答案、工具调用溯源与 traceId。
+- 未粉饰：`persisted=false`（本轮 memory backend）；首次 429 失败如实记录。
+- 证据：`zero-one-10wms/.runtime_tmp/f011_real_llm_e2e/e2e_retry.har`（6KB）、`panel_real_llm.png`（109KB），gitignore 排除；已扫描确认无 LLM API key 明文泄漏（HAR 中仅含真实用户 JWT 于 Authorization 头，属预期）。
 
 ### 追加：F-011 浏览器端到端实测（解除 runtime_unverified，升级 e2e_pass）
 
@@ -52,8 +62,8 @@
   - ~~真实用户 JWT 经网关 → Java 业务端点的完整链路~~ **本轮已实测**：wms-login 真实登录 token 经网关验签 + Redis 登出校验 → 6 个 Java 工具端点返回真实数据 → agent 拿到真实库存 rowCount=6。
   - 网关 `inner-paths` 与 `RESOURCE_ROLES_MAP` 的实际判定（判定在 starter jar 内，本环境 `open-authorization=false`，无法区分 white/inner 差异；Python 侧 401 已兜底）。
   - F-012 落库用的是本机原生 PostgreSQL 16.15，**未在虚拟机 pgvector 镜像上复验**。
-  - 本轮浏览器 e2e 使用 `persisted=false`（memory backend），未与 PG 持久化同时打开；两条链路各自单独通过。
-- 下一步：`F-002` 储位管理前端页面（`next_candidate`）；`F-004` 运行时基线仍 `blocked`。
+  - ~~本轮浏览器 e2e 使用 `persisted=false`（memory backend），未与 PG 持久化同时打开；两条链路各自单独通过。~~ **2026-11-24 已消除**：补做三合一合并 e2e（真实 LLM + 浏览器 + PG 持久化同时打开），`persisted=true`，详见下方「追加：三合一合并 e2e」。
+- 下一步：`F-002` 储位管理前端页面（`next_candidate`）；`F-004` 运行时基线仍 `blocked`。2026-11-24 已补齐问数 Agent 三合一合并 e2e 缺口（见下），AI-Agent 轨道剩余风险仅剩 VM pgvector 复验等非阻塞项。
 - 用户待办（可选）：若要把 trace 落到虚拟机，`192.168.89.128` 用 `pgvector/pgvector:pg16` 起库（库名 `ragent`），连接串 `postgresql+psycopg://postgres:postgres@192.168.89.128:5432/ragent`；不拉也不阻塞，F-006~F-013 均已通过，缺失时按 `persisted=false` 降级。
 - 已知风险：
   - **AgentScope 探针已通过**（`uv pip install --dry-run agentscope` → 97 包可解析、agentscope 2.0.12 兼容 Python 3.14.7，故 F-010 不记 blocked）；但 ReAct 循环按方案自研 `LLMProvider` + ToolSchema 契约实现，**未引入 AgentScope 依赖**（避免引入未被使用的 73 个传递依赖）——与 `feature_list.json` F-010 标题/notes 一致记录。
@@ -63,6 +73,16 @@
   - 本机 `postgres/123456` 是明文口令且本轮在库中建了 `ragent` 库，属测试环境痕迹，交付前宜改口令或清理该库。
 
 ## 最近会话（append-only）
+
+### 2026-11-24 问数 Agent 三合一合并 e2e（真实 LLM + 浏览器 + PG 持久化同时打开）
+
+- 用户诉求（m00001/m00031）：此前浏览器 e2e 用 `persisted=false`（memory backend），PG 持久化由 F-012 单独 e2e 证明，两条链路仍未同时打开；用户确认「可以，你测试下端到端的验证」。目标是把真实 LLM、浏览器 e2e、PG 持久化放到同一次运行中验证，补齐唯一残留缺口后回填 `feature_list.json` 与 `PROGRESS.md`。
+- 环境前置：wms-agent `.env` 为 `provider=openai` / OpenRouter `baidu/ernie-5.5-flash-preview:free`（真实 LLM）；通过 cmd 包装脚本 `zero-one-10wms/.runtime_tmp/start_agent_pg.cmd` 以 `WMS_AGENT_STORE_BACKEND=postgres` + `WMS_AGENT_DB_URL=postgresql://postgres:123456@127.0.0.1:5432/ragent` 重启 agent（pid 27272，日志 `agent_pg_combined.log`），即**同一进程同时开真实 LLM + PG 持久化**。JWT 取自 Redis `admin:token`（VM 192.168.89.128:6379，密码 `01star`），值须 `json.loads` 去外层引号得 700 字符裸 JWT（https:// 前缀无关），经网关 `/login/current-user` 验签通过。
+- 直连探针：`POST http://127.0.0.1:11200/agent/query`（真实 JWT，body `{"query":"查询 A01 库位的库存情况"}`）→ HTTP 200 `code=10000`、**`persisted=true`**、`traceId=t-20261124092640-e16eb8`、真实 LLM Markdown 答案「结论：A01 库位当前没有库存数据」、`toolCalls=[STOCK-QUERY/empty/0 行/46 ms]`。
+- 浏览器 e2e：Redis 真实 JWT 经 base64 注入 localStorage（`tokenLen=700`）→ `http://127.0.0.1:3000/home` 登录态生效（vite 代理 `/api`→网关 10001）→ 点『问数助手』→ 输入『查询 A01 库位的库存情况』→ 点『提问』。HAR（`zero-one-10wms/.runtime_tmp/f012_combined_e2e/combined.har`，gitignore 排除）捕获 `POST http://127.0.0.1:3000/api/agent/query`（Authorization: Bearer <真实 JWT>）→ HTTP 200 `{code:10000, data:{answer:**结论：A01 库位当前没有库存数据。** + 可能原因, sessionId:s-20261124092842-f68ae5, traceId:t-20261124092842-32b880, persisted:true, toolCalls:[STOCK-QUERY/status=empty/rowCount=0/durationMs=49/endpoint=/stock/inventory-query/query-all/resultDigest=sha256:4f53cda18c2baa0c]}}`；DOM 面板显示答案、『工具调用（1）STOCK-QUERY 无数据 0 行 49 ms』与『traceId t-20261124092842-32b880 · 已持久化』。
+- 回读与落库：`GET http://127.0.0.1:10001/agent/trace/t-20261124092842-32b880`（经网关、真实 JWT）→ `code=10000`、status=ok、userName=admin、toolRounds=1、答案一致；`psql -d ragent` 核对三表均新增 1 行：`agent_traces`(`t-20261124092842-32b880`,admin,ok,1,3317ms)、`agent_tool_calls`(seq=0,STOCK-QUERY,empty,row_count=0,49ms,endpoint,sha256:4f53cda18c2baa0c)、`agent_sessions`(`s-20261124092842-f68ae5`,admin,user_id=2c9221a4717bb44c01717d01c6ff0540)。测试前基线各 1 行（tester），测试后 traces=3 行（含直连探针 1 行）。
+- 结论：**两条链路已同时打开**，唯一残留缺口消除；`feature_list.json` F-011/F-012 evidence 已追加合并 e2e 条目，`updated_at` 改为 2026-11-24；F-011/F-012 仍为 `passing`+`e2e_pass`，F-006~F-013 状态不变。
+- 未粉饰/剩余风险：PG 仍为本机原生 PostgreSQL 16.15（非 VM pgvector 镜像）；JWT 私钥明文、Redis 注销黑名单、网关 inner-paths 判定等既有风险不变；测试痕迹（库 `ragent` 与明文口令 `postgres/123456`）交付前宜清理。
 
 ### 2026-11-23 问数助手「库存查询完成。」答非所问修复（方案 A：真实 LLM）
 
