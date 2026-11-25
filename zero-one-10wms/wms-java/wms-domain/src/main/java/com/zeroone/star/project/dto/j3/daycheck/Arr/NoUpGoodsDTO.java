@@ -1,5 +1,6 @@
 package com.zeroone.star.project.dto.j3.daycheck.Arr;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;
 import lombok.Data;
@@ -18,6 +19,15 @@ import java.time.LocalDateTime;
 public class NoUpGoodsDTO {
     @ApiModelProperty(value = "库存状态")
     private String kucunsta;
+
+    // 仅巡检分页端点赋值；旧裸 List 端点保持 null 并省略输出，旧契约不变
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    @ApiModelProperty(value = "稳定行 ID（wm_in_qm_i 主键）")
+    private String rowId;
+
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    @ApiModelProperty(value = "到货通知单 ID")
+    private String noticeId;
 
     @ApiModelProperty(value = "储位")//wm_tuopan
     private String bin_id;

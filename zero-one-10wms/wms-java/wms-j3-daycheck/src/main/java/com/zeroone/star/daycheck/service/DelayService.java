@@ -10,7 +10,7 @@ import java.util.List;
 
 public interface DelayService extends IService<Delay> {
 
-    PageDTO<WaringAllDTO> selectAll(Integer pageIndex, Integer pageSize);
+    PageDTO<WaringAllDTO> selectAll(Integer pageIndex, Integer pageSize, String sort);
 
     List<Delay> selectExcel();
 }

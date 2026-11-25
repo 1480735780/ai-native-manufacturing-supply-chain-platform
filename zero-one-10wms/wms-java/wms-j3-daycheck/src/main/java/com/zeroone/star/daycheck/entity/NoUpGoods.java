@@ -1,5 +1,6 @@
 package com.zeroone.star.daycheck.entity;
 
+import com.alibaba.excel.annotation.ExcelIgnore;
 import com.alibaba.excel.annotation.ExcelProperty;
 import com.zeroone.star.daycheck.config.LocalDateTimeExcel;
 import io.swagger.annotations.ApiModel;
@@ -18,6 +19,17 @@ import java.time.LocalDateTime;
 @Data
 @ApiModel("收货未上架-返回数据")//下面的数据和业务参考项目返回数据 看是否存在在wm_tuopan上 wm_in_qm_i验收记录
 public class NoUpGoods {
+    // 巡检数据源需要稳定行键：NoUpMapper.xml 的 resultMap 映射 id/im_notice_id，
+    // 实体必须有对应属性，否则 MyBatis 逐行映射时抛 There is no setter for property named 'id'。
+    // 两列不参与旧页面的 Excel 导出。
+    @ExcelIgnore
+    @ApiModelProperty(value = "主键（wm_in_qm_i.id，巡检行键 rowId）")
+    private String id;
+
+    @ExcelIgnore
+    @ApiModelProperty(value = "到货通知单（wm_in_qm_i.im_notice_id，巡检 noticeId）")
+    private String im_notice_id;
+
     @ApiModelProperty(value = "库存状态")//wm_in_qm_i
     @ExcelProperty(value = "库存状态" ,index = 0)
     private String bin_sta;

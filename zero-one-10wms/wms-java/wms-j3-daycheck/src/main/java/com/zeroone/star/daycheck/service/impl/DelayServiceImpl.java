@@ -19,7 +19,7 @@ import java.util.List;
 public class DelayServiceImpl extends ServiceImpl<DelayMapper, Delay> implements DelayService {
 
     @Override
-    public PageDTO<WaringAllDTO> selectAll(Integer pageIndex, Integer pageSize) {
+    public PageDTO<WaringAllDTO> selectAll(Integer pageIndex, Integer pageSize, String sort) {
         LocalDateTime now = LocalDateTime.now();
 
         Page<Delay> page = new Page<>(pageIndex,pageSize);
@@ -27,6 +27,13 @@ public class DelayServiceImpl extends ServiceImpl<DelayMapper, Delay> implements
         QueryWrapper<Delay> queryWrapper = new QueryWrapper<>();
 
         queryWrapper.lt("im_data",now);
+        if ("oldest".equals(sort)) {
+            // im_data + id 稳定二级排序，避免同时间数据顺序漂移
+            queryWrapper.orderByAsc("im_data", "id");
+        } else {
+            // 保持改造前观察到的默认顺序：新→旧
+            queryWrapper.orderByDesc("im_data", "id");
+        }
 
         Page <Delay> delayPage = baseMapper.selectPage(page,queryWrapper);
 

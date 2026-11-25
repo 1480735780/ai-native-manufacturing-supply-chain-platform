@@ -3,3 +3,9 @@ server:
 spring:
   application:
     name: ${sn.auth}
+
+
+agent:
+  service:
+    username: ${AGENT_SERVICE_USERNAME:}
+    warehouses: ${AGENT_SERVICE_WAREHOUSES:W01}

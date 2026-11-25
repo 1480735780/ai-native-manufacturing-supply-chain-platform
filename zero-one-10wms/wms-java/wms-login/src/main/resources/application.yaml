@@ -23,3 +23,23 @@ ribbon:
   OkToRetryOnAllOperations: false  #对所有操作请求都进行重试，如果是get则可以，如果是post，put等操作没有实现幂等的情况下是很危险的,所以设置为false
   ConnectTimeout: 5000  #（默认1s，即1000）请求连接的超时时间
   ReadTimeout: 5000 #（默认1s，即1000）请求处理的超时时间
+
+
+agent:
+  service:
+    api-key: ${AGENT_SERVICE_API_KEY:}
+    api-key-id: ${AGENT_SERVICE_API_KEY_ID:k1}
+    api-key-previous: ${AGENT_SERVICE_API_KEY_PREVIOUS:}
+    api-key-previous-id: ${AGENT_SERVICE_API_KEY_PREVIOUS_ID:}
+    username: ${AGENT_SERVICE_USERNAME:}
+    password: ${AGENT_SERVICE_PASSWORD:}
+    warehouses: ${AGENT_SERVICE_WAREHOUSES:W01}
+    token-ttl-seconds: ${AGENT_SERVICE_TOKEN_TTL_SECONDS:1800}
+    # 服务令牌自签用的密钥库（与 wms-oauth2 的 jwt.jks 同一把钥匙）；留空则拒绝签发
+    private-key-path: ${AGENT_SERVICE_PRIVATE_KEY_PATH:}
+    jks-path: ${AGENT_SERVICE_JKS_PATH:}
+    jks-password: ${AGENT_SERVICE_JKS_PASSWORD:123456}
+    key-alias: ${AGENT_SERVICE_KEY_ALIAS:01star}
+    key-password: ${AGENT_SERVICE_KEY_PASSWORD:123456}
+    token-use: ${AGENT_SERVICE_TOKEN_USE:agent_service}
+    ip-whitelist: ${AGENT_SERVICE_IP_WHITELIST:127.0.0.1,192.168.101.91}

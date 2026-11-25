@@ -193,6 +193,8 @@ zo:
           - "/auth/oauth/token"
           - "/login/auth-login"
           - "/login/refresh-token"
+          # 异常巡检服务账号令牌（无用户 JWT，靠 API Key + IP 白名单）
+          - "/login/service-token"
           # 问数 Agent 健康检查（匿名可访问）
           - "/agent/health"
         # 配置内部路径(需要用到凭证但不需要权限验证的请求)
@@ -205,3 +207,11 @@ zo:
           - "/agent/query"
           - "/agent/tools"
           - "/agent/trace/**"
+          # 异常巡检端点（需要凭证，权限由 Agent 侧 RBAC 校验）
+          - "/agent/scan"
+          - "/agent/scans/**"
+          - "/agent/alerts"
+          - "/agent/alerts/**"
+          # 站内通知（已读状态按用户隔离，权限同样由 Agent 侧校验）
+          - "/agent/notifications"
+          - "/agent/notifications/**"

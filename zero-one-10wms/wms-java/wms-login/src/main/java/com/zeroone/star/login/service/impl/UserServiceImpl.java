@@ -12,10 +12,12 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.nimbusds.jose.JWSObject;
 import com.zeroone.cloud.oauth2.entity.Oauth2Token;
 import com.zeroone.star.login.entity.TSBaseUser;
+import com.zeroone.star.login.config.AgentServiceProperties;
 import com.zeroone.star.login.entity.TSUser;
 import com.zeroone.star.login.mapper.TSBaseUserMapper;
 import com.zeroone.star.login.mapper.TSUserMapper;
 import com.zeroone.star.login.service.ITSUserService;
+import com.zeroone.star.login.service.AgentTokenSigner;
 import com.zeroone.star.login.service.OauthService;
 import com.zeroone.star.project.components.user.UserDTO;
 import com.zeroone.star.project.components.user.UserHolder;
@@ -26,16 +28,24 @@ import com.zeroone.star.project.dto.login.UserPasswordDTO;
 import com.zeroone.star.project.vo.JsonVO;
 import com.zeroone.star.project.vo.ResultStatus;
 import com.zeroone.star.project.vo.login.LoginVO;
+import com.zeroone.star.login.vo.ServiceTokenVO;
 import org.mapstruct.Mapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
 import javax.annotation.Resource;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
 import java.text.ParseException;
+import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
@@ -80,7 +90,11 @@ public class UserServiceImpl extends ServiceImpl<TSUserMapper, TSUser> implement
     @Value("${captcha.enabled}")
     private boolean captchaEnabled;
 
+    private static final Logger logger = LoggerFactory.getLogger(UserServiceImpl.class);
+
     private static final String LOGIN_TOKEN = "token";
+    /** 异常巡检服务账号唯一允许的角色。 */
+    private static final String AGENT_ROLE_CODE = "insp_read";
     private static final String LOGIN_REFRESHTOKEN = "refreshToken";
 
     @Autowired
@@ -91,6 +105,12 @@ public class UserServiceImpl extends ServiceImpl<TSUserMapper, TSUser> implement
     String clientId;
     @Value("${zo.cloud.starter.oauth2.mgr-password}")
     String clientPassword;
+
+    @Autowired
+    private AgentServiceProperties agentServiceProperties;
+
+    @Autowired
+    private AgentTokenSigner agentTokenSigner;
 
     /**
      * 通过用户名获取用户信息
@@ -217,6 +237,139 @@ public class UserServiceImpl extends ServiceImpl<TSUserMapper, TSUser> implement
             // TODO:这里需要根据业务需求，重新实现
             return JsonVO.success(getUserByUsername(currentUser));
         }
+    }
+
+    @Override
+    public JsonVO<ServiceTokenVO> serviceToken(
+            String apiKey,
+            String keyId,
+            String warehouse,
+            String remoteAddr
+    ) {
+        if (!isServiceApiKeyValid(apiKey, keyId)) {
+            return JsonVO.create(null, 401, "服务 API Key 无效");
+        }
+        if (!isServiceIpAllowed(remoteAddr)) {
+            return JsonVO.create(null, 403, "服务来源 IP 不允许");
+        }
+        String allowedWarehouse = resolveServiceWarehouse(warehouse);
+        if (allowedWarehouse == null) {
+            return JsonVO.create(null, 403, "仓库范围不允许");
+        }
+        if (!StringUtils.hasText(agentServiceProperties.getUsername())
+                || !StringUtils.hasText(agentServiceProperties.getPassword())) {
+            return JsonVO.create(null, 9994, "服务账号未配置");
+        }
+
+        String username = agentServiceProperties.getUsername();
+        TSBaseUser serviceUser = TSBaseUserMapper.selectBaseUserByUsername(username);
+        if (serviceUser == null
+                || serviceUser.getStatus() == null
+                || serviceUser.getStatus() != 1
+                || (serviceUser.getDeleteFlag() != null && serviceUser.getDeleteFlag() != 0)) {
+            return JsonVO.create(null, 401, "服务账号不存在或已停用");
+        }
+
+        // 角色必须严格为 insp_read；对外只暴露该角色，不回显数据库里的其它角色
+        List<String> dbRoles = TSBaseUserMapper.selectRoleCodesByUsername(username);
+        if (dbRoles == null || !dbRoles.contains(AGENT_ROLE_CODE)) {
+            return JsonVO.create(null, 403, "服务账号缺少 " + AGENT_ROLE_CODE + " 角色");
+        }
+        List<String> authorities = Collections.singletonList(AGENT_ROLE_CODE);
+
+        // OAuth2 password grant 仅用于核验服务账号口令，不使用它签发的令牌
+        Map<String, String> params = new HashMap<>(5);
+        params.put("grant_type", "password");
+        params.put("client_id", clientId);
+        params.put("client_secret", clientPassword);
+        params.put("username", agentServiceProperties.getUsername());
+        params.put("password", agentServiceProperties.getPassword());
+        Oauth2Token oauth2Token = oAuthService.postAccessToken(params);
+        if (oauth2Token.getErrorMsg() != null) {
+            return JsonVO.create(null, 401, "服务账号认证失败");
+        }
+
+        int ttlSeconds = agentServiceProperties.getTokenTtlSeconds();
+        String token;
+        try {
+            token = agentTokenSigner.sign(
+                    username,
+                    serviceUser.getId(),
+                    serviceUser.getRealname(),
+                    authorities,
+                    Collections.singletonList(allowedWarehouse),
+                    ttlSeconds
+            );
+        } catch (Exception exc) {
+            logger.warn("agent service token sign failed: {}", exc.getClass().getSimpleName());
+            return JsonVO.create(null, 9994, "服务签名密钥不可用");
+        }
+
+        // Redis TTL 与 JWT exp 同源；令牌本体不再写 refreshToken，避免长期凭据
+        redisTemplate.opsForValue().set(
+                username + ":" + LOGIN_TOKEN,
+                token,
+                ttlSeconds,
+                TimeUnit.SECONDS
+        );
+
+        ServiceTokenVO vo = new ServiceTokenVO();
+        vo.setToken(token);
+        vo.setExpiresIn(ttlSeconds);
+        vo.setUserName(username);
+        vo.setRoles(authorities);
+        vo.setWarehouseScope(Collections.singletonList(allowedWarehouse));
+        return JsonVO.success(vo);
+    }
+
+    private boolean isServiceApiKeyValid(String apiKey, String keyId) {
+        if (!StringUtils.hasText(apiKey)) {
+            return false;
+        }
+        String providedKey = apiKey.trim();
+        String providedId = StringUtils.hasText(keyId) ? keyId.trim() : agentServiceProperties.getApiKeyId();
+        if (providedId.equals(agentServiceProperties.getApiKeyId())) {
+            return constantTimeEquals(providedKey, agentServiceProperties.getApiKey());
+        }
+        if (StringUtils.hasText(agentServiceProperties.getApiKeyPreviousId())
+                && providedId.equals(agentServiceProperties.getApiKeyPreviousId())) {
+            return constantTimeEquals(providedKey, agentServiceProperties.getApiKeyPrevious());
+        }
+        return false;
+    }
+
+    private boolean constantTimeEquals(String left, String right) {
+        if (!StringUtils.hasText(left) || !StringUtils.hasText(right)) {
+            return false;
+        }
+        return MessageDigest.isEqual(
+                left.getBytes(StandardCharsets.UTF_8),
+                right.getBytes(StandardCharsets.UTF_8)
+        );
+    }
+
+    private boolean isServiceIpAllowed(String remoteAddr) {
+        if (!StringUtils.hasText(remoteAddr)) {
+            return false;
+        }
+        String ip = remoteAddr.trim();
+        if ("0:0:0:0:0:0:0:1".equals(ip) || "::1".equals(ip)) {
+            ip = "127.0.0.1";
+        }
+        return agentServiceProperties.getIpWhitelist().contains(ip);
+    }
+
+    private String resolveServiceWarehouse(String requested) {
+        List<String> allowed = agentServiceProperties.getWarehouses();
+        if (allowed == null || allowed.isEmpty()) {
+            return null;
+        }
+        if (!StringUtils.hasText(requested)) {
+            // 单仓部署可省略仓库头；多仓必须显式指定
+            return allowed.size() == 1 ? allowed.get(0) : null;
+        }
+        String normalized = requested.trim();
+        return allowed.contains(normalized) ? normalized : null;
     }
 
     @Override

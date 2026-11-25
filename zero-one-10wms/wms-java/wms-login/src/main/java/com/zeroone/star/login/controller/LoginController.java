@@ -13,6 +13,7 @@ import com.zeroone.star.project.login.LoginApis;
 import com.zeroone.star.project.vo.JsonVO;
 import com.zeroone.star.project.vo.login.LoginVO;
 import com.zeroone.star.project.vo.login.FunctionTreeVO;
+import com.zeroone.star.login.vo.ServiceTokenVO;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -20,6 +21,7 @@ import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import javax.annotation.Resource;
+import javax.servlet.http.HttpServletRequest;
 import java.util.List;
 
 /**
@@ -49,6 +51,17 @@ public class LoginController implements LoginApis {
     public JsonVO<Oauth2TokenDTO> authLogin(@RequestBody LoginDTO loginDTO) {
         // 响应认证成功数据
         return userService.authLogin(loginDTO);
+    }
+
+    @ApiOperation(value = "服务账号短时令牌（异常巡检）")
+    @PostMapping("service-token")
+    public JsonVO<ServiceTokenVO> serviceToken(
+            @RequestHeader(value = "X-Agent-Api-Key", required = false) String apiKey,
+            @RequestHeader(value = "X-Agent-Key-Id", required = false) String keyId,
+            @RequestHeader(value = "X-Agent-Warehouse", required = false) String warehouse,
+            HttpServletRequest request
+    ) {
+        return userService.serviceToken(apiKey, keyId, warehouse, request.getRemoteAddr());
     }
 
     @ApiOperation(value = "刷新登录")

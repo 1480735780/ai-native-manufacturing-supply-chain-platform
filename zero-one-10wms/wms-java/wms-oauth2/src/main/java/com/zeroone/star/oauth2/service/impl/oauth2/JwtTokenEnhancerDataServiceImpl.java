@@ -5,8 +5,10 @@ import com.zeroone.cloud.starter.oauth2.service.JwtTokenEnhancerDataService;
 import com.zeroone.star.oauth2.entity.TSBaseUser;
 import com.zeroone.star.oauth2.mapper.TSDataLogMapper;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -25,6 +27,12 @@ public class JwtTokenEnhancerDataServiceImpl implements JwtTokenEnhancerDataServ
     @Autowired
     TSDataLogMapper dataLogMapper;
 
+    @Value("${agent.service.username:}")
+    private String agentServiceUsername;
+
+    @Value("${agent.service.warehouses:}")
+    private String agentServiceWarehouses;
+
     @Override
     public Map<String, Object> enhance(SecurityUser securityUser) {
         // 获取数据库用户DO对象
@@ -39,6 +47,9 @@ public class JwtTokenEnhancerDataServiceImpl implements JwtTokenEnhancerDataServ
         info.put("orgCode", orgCode); // 用户所属部门
         info.put("companyCode", companyCode); // 用户所属公司
         info.put("realname", baseUser.getRealname()); // 登录的用户真实姓名
+        if (agentServiceUsername != null && agentServiceUsername.equals(baseUser.getUsername())) {
+            info.put("warehouse_scope", Arrays.asList(agentServiceWarehouses.split(",")));
+        }
         return info;
     }
 }

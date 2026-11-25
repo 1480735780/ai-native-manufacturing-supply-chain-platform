@@ -41,6 +41,13 @@ public interface DashboardApis {
     JsonVO<GoodsPendingVO> queryCurrentPickGoodNumber();
 
     /**
+     * 巡检专用：四个待办队列的一致快照（REPEATABLE READ，绕过 Redis 缓存，数值为 BigDecimal）。
+     * 任一队列查询失败整体失败；旧 query-pend-* 缓存端点行为不变。
+     * @return 统一 observedAt 的四队列计数
+     */
+    JsonVO<PendSnapshotVO> queryPendSnapshot();
+
+    /**
      *查询上架商品数量前count位的商品,默认查询前6位
      * @param count 前几位
      * @return 符合条件的商品列表

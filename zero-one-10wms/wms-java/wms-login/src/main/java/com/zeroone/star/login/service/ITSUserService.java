@@ -10,6 +10,7 @@ import com.zeroone.star.project.dto.login.RefreshTokenDTO;
 import com.zeroone.star.project.dto.login.UserPasswordDTO;
 import com.zeroone.star.project.vo.JsonVO;
 import com.zeroone.star.project.vo.login.LoginVO;
+import com.zeroone.star.login.vo.ServiceTokenVO;
 
 /**
  * <p>
@@ -38,5 +39,13 @@ public interface ITSUserService extends IService<TSUser> {
 
     // 退出登录
     JsonVO<String> logout() throws Exception;
+
+    // 服务账号短时令牌
+    JsonVO<ServiceTokenVO> serviceToken(
+            String apiKey,
+            String keyId,
+            String warehouse,
+            String remoteAddr
+    );
 
 }

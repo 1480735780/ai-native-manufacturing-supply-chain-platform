@@ -22,6 +22,6 @@ public interface DelayApi {
      * 没有查询条件只有展示功能
      * @return 响应数据结果
      */
-    JsonVO<PageDTO<WaringAllDTO>> queryAll(Integer pageIndex, Integer pageSize);
+    JsonVO<PageDTO<WaringAllDTO>> queryAll(Integer pageIndex, Integer pageSize, String sort);
 
 }

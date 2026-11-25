@@ -16,6 +16,7 @@ DO_CPP=0
 DO_FRONTEND=0
 DO_JAVA=0
 DO_AGENT=0
+DO_JAVA_TEST=0
 FAILED=0
 
 usage() {
@@ -31,6 +32,7 @@ usage() {
   --frontend         前端构建（corepack pnpm build）
   --cpp              C++ 静态检查（模块注册、词条重复键）
   --agent            问数 Agent（wms-agent）依赖同步 + pytest
+  --java-test        巡检前置 Java 测试（wms-login / wms-j3-daycheck / wms-oauth2 跑 test）
   --help             显示帮助
 
 环境变量:
@@ -78,6 +80,9 @@ while [ "$#" -gt 0 ]; do
 			;;
 		--agent)
 			DO_AGENT=1
+			;;
+		--java-test)
+			DO_JAVA_TEST=1
 			;;
 		--frontend)
 			DO_FRONTEND=1
@@ -307,6 +312,62 @@ check_java() {
 	fi
 }
 
+check_java_test() {
+	say "运行巡检前置 Java 测试（mvn test）"
+
+	if ! have mvn; then
+		fail "缺少 mvn，无法运行 Java 测试"
+		return
+	fi
+
+	local modules="wms-login,wms-j3-daycheck,wms-oauth2,wms-j1-dashboard"
+	# 只跑新增的巡检前置测试类：
+	# - 既有 test.java / test2.java 是 @SpringBootTest 手工联调用例，依赖 Nacos/MySQL，不属于 harness 门禁；
+	# - wms-oauth2 仅编译其在 reactor 中的产物，不在本门禁内启动上下文；
+	# - wms-j1-dashboard 的 PendSnapshot*Test 覆盖阶段3 一致快照端点（契约 + 资源角色种子）。
+	local test_filter="AgentServiceTokenTest,DaycheckSortContractTest,NoUpMapperXmlTest,NoUpPageContractTest,NoUpPageServiceTest,NoUpPageResourceRoleSeedTest,DelayServiceSortTest,DelayControllerSortTest,PendSnapshotContractTest,PendSnapshotResourceRoleSeedTest"
+	if (cd "$ROOT/wms-java" && mvn -o -pl "$modules" -am test -DskipTests=false \
+		-Dtest="$test_filter" -Dsurefire.failIfNoSpecifiedTests=false); then
+		ok "巡检前置 Java 测试执行完成"
+	else
+		fail "巡检前置 Java 测试失败"
+		return
+	fi
+
+	# 必须确认每个门禁测试类都真的被执行，不能出现「0 tests 也 PASS」或某个类被静默跳过
+	local report
+	local found
+	local missing=0
+	for report in \
+		"$ROOT/wms-java/wms-login/target/surefire-reports/"*AgentServiceTokenTest.txt \
+		"$ROOT/wms-java/wms-j3-daycheck/target/surefire-reports/"*DelayServiceSortTest.txt \
+		"$ROOT/wms-java/wms-j3-daycheck/target/surefire-reports/"*DelayControllerSortTest.txt \
+		"$ROOT/wms-java/wms-j3-daycheck/target/surefire-reports/"*DaycheckSortContractTest.txt \
+		"$ROOT/wms-java/wms-j3-daycheck/target/surefire-reports/"*NoUpMapperXmlTest.txt \
+		"$ROOT/wms-java/wms-j3-daycheck/target/surefire-reports/"*NoUpPageContractTest.txt \
+		"$ROOT/wms-java/wms-j3-daycheck/target/surefire-reports/"*NoUpPageServiceTest.txt \
+		"$ROOT/wms-java/wms-j3-daycheck/target/surefire-reports/"*NoUpPageResourceRoleSeedTest.txt \
+		"$ROOT/wms-java/wms-j1-dashboard/target/surefire-reports/"*PendSnapshotContractTest.txt \
+		"$ROOT/wms-java/wms-j1-dashboard/target/surefire-reports/"*PendSnapshotResourceRoleSeedTest.txt; do
+		# shellcheck disable=SC2086
+		found=$(ls $report 2>/dev/null | head -n 1)
+		if [ -z "$found" ]; then
+			warn "缺少 surefire 报告: $report"
+			missing=1
+			continue
+		fi
+		if ! grep -Eq "Tests run: [1-9][0-9]*" "$found"; then
+			warn "surefire 报告为 0 tests: $found"
+			missing=1
+		fi
+	done
+	if [ "$missing" = 0 ]; then
+		ok "已确认巡检前置 10 个 Java 测试类全部实际执行（surefire 报告非 0 tests）"
+	else
+		fail "巡检前置 Java 测试执行记录不完整（surefire 报告缺失或 0 tests）"
+	fi
+}
+
 check_cpp() {
 	say "检查 C++ 静态一致性"
 
@@ -373,7 +434,7 @@ check_agent() {
 	fi
 
 	local f
-	for f in pyproject.toml app/main.py app/agent/react.py app/tools/registry.py app/storage/store.py; do
+	for f in pyproject.toml config/scan.yaml app/main.py app/agent/react.py app/tools/registry.py app/storage/store.py app/scan/config.py app/scan/worker.py; do
 		if [ -f "$agent_dir/$f" ]; then
 			ok "存在: wms-agent/$f"
 		else
@@ -499,6 +560,10 @@ fi
 
 if [ "$DO_AGENT" = 1 ]; then
 	check_agent
+fi
+
+if [ "$DO_JAVA_TEST" = 1 ]; then
+	check_java_test
 fi
 
 if [ "$DO_SNAPSHOT" = 1 ]; then

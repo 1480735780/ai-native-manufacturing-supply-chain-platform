@@ -89,6 +89,24 @@ public class DashboardController implements DashboardApis {
         return JsonVO.success(currentPickGoodNumber);
     }
 
+    @Resource
+    IPendSnapshotService pendSnapshotService;
+
+    @GetMapping("/query-pend-snapshot")
+    @ApiOperation(value = "待办队列一致快照-巡检专用", notes = "该接口属于货物待办模块，供异常巡检 Agent 使用\n" +
+            "四个队列在同一 REPEATABLE READ 只读事务内读取，共用 observedAt，不读写 Redis 缓存；" +
+            "数值由 SQL 侧 DECIMAL 求和（BigDecimal）；任一队列查询失败则整体失败，不返回部分数据。" +
+            "旧 query-pend-* 缓存端点保持不变。")
+    @Override
+    public JsonVO<PendSnapshotVO> queryPendSnapshot() {
+        String observedAt = java.time.ZonedDateTime.now().toString();
+        PendSnapshotVO snapshot = pendSnapshotService.snapshot(observedAt);
+        if (snapshot == null){
+            throw new RuntimeException("待办快照查询失败");
+        }
+        return JsonVO.success(snapshot);
+    }
+
     @Override
     public JsonVO<List<GoodsToUpVO>> queryGoodsToUpNumberTopCount(int count) {
         if (count < 1){

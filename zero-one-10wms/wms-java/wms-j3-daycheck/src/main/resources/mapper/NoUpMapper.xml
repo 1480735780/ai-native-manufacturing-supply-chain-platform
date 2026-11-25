@@ -2,7 +2,14 @@
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.zeroone.star.daycheck.mapper.NoUpMapper">
 
+    <!--
+      id / im_notice_id 来自 wm_in_qm_i，是巡检数据源的稳定行键（rowId）与通知单号（noticeId）；
+      实体 NoUpGoods 必须有对应 setter，否则 MyBatis 逐行映射时抛
+      "There is no setter for property named 'id'"（NoUpMapperXmlTest 守护）。
+    -->
     <resultMap id="NoUpGoodsResultMap" type="com.zeroone.star.daycheck.entity.NoUpGoods">
+        <result property="id" column="id"/>
+        <result property="im_notice_id" column="im_notice_id"/>
         <result property="bin_id" column="bin_id"/>
         <result property="bin_sta" column="bin_sta"/>
         <result property="tin_id" column="tin_id"/>
@@ -18,29 +25,81 @@
         <result property="sys_company_code" column="sys_company_code"/>
     </resultMap>
 
+    <!-- 旧页面（收货未上架）的可选过滤条件，巡检语句复用同一套 -->
+    <sql id="noUpQueryFilters">
+        <if test="query.bin_id != null">
+            AND wiqi.bin_id = #{query.bin_id}
+        </if>
+        <if test="query.tin_id != null">
+            AND wiqi.tin_id = #{query.tin_id}
+        </if>
+        <if test="query.cus_code != null">
+            AND wiqi.cus_code = #{query.cus_code}
+        </if>
+        <if test="query.zhong_wen_qch != null">
+            AND md_cus.zhong_wen_qch = #{query.zhong_wen_qch}
+        </if>
+        <if test="query.goods_id != null">
+            AND md_goods.shp_bian_ma = #{query.goods_id}
+        </if>
+        <if test="query.shp_ming_cheng != null">
+            AND md_goods.shp_ming_cheng = #{query.shp_ming_cheng}
+        </if>
+    </sql>
+
+    <!-- sort 只接受枚举 oldest（NoUpGoodsQuery @Pattern + Controller 校验），分支硬编码，禁止用 ${} 字符串拼接注入 sort；
+         两个分支都带稳定二级排序键 id，保证翻页不抖动。 -->
+    <sql id="noUpOrderBy">
+        <choose>
+            <when test="query.sort != null and query.sort == 'oldest'">
+                ORDER BY wiqi.create_date ASC, wiqi.id ASC
+            </when>
+            <otherwise>
+                ORDER BY wiqi.create_date DESC, wiqi.id DESC
+            </otherwise>
+        </choose>
+    </sql>
+
+    <!-- 旧页面端点 GET /daycheck/no-up/get-no-up-goods：
+         契约不变——不过滤 bin_sta（页面按 N=未上架 / I=上架中 / Y=已上架 三态展示"库存状态"），
+         select * 与 HEAD 一致；只多了 F-014 的可选 sort 与确定性排序。 -->
     <select id="getNoUpGoodsPage" resultMap="NoUpGoodsResultMap">
         select * from wm_in_qm_i wiqi
         left join md_goods on wiqi.goods_id = md_goods.shp_bian_ma
         LEFT JOIN md_cus ON wiqi.cus_code = md_cus.ke_hu_bian_ma
         <where>
-            <if test="query.bin_id != null">
-                AND wiqi.bin_id = #{query.bin_id}
-            </if>
-            <if test="query.tin_id != null">
-                AND wiqi.tin_id = #{query.tin_id}
-            </if>
-            <if test="query.cus_code != null">
-                AND wiqi.cus_code = #{query.cus_code}
-            </if>
-            <if test="query.zhong_wen_qch != null">
-                AND md_cus.zhong_wen_qch = #{query.zhong_wen_qch}
-            </if>
-            <if test="query.goods_id != null">
-                AND md_goods.shp_bian_ma = #{query.goods_id}
-            </if>
-            <if test="query.shp_ming_cheng != null">
-                AND md_goods.shp_ming_cheng = #{query.shp_ming_cheng}
-            </if>
+            <include refid="noUpQueryFilters"/>
         </where>
+        <include refid="noUpOrderBy"/>
+    </select>
+
+    <!-- 巡检专用 GET /daycheck/no-up/get-no-up-goods-page：
+         口径 = 未上架 bin_sta='N'（与看板"待上架"计数 WmInQmIServiceImpl 一致）并兼容历史 NULL
+         （与待上架页 ToShelvesServiceImpl 的 NULL 处理一致；上架中 'I' 不计入）；
+         显式列清单避免三表 select * 的同名列（id/create_date/sys_company_code）歧义。 -->
+    <select id="getNoUpGoodsForInspection" resultMap="NoUpGoodsResultMap">
+        select wiqi.id                as id,
+               wiqi.im_notice_id      as im_notice_id,
+               wiqi.bin_id            as bin_id,
+               wiqi.bin_sta           as bin_sta,
+               wiqi.tin_id            as tin_id,
+               wiqi.cus_code          as cus_code,
+               md_cus.zhong_wen_qch   as zhong_wen_qch,
+               wiqi.goods_id          as goods_id,
+               md_goods.shp_ming_cheng as shp_ming_cheng,
+               wiqi.qm_ok_quat        as qm_ok_quat,
+               wiqi.goods_unit        as goods_unit,
+               wiqi.pro_data          as pro_data,
+               wiqi.create_date       as create_date,
+               md_goods.bzhi_qi       as bzhi_qi,
+               wiqi.sys_company_code  as sys_company_code
+        from wm_in_qm_i wiqi
+        left join md_goods on wiqi.goods_id = md_goods.shp_bian_ma
+        left join md_cus on wiqi.cus_code = md_cus.ke_hu_bian_ma
+        <where>
+            AND (wiqi.bin_sta = 'N' OR wiqi.bin_sta IS NULL)
+            <include refid="noUpQueryFilters"/>
+        </where>
+        <include refid="noUpOrderBy"/>
     </select>
 </mapper>

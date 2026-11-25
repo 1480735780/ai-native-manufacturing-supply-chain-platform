@@ -5,7 +5,6 @@ import com.zeroone.star.daycheck.entity.NoUpGoods;
 import com.zeroone.star.daycheck.mapper.NoUpMapper;
 import com.zeroone.star.daycheck.service.NoUpService;
 import com.zeroone.star.project.query.j3.daycheck.Arr.NoUpGoodsQuery;
-import jdk.nashorn.internal.ir.annotations.Reference;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
 

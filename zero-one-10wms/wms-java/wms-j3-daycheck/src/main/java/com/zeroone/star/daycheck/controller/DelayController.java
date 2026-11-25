@@ -53,8 +53,12 @@ public class DelayController implements DelayApi {
     @Override
     public JsonVO<PageDTO<WaringAllDTO>> queryAll(
             @RequestParam Integer pageIndex,
-            @RequestParam Integer pageSize) {
-        PageDTO<WaringAllDTO> waring = delayService.selectAll(pageIndex,pageSize);
+            @RequestParam Integer pageSize,
+            @RequestParam(required = false) String sort) {
+        if (sort != null && !sort.isEmpty() && !"oldest".equals(sort)) {
+            return JsonVO.create(null, 9995, "sort 仅支持 oldest");
+        }
+        PageDTO<WaringAllDTO> waring = delayService.selectAll(pageIndex, pageSize, sort);
 
         return JsonVO.success(waring);
     }

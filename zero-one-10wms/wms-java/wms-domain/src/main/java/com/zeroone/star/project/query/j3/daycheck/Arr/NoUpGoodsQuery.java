@@ -4,6 +4,8 @@ import com.zeroone.star.project.query.PageQuery;
 import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;
 import lombok.Data;
+
+import javax.validation.constraints.Pattern;
 import lombok.EqualsAndHashCode;
 
 /**
@@ -33,4 +35,8 @@ public class NoUpGoodsQuery extends PageQuery {
 
     @ApiModelProperty(value = "商品名称")//md_goods
     private String shp_ming_cheng;
+
+    @ApiModelProperty(value = "排序，仅支持 oldest（最老优先）")
+    @Pattern(regexp = "oldest", message = "sort 仅支持 oldest")
+    private String sort;
 }

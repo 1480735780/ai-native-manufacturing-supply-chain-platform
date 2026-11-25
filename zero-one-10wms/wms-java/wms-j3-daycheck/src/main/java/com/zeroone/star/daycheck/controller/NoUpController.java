@@ -4,6 +4,7 @@ import cn.hutool.core.date.DateTime;
 import com.zeroone.star.daycheck.entity.NoUpGoods;
 import com.zeroone.star.daycheck.service.NoUpService;
 import com.zeroone.star.project.components.easyexcel.EasyExcelComponent;
+import com.zeroone.star.project.dto.PageDTO;
 import com.zeroone.star.project.dto.j3.daycheck.Arr.NoUpGoodsDTO;
 import com.zeroone.star.project.j3.daycheck.NoUpApis;
 import com.zeroone.star.project.query.j3.daycheck.Arr.NoUpGoodsQuery;
@@ -48,8 +49,24 @@ public class NoUpController implements NoUpApis {
     @ApiOperation(value = "获取出货未上架")
     @Override
     public JsonVO<List<NoUpGoodsDTO>> getNoUpGoods(NoUpGoodsQuery condition) {
+        if (condition.getSort() != null && !condition.getSort().isEmpty()
+                && !"oldest".equals(condition.getSort())) {
+            return JsonVO.create(null, 9995, "sort 仅支持 oldest");
+        }
         List<NoUpGoodsDTO> result = noUpService.getNoUpGoodsPage(condition);
         return JsonVO.success(result);
+    }
+
+    @GetMapping("/get-no-up-goods-page")
+    @ResponseBody
+    @ApiOperation(value = "获取收货未上架（巡检分页：rows/total/pages）")
+    @Override
+    public JsonVO<PageDTO<NoUpGoodsDTO>> getNoUpGoodsPaged(NoUpGoodsQuery condition) {
+        if (condition.getSort() != null && !condition.getSort().isEmpty()
+                && !"oldest".equals(condition.getSort())) {
+            return JsonVO.create(null, 9995, "sort 仅支持 oldest");
+        }
+        return JsonVO.success(noUpService.getNoUpGoodsPageDTO(condition));
     }
 
     @SneakyThrows
