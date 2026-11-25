@@ -61,18 +61,28 @@ export WMS_AGENT_STORE_BACKEND=memory
 建表失败只告警不阻塞启动，PG 不可达时问数照常返回并标 `persisted=false`。
 只落审计摘要与 `resultDigest`，不落 JWT 原文与完整工具结果。
 
-真实 PG 集成测试需显式给出连接串：
+真实 PG 集成测试需显式给出连接串（trace 存储 + 巡检队列/告警契约）：
 
 ```bash
-WMS_AGENT_TEST_DB_URL=postgresql://postgres:123456@127.0.0.1:5432/ragent uv run pytest
+# 建议用独立测试库（CREATE DATABASE wms_agent_scan_test;）。
+# 巡检契约测试会清空 wms_agent 的巡检四张表，所以库名必须包含 test，
+# 否则用例直接失败而不是清表——不要指向开发库 ragent。
+WMS_AGENT_TEST_DB_URL=postgresql://postgres:<口令>@127.0.0.1:5432/wms_agent_scan_test uv run pytest
 ```
 
-未设置该变量时，3 个集成用例自动跳过。
+未设置该变量时，PG 集成用例自动跳过（2026-11-24：带测试库 184 passed / 3 skipped，不带 166 passed / 21 skipped）。
+巡检契约测试（`tests/test_scan_store_contract.py`）让 Memory 与 PG 跑同一份断言：租约、fencing、
+attempt 上限、告警/事件/通知同事务、ignored 行锁、并发领取与并发 upsert。
 
 ## 配置
 
 复制 `.env.example` 为 `.env` 后按需修改；`.env` 已被仓库根 `.gitignore` 排除，
 密钥（`WMS_AGENT_LLM_API_KEY` 等）只允许进 `.env` 或运行环境，禁止入库、进日志、进快照。
+
+异常巡检非密配置位于 `config/scan.yaml`（ADR-018），启动时加载并校验，不热重载。
+每次入队冻结 canonical `config_snapshot/config_hash/config_version`，worker 只按快照执行；
+修改 YAML 不影响在途任务。`WMS_AGENT_SCAN_CONFIG_PATH` 可覆盖路径；显式设置的仓库、
+通知模式与接收人环境变量会覆盖 YAML，并进入最终生效快照。密钥不得写入 YAML。
 
 ## 端点
 

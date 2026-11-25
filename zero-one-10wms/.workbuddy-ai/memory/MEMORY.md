@@ -22,6 +22,10 @@
 - 动态更新 DTO 用 `API_DTO_FIELD_DEFAULT`；`API_DTO_FIELD` 第 5 参数是真默认值，未传字段会被填默认值。
 - Java 成功码 `10000`；C++ `JsonVO` 成功码 `0`；文件导出兼容 `201`。
 - Agent 首版 6 个工具端点在当前仓库均已核实存在（2026-11-23）：`/stock/inventory-query/query-all`（`StockQueryController.java:30,39`）、`/stock/expiry-warning/query-all`（`ExpiryWarningController.java:24,30`）、`/daycheck/no-up/get-no-up-goods`（`NoUpController.java:35,46`）、`/daycheck/delay/im-delay`（`DelayController.java:24,51`，类级 `@RequestMapping("daycheck")` 无前导 `/`）、`/dashboard/query-pend-*` 与 `/dashboard/query-cur-pick`（`DashboardController.java:30,38,52,66,79`）、`/dashboard/query-goods-to-*`（`DashboardController.java:110,123,136,148`）。
+- 旧“收货未上架”页面（`wms-frontend/src/views/daily-check/received-unsold/index.vue`）的 `statusText` 按 N=未上架 / I=上架中 / Y=已上架 三态展示库存状态：旧端点 `/daycheck/no-up/get-no-up-goods` 不得加 `bin_sta` 过滤；巡检口径（`bin_sta='N'` 或 NULL、稳定排序、显式列）走独立端点 `/daycheck/no-up/get-no-up-goods-page`（`NoUpMapper.getNoUpGoodsForInspection`）。
+- Agent `Settings`（pydantic-settings）字段都带 `validation_alias`：`Settings(scan_lease_seconds=3)` 会被静默忽略，必须按环境变量名传（`Settings(WMS_AGENT_SCAN_LEASE_SECONDS=3)`）；list 类型环境变量用 `Annotated[list[str], NoDecode]` + 逗号分隔。
+- Codex 沙箱内 `wms-agent` 的 `cryptography` DLL 与 Maven 本地仓库不可用：pytest / psycopg / mvn 必须提权执行；Windows 下打包前先停掉占用 jar 的服务，否则 `spring-boot:repackage` 因文件锁失败、产出无主清单的 jar。
+- MyBatis resultMap 映射了实体没有的 property 时，解析不报错，但逐行映射到非空列会抛 `There is no setter for property named ...`；空表会让缺陷“看起来正常”。守护测试：`NoUpMapperXmlTest`（真实解析 + `MetaClass.hasSetter` + 逐行赋值）。
 - 网关 `wms-gateway/src/main/resources/application.yaml` 路由现状：`/dashboard/**` 行 37-40、`/stockln/**,/stock/**` 行 85-88、`/daycheck/**` 行 89-92 走 `lb://${sn.*}`；C++ 走静态端口样式（行 103-106 `c3-chuweiguanli-route uri: http://127.0.0.1:8103`，`Path=/chuweiguanli/**`）；`/warningmanagement/**` 无路由，故 ADR 跳过 `EXP-WARN-CPP` 成立。
 
 ## 环境限制
@@ -37,6 +41,8 @@
 - `./init.sh --cpp`：PASS；C++ 模块注册完整，源码 `zh-dict.yaml` 无重复顶层键；本机无 cmake，仅静态层。
 - `./init.sh --frontend`：PASS；`vite build --mode production` 完成（约 44s）。
 - `./init.sh --java wms-j8-othermana`：PASS；Maven 离线编译通过。
+- `./init.sh --java-test`（Git Bash + JDK17）：PASS；login 12 + daycheck 19 = 31 tests，7 个门禁测试类逐一确认执行（2026-11-24）。
+- `wms-agent`：`.venv\Scripts\python.exe -m pytest`，设置 `WMS_AGENT_TEST_DB_URL=postgresql://postgres:<口令>@127.0.0.1:5432/wms_agent_scan_test`（独立测试库，库名必须含 test）→ 184 passed / 3 skipped；不设 → 166 passed / 21 skipped（2026-11-24）。需在沙箱外执行。
 - `./init.sh --quick --snapshot`：PASS；`$WMS_STATE_DIR/history.jsonl` 追加 JSONL，含 `prev_hash` / `hash`。
 - `python -m json.tool feature_list.json`：PASS。
 

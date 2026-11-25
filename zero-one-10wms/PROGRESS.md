@@ -4,7 +4,15 @@
 
 ## 当前已验证状态
 
-- 日期：2026-11-24
+- 日期：2026-11-25
+- F-015 阶段7.7（2026-11-25，扫描记录与证据归档 + 通知归档 + 指标日聚合 2 年，ADR-020 修订）：Python 全量 pytest 带独立 PG 测试库 **531 passed / 11 skipped / 1 warning**、不带 PG **474 passed / 68 skipped**；Java `./init.sh --java-test` PASS（41 tests）；真实环境 e2e **21/21**（日聚合 180 仓库·日、合成过期扫描整批归档、通知归档、读回落、长窗口指标）；新测试抓到并修复 3 个日聚合真实缺陷；F-015 按用户 m09157 决定置为 **passing / e2e_pass**；生产上线仍被 ADR-021 阻塞；改动未提交。
+- F-015 真实模型摘要质量评估 + 端到端（2026-11-25，用户 m08991 指定本轮只做这两项；未改产品代码、未提交）：`.env` 配置的外部模型对本机不可用（OpenRouter 对全部免费模型与配置模型的 `POST /chat/completions` 返回 400 `Request path cannot be relayed`，属服务端问题，未改 `.env`）。质量评估：真实巡检输入 5 组 + 按真实形状构造的注入输入 3 组 → 真实模型 glm-5.4（cc-switch-zhipu-glm，经 DSH 子代理通道；**不是生产配置的模型，也不是直连端点**）的 8 条回复全部走产品真实的解析/清洗链路 **8/8 通过**（数量与级别一致、纯文本无 Markdown/链接、动作码 ⊆ allowedActions 且文案对题、incomplete 有说明；3 组注入未改变级别与输出结构并主动提示字段含可疑指令），人工阅读结论「可用，偏啰嗦」。端到端：回放链路 `scan-8a7e9ea19c8f494b`（经网关真实 JWT 触发，summariesLlm 5 / template 0，PG 文本即模型原文；浏览器详情抽屉显示「模型摘要 / 模型：glm-5.4(replay)」、纯文本、3 条建议动作）；直连真实端点 `scan-50bb337adc9c4489`（llmCalls 5 / llmFailures 5 / 全部降级模板，`fallback_detail` 含 `llm returned http status 400: Request path cannot be relayed`，整次扫描约 4.7 秒）。证据：`.runtime_tmp/stage8_real_model_summary_quality.json`、`stage8_real_model_replay_e2e.json`、`stage8_direct_endpoint_degradation.json`、`stage8_real_model_summary.png`。**限制**：生产配置模型的摘要质量仍未评估；回放链路的 token 用量是端点固定值；接入其它模型前须按同一组 8 条输入复评。agent 已以默认配置重启（`llm.enabled=false`）。
+- F-015 阶段7（2026-11-25，retry 审计归属 + 指标 + 保留与归档 + 前端摘要展示 + 生产安全门 + v0.2.0 总验收，ADR-020/ADR-021）：Python 全量 pytest 带独立 PG 测试库 **512 passed / 10 skipped / 1 warning**、不带 PG **459 passed / 63 skipped / 1 warning**；Java `./init.sh --java-test` **PASS**（41 tests，阶段7 无 Java 改动）；前端 Vitest 15 passed、生产构建通过；真实环境总验收 e2e（真实 JWT 经网关）**STAGE7_E2E_OK 29/29**（retry 归属四列、调度槽位唯一入队、指标接口权限与取数耗时、保留任务删除/归档/摘要回落）。落地：V010 retry 审计归属（`trigger=retry` + `retry_of_scan_id` + `origin_*`）；`GET /agent/scan/metrics`（仅管理员）；V011 归档表 + `POST /agent/scan/retention/run` + 每日保留任务（默认关闭）；告警详情抽屉展示巡检摘要（模型/模板标识、降级原因、纯文本）。本轮修复：摘要可见性跟随告警可见性、`GET /agent/alerts/{id}` 内嵌完整扫描记录的越权缺口（改为摘要）、抽屉关闭动画期间重开竞态、PG 通知忽略 `createdAt`。**生产上线阻塞（ADR-021）**：实测网关无 token 任意方法均放行、资源角色不生效，范围是全部 Java 服务；巡检端点由 agent 自验并有路由级回归。待决：扫描记录与证据保留期、通知与 trace 是否归档、「聚合统计 2 年」未落地、生产配置模型的摘要质量未评估（glm-5.4 的评估见上一条）。改动未提交；F-015 状态待用户确认验收后更新（v0.2.1 在阶段8 登记）。
+- F-015 阶段6（2026-11-25，LLM 聚合摘要，ADR-019）：Python 全量 pytest 带独立 PG 测试库 **452 passed / 7 skipped / 1 warning**、不带 PG **411 passed / 48 skipped**（阶段5 基线 368 → +84）；新增 `tests/test_scan_stage6.py` 73 例与 V009 双后端契约 6 例；Java `./init.sh --java-test`（harness JDK8）**HARNESS_EXIT=0，41 tests BUILD SUCCESS**（阶段6 无 Java 改动，仅回归）。落地内容：`config/scan.yaml` 的 `llm` 段（**默认关闭**，6 个上限为启动硬上限，进入配置快照与哈希，密钥仍只走 env）；`app/scan/llm/summarizer.py`（**只摘要不判定**：按 rule+仓库+客户聚合，仅 P0/P1 调模型，输入是白名单 digest、不含原始行与司机姓名/电话/车牌，输出做 schema 校验与清洗，任何失败降级确定性模板，调用数与 token 记入 counts）；V009 `agent_scan_summaries`；`GET /agent/scans/{scanId}/summaries`（可见性同扫描详情）。真实链路 e2e **STAGE6_E2E_OK（22 项）**：A. 按 `.env` 所配外部模型入队启用 LLM 的快照 → 该网关对话接口对本机返回 HTTP 400（13 个模型均如此，属环境问题），5 组全部降级模板、扫描 succeeded、8 条命中照常落库（「LLM 失败仍落告警、摘要用模板」被真实验证）；B. 同一 agent 的真实 worker 经真实 HTTP 调本地 OpenAI 兼容桩（**模型是桩**）→ 5 组中 3 组取得模型摘要（`llmCalls 5 / llmFailures 2 / promptTokens 462 / completionTokens 90`）、2 组超过 8 秒降级模板，桩侧请求体只含白名单键，经网关读取接口 code 10000；对照快照未启用的扫描期间模型端点零请求。evidence `.runtime_tmp/stage6_llm_summary_e2e_result.json`。本轮修复 3 个缺陷：PG 与 Memory 对未知 `summarySource` 归一不一致、成功路径未累加 token、迁移守卫测试写死版本号。**未做/未验证**：前端 `/inspection/alerts` 尚未展示摘要；真实模型的摘要质量未评估；`llm.enabled` 启用属部署决策。F-015 仍 `in_progress/runtime_unverified`（剩阶段7 指标与保留+v0.2.0 总验收）。
+- F-015 阶段5（2026-11-25，自动 resolved + 内部调度）：Python 全量 pytest 带独立 PG 测试库 **368 passed / 6 skipped / 1 warning**、不带 PG **333 passed / 41 skipped**（阶段4 基线 313 → +55）；新增 `tests/test_scan_stage5.py` 44 例（必测 10 项全覆盖 + retry 权限 14 例）与 V008 双后端契约；Java `./init.sh --java-test`（harness JDK8）**HARNESS_EXIT=0，41 tests BUILD SUCCESS**（阶段5 无 Java 改动，仅回归）；真实 e2e **STAGE5_E2E_OK**（四项同一次连贯运行）——①`wm_in_qm_i` 插两行未上架（-10h/-5h）→ 真实 admin JWT 扫描建 2 条告警（P0/P1）→ 一行改已上架、一行删除 → 第二次扫描 `findings 0 / alertsAutoResolved 2 / staleCheckSkipped 0`，两条 `condition_cleared` 事件 `open→resolved`、`actorType=system`、traceId 与扫描一致；②调度槽位 `20261125T1730` tick `outcome=created` → 扫描 succeeded，`trigger=schedule`、`executor=[service,agent-inspector]`、`scheduleSlot`/`configSnapshot`/`configHash`/`configVersion=v0.2.0` 与入队一致且可回放；③同槽位：同实例再 tick 不入队，新实例 tick 与直接 enqueue 重放均 `idempotent`，PG 该槽位仅 1 行；同 requestId 三次真实 POST 同一 `scanId`；④错 key/缺 key 的扫描 `failed(auth_failed:…)` 且 executor 为空，不回退管理员令牌。本轮修复 3 个 **Memory 单测发现不了、PG 契约/真实 e2e 才暴露**的缺陷：PG 建告警丢 `lastSeenAt`、源合法返回 0 行时自动关闭被整体跳过、自动关闭事件 `from_state` 被写成 `resolved`。**retry 权限修正（用户 m07086 评审）**：首版 retry 误用 `can_trigger_scan`（cg/ckjl/服务账号可重试）且未校验原扫描归属，已改为仅管理员且原扫描须归本人或由服务账号发起（`security.can_retry_scan`）；真实令牌 e2e **RETRY_E2E_OK**（14 项：ckjl001 仍可发起扫描但重试 403、服务令牌 403、admin 重试他人扫描 403、被拒调用不入队、admin 重试本人扫描与定时扫描均按原快照成功；evidence `.runtime_tmp/retry_permission_e2e_result.json`）。**调度器默认仍关闭**（仓库 `scan.yaml` 的 `schedule.enabled=false`，启用属部署决策）。F-015 仍 `in_progress/runtime_unverified`（剩阶段6 LLM 聚合摘要、阶段7 指标与保留+v0.2.0 总验收）。
+- F-015 阶段4（2026-11-25，版本化 YAML + ADR-018）：Python 全量 pytest 带独立 PG 测试库 **313 passed / 5 skipped / 1 warning**、不带 PG **284 passed / 34 skipped**（阶段3 基线 277 → +36）；新增 `tests/test_scan_config.py` 26 例覆盖配置契约（重复键/非字符串键/阈值反序/非法通知模式/未知路由/跨仓路由/未知 override/缺文件/哈希稳定与键序无关/三处变化各改哈希/env override 进快照/往返哈希一致/篡改/版本不符/非法 JSON/快照不含密钥/worker 用入队快照/缺快照与坏快照 fail-closed/routedTo=岗位且 assignee 为空/合并接收人/无路由计数/PG 回放）；Java `./init.sh --java-test`（harness JDK8）**HARNESS_EXIT=0**，10 个门禁类 **41 tests BUILD SUCCESS**；真实 e2e **STAGE4_E2E_OK**——入队冻结配置 A（`configHash=sha256:479605f8…`，noUp 8/4/2）后把 `scan.yaml` 改为 B（noUp 3/2/1，`sha256:451c2e31…`），worker 消费该任务仍按 A 执行（`status=succeeded`、库中 `config_hash/config_version` 回读为 A、执行快照 `p0Hours` 仍 8.0），脚本结束自动还原 YAML 并核对回 8/4/2。F-015 仍 `in_progress/runtime_unverified`（剩阶段5 自动 resolved+内部调度、阶段6 LLM 摘要、阶段7 指标与保留）。
+- F-015 阶段3（2026-11-25，backlog+一致快照）：Python 全量 pytest 带独立 PG 测试库 **277 passed / 4 skipped**；Java `./init.sh --java-test`（harness JDK8）已把 `PendSnapshotContractTest`/`PendSnapshotResourceRoleSeedTest` 纳入门禁（10 个测试类）→ **wms-login 12 + dashboard 7 + daycheck 22 = 41 tests BUILD SUCCESS**；真实 e2e **STAGE3_E2E_OK**——dashboard(10010) 直读 MySQL 一致快照 `receipt 0 / to_up 0 / pick 45 / cur_pick 74`，admin 连发 7 次 backlog 扫描全部 succeeded、PG `agent_backlog_observations` 恰 21 行（7×3 队列，observed_at 为 Java 纳秒时间已去 `[Asia/Shanghai]` 后缀）与 scan trace 串联，真实 pick 恒 45 → 0 条 BACKLOG-GROWTH 误报。四类规则（效期/未上架/延时/积压）至此全部落地；F-015 仍 `in_progress/runtime_unverified`（后续阶段见上条）。
+- F-015 阶段1（2026-11-25，告警详情/认领/已读/真实 in_app）：Python 全量 pytest 带独立 PG 测试库 **208 passed / 3 skipped**、不带 PG **185 passed / 26 skipped**；Java `./init.sh --java-test`（harness JDK8）**daycheck 22 + wms-login 12 tests BUILD SUCCESS**；V004/V005 迁移已在真实 PG 应用并核对列与索引。F-015 仍 `in_progress/runtime_unverified`（backlog/LLM/前端未做）。前一阶段第四轮返修基线：带 PG **184 passed / 3 skipped**、不带 PG **166 passed / 21 skipped**，Java 31 tests BUILD SUCCESS，真实 daycheck+网关+agent+PG 运行态 42 项检查全过。**运行态注意**：agent 进程当前带进程级环境变量 `WMS_AGENT_SERVICE_API_KEY` / `WMS_AGENT_SERVICE_KEY_ID` / `WMS_AGENT_ALERT_RECIPIENTS=admin` 启动（未写入 `.env`），不带这些变量重启后 worker 取不到服务令牌会 `failed(auth_failed)`。
 - 问数 Agent 收尾（2026-11-24 晚）：默认持久化配置已固化到 `.env`（本地）与 `.env.example`/实施方案/README（入库模板），正常重启即从 `.env` 读 PG 配置，无需进程级临时覆盖；复验 `persisted=true`。相关测试隔离修复后 `uv run pytest` 72 passed、`init.sh --agent` 69 passed 3 skipped PASS。问数 Agent（F-006~F-013）就此结项。
 - 父仓库：`main`（F-006~F-013 已提交；本轮追加 F-011 浏览器 e2e 证据并单独提交，HEAD 见 `git log`）
 - 嵌套历史仓库：`zero-one-10wms/.git` 仍存在，HEAD `7ef08d8`，但父仓库不维护其指针，不作为提交目标
@@ -12,16 +20,168 @@
 - 推送范围：父仓库根新增 `.gitignore`，排除 `node_modules/`、`node_modules.bak/`（**2.55 GB**，本轮明确不入库）、`target/`、`dist/`、`*.class`、`*.jar`、`*.pdb`、`*.log`、`__pycache__/`、`*.pyc`、`.venv/`、`.env`/`.env.*`、`.idea/`、`.vs/`、`.runtime_tmp/`（临时联调目录，含私钥/token/HAR）。其余文件全部入库（含 `.dsh-scratch/` 辅助脚本 6.4 MB / 210 文件）。
 - 标准启动路径：`cd zero-one-10wms && ./init.sh --quick`（Git Bash）
 - 标准验证路径：`./init.sh --quick` → `./init.sh --cpp` → 按功能跑 `--java <module>` / `--frontend` / `--verify` / `--agent`
-- 当前工作项：**AI-Agent 轨道 F-006~F-013 全部完成**（`F-006`/`F-007`/`F-011`/`F-012`/`F-013` 为 `e2e_pass`，`F-008`/`F-009`/`F-010` 为 `unit_pass`）；F-008 追加真实 LLM（OpenRouter）手动 smoke 证据；下一个候选 `F-002`（储位管理前端页面）
-- AI-Agent 轨道顺序（已全部走完）：`F-006` 骨架 → `F-007` 网关路由 → `F-008` LLMProvider → `F-009` 6 工具 → `F-010` ReAct 循环与 `/agent/query` → `F-011` 前端悬浮窗 → `F-012` 状态持久化 → `F-013` `init.sh --agent`
-- 优先级决策（2026-11-23）：`priority` 改为唯一连续序号 1..13，features 数组按 id 升序、排序键为 priority；AI-Agent 轨道整体前置，传统功能队列后移（F-002=11、F-003=12、F-004=13；F-005=5 保持不变）。
-- 排队项：`F-002` 储位管理前端页面、`F-003` 商品明细只读页面（均 `not_started`）；`F-004` 运行时基线仍 `blocked`
-- 已通过项：`F-001` harness 入口、`F-005` 其他配置 25 项（均 `passing` + `static_pass`）、`F-006`（`e2e_pass`）、`F-007`（`e2e_pass`）、`F-008`/`F-009`/`F-010`（`unit_pass`）、`F-011`（`e2e_pass`，本轮真实浏览器实测）、`F-012`（`e2e_pass`）、`F-013`（`e2e_pass`）
+- 当前工作项：**F-015 异常巡检 v0.2.0 效期纵向切片（in_progress，runtime_unverified）**；F-014 核心前置已完成，6 项待补证据并行补齐，按 single_in_progress 记 `blocked`；问数 Agent F-006~F-013 已结项。
+- AI-Agent 轨道：问数 Agent `F-006~F-013` 已走完；异常巡检 `F-014` 前置完成但待补 6 项证据（blocked），`F-015` 效期单类切片已跑通真实链路（in_progress）。
+- 优先级决策（2026-11-24）：`priority` 唯一连续 1..15；异常巡检前置项 `F-014`=11、实现项 `F-015`=12；传统队列后移为 `F-002`=13、`F-003`=14、`F-004`=15；F-005=5 保持不变。
+- 当前工作项：`F-015` 异常巡检 v0.2.0 效期切片（`in_progress`）；排队项：`F-002` 储位管理、`F-003` 商品明细（`not_started`）；`F-014` 前置完成但待补 6 项证据（`blocked`）；`F-004` 运行时基线仍 `blocked`。
+- 已通过项：`F-001`、`F-005`（`static_pass`）；问数 Agent `F-006`/`F-007`/`F-011`/`F-012`/`F-013`（`e2e_pass`）、`F-008`/`F-009`/`F-010`（`unit_pass`）；异常巡检 `F-014`（blocked）、`F-015`（in_progress，效期切片已有真实 e2e，未全类完成）。
 - 运行时底座（本轮实测）：本机 `192.168.101.91`；虚拟机 `192.168.89.128` 提供 Nacos 8848、Redis 6379、MySQL 3306，**PG 5432 未起**；本机原生 PostgreSQL 16.15 在 5432（库 `ragent`，`postgres`/`123456`，本轮 F-012 落库用它）
 - 工具链实测：Python 3.14.7 = `D:\DownloadPackage\environment\python.exe`；uv 0.13.1 = `C:\Users\a\.local\bin\uv.exe`（**不在 PATH**）；JDK17 = `D:\DownloadPackage\environment\jdk-17.0.20.1+1`（PATH 上的 java 是 JDK8，不能用于 Spring Boot 3）；mvn = `D:\DownloadPackage\Maven\apache-maven-3.6.3-bin\apache-maven-3.6.3\bin\mvn.cmd`；Git Bash = `D:\DownloadPackage\environment\Git\Git\bin\bash.exe`（**不在 PATH**，本轮已用它跑通 `init.sh --agent`）
-- 当前 blocker：本机无 cmake/MSVC，C++ 只能 `static_pass + runtime_unverified`；运行时/端到端环境未就绪（`F-004`）；`init.sh` 需用 Git Bash 执行。前端浏览器链路已用本轮实测打通（私钥就在仓库 jwt.pfx/jwt.jks + 现启 Java 服务），原 blocker 已解除。
+- 当前 blocker：本机无 cmake/MSVC，C++ 只能 `static_pass + runtime_unverified`；`init.sh` 需用 Git Bash 执行；异常巡检 v0.2.0 四类规则、前端 `/inspection/alerts` 与阶段4 配置版本化（`scan.yaml` + 入队 canonical 快照 + worker 快照回放）已落地，阶段5 自动 resolved+内部调度已落地（调度器默认关闭），阶段6 LLM 聚合摘要已落地（ADR-019，`llm.enabled` 默认关闭），阶段7（retry 审计归属、指标、保留与归档、前端摘要展示、v0.2.0 总验收）已落地，阶段7 与 7.7 已落地并通过验收，F-015=passing/e2e_pass；剩余阶段8 v0.2.1 登记（待用户确认）；**生产上线阻塞项（ADR-021）**：2026-11-25 实测网关无 token 任意方法任意路径均被转发、错误角色访问登记资源仍放行（第三方 starter 链路 + 未登记资源返回 null，影响全部 Java 服务）；巡检端点按 ADR-007 由 agent 侧自验承接并已有路由级回归，平台侧修复网关前不可上线。
 
 ## 本轮记录
+
+### 追加：剩余实施路线图阶段7.7（2026-11-25，用户 m09157 验收决定）
+
+- **目标**：按用户验收决定补齐三项保留口径——扫描记录及其证据与告警证据一致（在线 180 天→归档 1 年）、通知 90 天在线后归档 1 年、聚合统计 2 年（90 天内实时、90 天至 2 年读日聚合）。
+- **契约**：V012 `agent_metric_daily(metric_date, warehouse, timezone, metrics JSONB)`；`archive_notifications_before`、`archive_scan_evidence`、`get_archived_run`、`save_metric_daily`/`list_metric_daily`/`purge_metric_daily_before`；`POST /agent/scan/metrics/rollup/run`（仅管理员）；`GET /agent/scan/metrics` 的 `hours` 上限由 2160 提到 17520；保留执行由 5 步扩为 7 步；`WMS_AGENT_RETENTION_METRICS_DAYS`（默认 730）。决策见 ADR-020（2026-11-25 修订）。
+- **已改**：`app/scan/migrations/V012__metric_daily.{up,down}.sql`、`app/scan/repository.py`、`app/scan/metrics_rollup.py`（新建）、`app/scan/retention.py`、`app/scan/router.py`、`app/config.py`、`.env.example`；`tests/test_scan_stage77.py`（新建 12 例）、`tests/test_scan_stage7.py`、`tests/test_scan_store_contract.py`；ADR-020、`技术选型ADR.md`、实施方案 §9.6。
+- **本轮捕获并修复的真实缺陷**：`metrics_rollup.py` 三处——参数名 `timezone` 遮蔽 `datetime.timezone`（不传 `now` 时路由与调度器路径必崩）、降级原因计数对普通字典做 `+=`（有降级摘要的日期补算必失败）、合并最大值时与 `None` 比较（无样本日期合并必失败）。三处均由新测试发现，未进入真实环境。
+- **已验证**：全量 pytest 带 PG 531 passed / 11 skipped、不带 PG 474 passed / 68 skipped；Java harness PASS；真实环境 e2e 21/21（日聚合 180 仓库·日且重跑幂等；合成过期扫描连同摘要、评估覆盖、命中观测、积压样本一次整批归档；100 天前通知归档；扫描记录/摘要/告警详情扫描简报读回落并标 archived；`hours=2160` 实时、`hours=2200` 走日聚合、`hours=17521` 422、越权仓库 9997；二次运行全 0）。
+- **未验证与限制**：日聚合只回看 180 天补算，首次启用前更早的日期不补算（`coverage.missingDays` 如实暴露）；日聚合不提供分位数；真实库已由真实历史数据算出 180 行日聚合并保留；归档行无通用查询接口（读回落仅覆盖摘要与扫描简报）。
+- **退出判定**：通过。F-015 按用户决定置为 passing / e2e_pass；生产上线阻塞项 ADR-021 不变。
+- **下一步**：清除待提交文件中的连接串/口令 → 分 5 批提交阶段 0–7（明确路径、不 push）→ 用户确认后登记阶段8 v0.2.1。
+
+### 追加：剩余实施路线图阶段7（2026-11-25，用户 m07804 签收阶段6 并给定范围）
+
+- **目标**：补齐 v0.2.0 收尾——retry 审计归属、前端摘要展示、管理员只读指标、保留与归档、v0.2.0 总验收、生产安全门。
+- **契约（ADR-020 / ADR-021）**：
+  - 重试记录回答「谁点了重试」：`actor_type=user`、`actor_id`=发起重试的管理员、`trigger=retry`、`retry_of_scan_id` 指向被重试的扫描；`origin_actor_type/origin_actor_id/origin_trigger` 保留根来源（链式重试不覆盖）；`executor_*` 仍由 worker 服务令牌决定。
+  - 指标只读、实时聚合（窗口 1 小时–90 天，按请求时刻计算），不落统计表；扫描按 `started_at` 入窗，事件按事件时间入窗，活跃数为当前快照。
+  - 保留：已结案告警及其事件在线 180 天 → 归档 1 年（单表 JSONB，`agent_archive_rows`）；通知、trace/tool_calls 90 天后删除；扫描摘要随扫描归档并在接口回落；每步限批（默认 500/批、最多 20 批/次）、可重入、先子后父；自动任务默认关闭，当天失败不重试。
+  - 摘要可见性跟随告警可见性：能看扫描记录或能看该仓库告警即可读摘要；扫描记录本身可见性不变；告警详情只内嵌扫描摘要字段（`SCAN_BRIEF_KEYS`）。
+  - 生产安全门：网关实测为「无 token 全放行、资源角色不生效」，范围是全部 Java 服务 → **阻塞生产上线**（ADR-021）；巡检端点以 agent 自验为准，15 条路由 × 5 类坏凭据全部 401 的回归已固化。
+- **已改**：`wms-agent/app/scan/migrations/V010__scan_retry_attribution`、`V011__agent_archive_rows`；`app/scan/{service,router,repository,worker}.py`、新增 `app/scan/metrics.py`、`app/scan/retention.py`；`app/config.py`（保留策略 9 个 `WMS_AGENT_RETENTION_*`）与 `.env.example`；`app/security.py`（`can_view_scan_summaries`）；`app/main.py`（启停 `RetentionScheduler`）；前端 `src/apis/inspection/alerts.ts`（`fetchScanSummaries` 与纯函数）、`src/views/inspection/alerts/index.vue`（摘要卡片与抽屉竞态修复）；文档 `ADR-020-巡检数据保留与归档.md`、`ADR-021-网关认证与鉴权缺口（上线阻塞）.md`、`技术选型ADR.md`、实施方案 §5.1/§5.2/§9.6/§12.2。
+- **本轮捕获并修复的缺陷**：①摘要可见性原先跟随扫描记录 → 仓库经理取不到定时巡检摘要；②`GET /agent/alerts/{id}` 内嵌完整扫描记录（配置快照、执行人、租约、错误摘要）越权；③详情抽屉关闭动画期间再点「详情」不重新打开；④PG 写通知忽略调用方 `createdAt`（e2e 捕获，Memory/PG 不一致）。
+- **已验证**：
+  - 自动化：`tests/test_scan_stage7.py` 36 例（指标口径、存储聚合、保留与归档、调度器、接口权限、路由级凭据回归）+ `tests/test_scan_store_contract.py` 新增 12 个契约用例（retry 归属、指标聚合、保留与归档、通知时间、告警内嵌摘要，Memory/PG 双后端）；全量 pytest 带 PG 512/10、不带 459/63；Java harness PASS（41 tests）。
+  - 前端：Vitest 15 passed；`vite build --mode production` BUILD_EXIT=0；真实 Chrome（headless + dev server）验证「模型摘要」「模板摘要 + 降级原因」「入库延迟无客户维度」三种形态、ckjl001 可见，以及抽屉关闭后 0–450ms 内重开；evidence `.runtime_tmp/stage74_summary_llm.png`、`stage74_summary_template_fallback.png`（**模型是本地桩 stage7-stub**）。
+  - 真实环境总验收（`.runtime_tmp/stage7_acceptance_e2e_result.json`，STAGE7_E2E_OK 29/29）：admin 发起 no_up 扫描 → ckjl001 重试 403 → admin 重试后 PG `trigger=retry`、`retry_of_scan_id`、`origin_*=user/admin/manual`、executor=service/agent-inspector；admin 重试阶段5 的定时扫描 → origin 为 service/agent-inspector/schedule；调度槽位 `20261125T2200` 只有一条扫描且按临时启用的快照执行；`GET /agent/scan/metrics?hours=24` 管理员 10000、ckjl001/cwtest001 9997、新扫描 `sourceStatus.durationMs` 有值；`POST /agent/scan/retention/run` 业务角色 403、管理员执行后合成过期行被删除/归档、步骤顺序正确、归档摘要回落 `archived=true`、二次运行全 0、真实告警 10→10 未动。
+  - 网关实测（ADR-021 证据 `.runtime_tmp/_probe_gateway_75_out.json`、`_75b_out.json`）。
+- **未验证与限制**：真实模型的摘要质量未评估；扫描记录与评估覆盖/命中观测/积压样本无保留期（只增不减）；通知与 trace 到期后直接删除不归档；归档数据无查询接口与预览（dry-run）接口；「聚合统计 2 年」未落地；生产上线被 ADR-021 阻塞。
+- **退出判定**：阶段7 六项均已落地并有真实环境证据，v0.2.0 总验收通过；F-015 状态与 v0.2.1 登记待用户确认。
+- **下一步**：用户确认后进入阶段8（登记 v0.2.1）；平台侧按 ADR-021 修复网关认证与资源鉴权后再做生产验收。
+
+### 追加：剩余实施路线图阶段6 LLM 聚合摘要（2026-11-25，用户 m07086「直接阶段 6」）
+
+- **目标**：给一次巡检的 P0/P1 告警生成「这组告警说的是什么事、先做什么」的人读摘要；LLM 只负责表达，不参与判定；任何模型侧失败都不影响告警落库与扫描结果。
+- **契约（ADR-019）**：
+  - 只摘要不判定：`ruleId/severity/objectCount/severityCounts` 取自规则结果；模型输出只取 `summary` 与 `suggestedActions[{code,text}]`，其余字段忽略；建议动作只展示不执行（ADR-017）。
+  - 输入白名单：按 `rule_id + warehouse + customer` 聚合后的 digest（规则、级别分布、区间指标、≤5 个样本标签、允许的动作码），**不含原始行、`sourceRowKey`/`sourceEndpoint`、司机姓名/电话/车牌**。
+  - 输出约束：摘要纯文本 ≤300 字（去 HTML 标签/Markdown 强调与链接/URL/零宽与双向控制字符）；建议动作 code 取「白名单 ∩ 规则已给出的动作」，≤3 条、每条 ≤100 字，未知 code 丢弃。
+  - 默认关闭、快照决定：`llm.enabled` 默认 `false`，`llm` 段进入配置快照与哈希（ADR-018）；worker 只在入队快照启用时构造 provider；6 个上限（调用 20 / 超时 8s / 并发 4 / 摘要 300 字 / 动作 3 条 / 每条 100 字）是启动硬上限。
+  - 失败降级模板：P2、partial 取数、模型不可用、调用上限、预算耗尽、超时、非法 JSON、违反 schema、空摘要 → 确定性模板 + `fallbackReason/fallbackDetail`；模型已应答但不合规时 `model` 与 token 用量照记。
+  - 读取接口：`GET /agent/scans/{scanId}/summaries`，可见性与 `GET /agent/scans/{scanId}` 完全一致。
+- **已改**：`wms-agent/config/scan.yaml`（`llm` 段）；`app/scan/config.py`（`LlmConfig`，带默认值 → 旧快照仍可回放）；新增 `app/scan/llm/summarizer.py`；`app/scan/migrations/V009__scan_llm_summaries.up.sql`（表 `agent_scan_summaries`，唯一键 `scan_id+rule_id+warehouse+customer`）；`app/scan/repository.py`（协议 `save_scan_summaries/list_scan_summaries` + Memory + PG，`normalize_summary_source`）；`app/scan/service.py`（`run_scan` 新增 `llm_provider` 参数，在告警落库与自动关闭之后编排摘要；`DEFAULT_CONFIG`/`DEFAULT_COUNTS` 同步）；`app/scan/worker.py`（`_build_llm_provider` 仅按快照启用）；`app/scan/router.py`（抽出 `_load_visible_scan`，新增 summaries 接口）；`app/llm/mock.py`（场景条目可带 `usage`）；`app/llm/openai_compatible.py`（HTTP 错误带脱敏、截断后的可读详情）；`tests/test_scan_stage6.py`、`tests/test_scan_store_contract.py`（V009 契约 6 例）、`tests/test_scan_round4.py`（迁移守卫测试改动态版本号）；`documents/07、AI-Agent化/ADR-019-巡检LLM摘要边界.md` 与 `技术选型ADR.md`（索引、条目、风险表）。
+- **本轮捕获并修复的缺陷**：①契约测试发现 PG 把未知 `summarySource` 归一为 `template` 而 Memory 原样保留 → 统一 `normalize_summary_source`；②summarizer 成功路径未累加 token（只有失败路径记账）→ 成功与已应答降级行都记 `promptTokens/completionTokens`；③`test_migration_rollback_requires_applied_and_latest` 写死「未知版本 9」，V009 落地后 9 变成合法版本 → 按 `discover_migrations()` 动态计算。
+- **已验证**：
+  - 自动化：`tests/test_scan_stage6.py` 73 例（配置校验与旧快照兼容、聚合与输入白名单、清洗与 schema、仅 P0/P1 调用、调用上限、超时/预算/异常降级、并发上限、token 记账、提示注入不改级别与结构、dry-run 不摘要、摘要存储失败不拖垮扫描、worker 传 provider、API 可见性、`httpx.MockTransport` 走真实 `OpenAICompatibleProvider`）；全量 pytest 带 PG **452 passed / 7 skipped**、不带 PG **411 passed / 48 skipped**；Java harness **HARNESS_EXIT=0**（41 tests BUILD SUCCESS，2026-11-25T19:26:37）。
+  - 真实链路 A（`.env` 所配外部模型，未改用户 `.env`）：入队 `llm.enabled=true` 的快照 → `scan-f9a6e79ace184137` succeeded、8 条命中照常落库，5 组全部 `provider_error`（该网关对话接口对本机返回 `HTTP 400 Request path cannot be relayed`，13 个模型均如此，属环境问题）并降级模板。
+  - 真实链路 B（本地 OpenAI 兼容桩 `127.0.0.1:11800`，**模型是桩**；agent 以进程环境变量 `WMS_AGENT_LLM_*` 临时覆盖）：经网关以真实 admin JWT 入队 → `scan-ed05c09285484d62` succeeded、`llmCalls 5 / llmFailures 2 / summariesLlm 3 / summariesTemplate 2 / promptTokens 462 / completionTokens 90`；3 组取得模型摘要，2 组超过 8 秒降级模板；桩侧 5 个请求全部鉴权通过、请求体只含白名单键；经网关读取接口 code 10000，无 token 401，ckjl001 得 9997。对照 `scan-0a35bc93881e4eed`（快照未启用）期间模型端点零请求、5 行全模板。e2e 共 22 项全过（**STAGE6_E2E_OK**），evidence `.runtime_tmp/stage6_llm_summary_e2e_result.json`。
+  - 收尾：桩已停止；agent 已以默认配置重启（`llm` 关闭，`configHash=sha256:339c13d0…`）；中途两轮被取代的 e2e 扫描及其摘要/覆盖记录/积压样本行已清理，保留三条证据扫描。
+- **未验证与限制**：真实模型的摘要质量未评估（外部模型在本机不可用，桩只证明链路与边界）；前端 `/inspection/alerts` 尚未展示摘要；`llm.enabled` 启用属部署决策；digest 仍含货名/客户名/供应商名等业务标识（已是最小集合，零外发可保持关闭）；提示注入只能降低不能消除（级别与对象不受影响）；「网关 GET 无 token 仍被第三方 starter 放行」继续作为部署前安全未闭环项保留；阶段0–6 改动均未提交（用户 m07086 指示不提交）。
+- **退出判定**：阶段6 用户清单项均已落地并有真实链路证据 → 退出条件满足；F-015 整体仍 `in_progress/runtime_unverified`（不升级）。
+- **下一步**：阶段7 指标与保留 + v0.2.0 总验收（须等用户确认再进）；待用户决定：前端是否展示摘要、重试记录归属是否按实施方案改为「原身份 / trigger=retry」。
+
+### 追加：剩余实施路线图阶段5 自动 resolved + 内部调度（2026-11-25，用户 m06123 清单）
+
+- **目标**：条件消失后告警自动关闭（严格、可审计、不误关），并把定时触发从外部 cron 收回到 agent 内部（默认关闭）；不提前做 LLM 摘要（阶段6）。
+- **契约（先定后写）**：
+  - 关闭条件九条同时成立才关闭：源 `status=ok` 且未截断；本次扫描非 partial；该规则本次已登记为「已评估」；对象不在本次命中集；告警 `lastSeenAt` 早于本次扫描开始时间；`ruleVersion` 与当前规则版本一致；仓库一致；状态为 `open/acknowledged`；忽略窗口未生效。数据质量跳过（缺时间/未来时间/畸形快照）不参与关闭。
+  - V008 `agent_scan_evaluated_objects`：每次扫描每个对象每个规则一行，`UNIQUE(scan_id,rule_id,object_id,dimension_hash)` 幂等；自动关闭用「已评估且未命中」判定，而不是「没出现」。
+  - 幂等三重：`requestId+actorId` / `scheduleSlot+configHash+scanTypes`（`uq_scan_runs_schedule`）/ 活动态 `scanKey`；统一入口 `service.enqueue_scan`。
+  - 调度：`schedule.enabled` 默认 `false`；`cron="*/15 7-23 * * *"`、`timezone=Asia/Shanghai`；错过不补跑；同一槽位进程内只入队一次，重启后由 PG 唯一索引兜底。
+  - `POST /agent/scans/{scanId}/retry` 是**管理员接口**（用户 m07086 修正）：仅 `is_scan_admin`，服务账号一律拒绝；原扫描归属沿用查询规则 `can_view_scan`——本人发起的手动扫描或服务账号发起的定时扫描，他人手动扫描 403；权限判定先于取记录（非管理员探测存在/不存在的 scanId 得到同一 403）。复用原扫描的 configSnapshot/configHash/configVersion/scanTypes/warehouse/dryRun/notificationMode（无快照 409、不存在 404）。
+- **已改**：
+  - 规则层：`app/scan/rules/base.py` 增 `EvaluatedKey`、`RuleEvaluation.evaluated_keys/data_quality_skipped/skip()`；`rules/{expiry,no_up,delay,backlog}.py` 命中与未命中都登记已评估，缺时间/未来时间/非法值登记为质量跳过。
+  - 存储：`app/scan/migrations/V008__scan_evaluated_objects.{up,down}.sql`；`repository.py` Protocol 与 Memory/PG 双后端新增 `save_evaluated_objects`、`list_evaluated_objects`、`list_auto_resolve_candidates`、`auto_resolve_alert`（PG 用 `CTE prev … FOR UPDATE` 取旧状态）。
+  - 服务：`service.py` 新增 `enqueue_scan`、`_auto_resolve_cleared`、`SCAN_TYPE_RULE_IDS`、`compute_retry_scan_key`；`counts` 增 `alertsAutoResolved/staleCheckSkipped`。
+  - 调度与入口：`app/scan/scheduler.py`（`parse_scan_cron`/`current_slot`/`ScanScheduler.tick`），`app/main.py` lifespan 随服务启停；`router.py` 新增 retry 接口，入队改走 `enqueue_scan`。
+  - 配置：删除死配置 `WMS_AGENT_SCAN_QUEUE_ENABLED`（`app/config.py`、`.env.example`、`config/scan.yaml` 的 `schedule.enabled` 承担开关语义）。
+- **本轮捕获并修复的真实缺陷（均为 Memory 单测全绿、PG 契约或真实 e2e 才暴露）**：
+  1. PG 建告警不接受调用方 `lastSeenAt`（`first_seen_at/last_seen_at` 直接取 `DB now()`）→ 回填观测时间的告警永不满足自动关闭的新鲜度条件。修复：`_ALERT_INSERT_SQL` 改 `COALESCE(%s::timestamptz, now())`。
+  2. 源合法返回 0 行时求值结果为空，`rule_ok` 没有任何规则登记 → 自动关闭被整体跳过（单测里第二次扫描总留一条不超期行，掩盖了该分支）。修复：`SCAN_TYPE_RULE_IDS` 按扫描类型登记全部规则；`_evaluate_backlog` 对畸形快照登记 `data_quality_skipped`。
+  3. PG 自动关闭事件 `from_state` 取自 `UPDATE … RETURNING state`，拿到的永远是新值 → 事件被写成 `resolved→resolved`。修复：CTE 先 `FOR UPDATE` 取旧状态再 UPDATE；契约测试补断言 `fromState`。
+  4. （用户 m07086 评审发现）retry 接口误用 `can_trigger_scan` 做门禁：ckjl/cg/仅 `inspection:scan:trigger` 权限码/服务账号都能重试，且未校验原扫描归属；原测试恰以 ckjl 身份重试并通过，等于把缺陷测成了功能。修复：新增 `security.can_retry_scan`（仅管理员 + 原扫描归本人或服务账号发起），`router.py` 先判管理员再取记录。
+- **已验证**：`tests/test_scan_stage5.py` 44 例（必测 10 项全覆盖：条件消失才关闭 / partial·page_drift·5xx 不关 / 质量跳过不关 / 乱序不关 / ignored 不复活 / 复发新建 / 用户先解决则不自动关 / fake clock 窗口边界·重启·重复槽 / 调度关闭不入队 / retry 复用旧快照；另 retry 权限 14 例：管理员正例 2、403 负例矩阵）；`tests/test_scan_store_contract.py` 增 V008 段（覆盖幂等、auto_resolve 条件 UPDATE、候选查询、并发唯一赢家、事件 fromState）；全量 pytest 带 PG **368 passed / 6 skipped**、不带 PG **333 passed / 41 skipped**；`./init.sh --java-test` **HARNESS_EXIT=0（41 tests）**；真实 e2e **STAGE5_E2E_OK**（四项见顶部条目，evidence `.runtime_tmp/stage5_auto_resolve_e2e_result.json`）；retry 权限真实令牌 e2e **RETRY_E2E_OK**（14 项，evidence `.runtime_tmp/retry_permission_e2e_result.json`）。
+- **未验证与限制**：调度器默认关闭，启用后长期运行的稳定性未压测；多实例同时 tick 只验证了「重启重放」，未做多进程并发实测（依赖 `uq_scan_runs_schedule` 兜底）；自动关闭只覆盖「未再命中」一种原因，人工认领中的告警同样会被关闭（条件消失即关闭是设计选择，事件流可审计）；网关 GET 无 token 仍被第三方 starter 放行，该安全未闭环项保留至生产验收。
+- **退出判定**：阶段5 退出条件满足（自动 resolved 严格条件 + 内部调度 + retry + 必测 10 项 + 契约 + 真实 e2e 四项全部通过）；F-015 仍 `in_progress/runtime_unverified`，待阶段6/7。
+- **下一步**：阶段6 LLM 聚合摘要（须用户确认后进入）；阶段7 指标与保留 + v0.2.0 总验收；阶段8 v0.2.1。
+
+### 追加：剩余实施路线图阶段4 版本化 YAML + ADR-018（2026-11-25，用户 m05130 七项清单、m05303 指定先做配置契约）
+
+- **目标**：把四类规则阈值、仓库范围、预算、责任路由、通知模式与调度开关从代码常量/env 迁到仓库内版本化 `scan.yaml`，实现「启动一次性校验 + 入队冻结 canonical 快照 + worker 只读快照回放」；密钥不进 YAML；不启用调度器、不做自动 resolved（阶段5）。
+- **配置契约（先定后写）**：新建 `wms-agent/config/scan.yaml`（`version/warehouses/scan{pageSize,maxPages,requestTimeoutSeconds,sourceBudgetSeconds,scanBudgetSeconds,concurrency}/rules{expiry,noUp,delay,backlog}/routing/notifications/schedule`）；新建 `app/scan/config.py`：pydantic 模型全部 `extra="forbid"`，校验 `p0Hours>p1Hours>p2Hours`、`watchDays>=nearDays`、`scanBudgetSeconds>=sourceBudgetSeconds`、通知模式 `dry_run|in_app|full`、路由 `rule_id` 必须命中 `KNOWN_RULE_IDS`（或 `*`）、路由 `warehouse` 必须在 `warehouses` 内、`warehouses` 非空不重复；自定义 `_UniqueKeyLoader` 拒绝重复键与非字符串键；`canonical_json`（`sort_keys` + 紧凑分隔符）与 `hash_config`（`sha256:` 前缀）是唯一指纹来源。`ScanConfigError` 定义在 `app/config.py`，10 个精确错误串（`YAML 重复键: {key}（行 N）`、`巡检配置非法: {exc}`、`config_snapshot_hash_mismatch` 等）。
+- **已改**：
+  - Python 配置层：`app/scan/config.py`（新建，287 行）、`config/scan.yaml`（新建）、`app/config.py`（`scan_config_path` / `WMS_AGENT_SCAN_CONFIG_PATH`）、`app/main.py`（启动加载 + 按 `settings.model_fields_set` 只把真正由 env 提供的三项作为 override 合并，再算快照与哈希；非法配置拒绝启动；`ensure_single_scan_warehouse` 仍强制单仓；`app.state.scan_config`）、`pyproject.toml`（`pyyaml>=6.0`）。
+  - 快照冻结：`migrations/V007__scan_config_snapshot.{up,down}.sql`（`agent_scan_runs` +`config_snapshot TEXT`/`config_version TEXT`，保留 `config_hash`；down 先备份到 `agent_scan_runs_v007_config_backup`）；`repository.py` 的 `RUN_COLUMNS`/`_run_params`/`_row_to_run` 三处同步 31 列；`router.py` POST /scan 写 `configSnapshot`/`configVersion`/`configHash`/`notificationMode`（均取自生效配置）。
+  - 快照回放：`worker.py` `execute_queued_scan` 只从 `run["configSnapshot"]` 反序列化执行，不再读当前 `scan.yaml`；缺失 → `failed(config_snapshot_missing)`，哈希/版本不符 → `failed(config_snapshot_hash_mismatch)`/`failed(config_snapshot_version_mismatch)`；该检查**有意排在鉴权之后**（鉴权失败是更早的失败语义）。
+  - 责任路由：`service.py` 新增 `resolve_route_targets`（按 `warehouse`+`rule_id` fnmatch 解析）与 `_rule_config` 兼容层；`DEFAULT_CONFIG` 改为与 `scan.yaml` 同构嵌套；`routed_to` 只写责任岗位，`assignee` 仍只由 claim 写；手动/用户身份只通知发起人，定时/服务身份合并 `notifications.recipients` 与路由 recipients 去重，解析不到记 `counts.notificationsUnrouted` 且不写占位账号。
+  - 文档：新建 `documents/07、AI-Agent化/ADR-018-巡检规则配置.md`（7 章：背景/决策/与 ADR-014 的有意例外关系/规则版本 vs 配置版本/后果/验证证据表/未覆盖范围）；`技术选型ADR.md` 索引表与正文摘要本已存在，无需重写。
+- **本轮捕获并修复的真实运行时缺陷（单测全绿、真实回放才暴露）**：`load_config_snapshot` 原对 `document.model_dump()` 重算哈希，pydantic 把 `p0Hours: 24` 归一化为 `24.0`，导致入队侧 `sha256:ed25ab23…` 与消费侧 `sha256:e15ff7b6…` 不一致、合法快照被判 `config_snapshot_hash_mismatch` → 改为对 `json.loads(snapshot)` 的**原始 dict** 算 `canonical_json`，并由 `test_snapshot_roundtrip_keeps_hash` 守住。另修 `service.py` 漏 `import hashlib`/`import json`（38 例失败主因）、配置扁平→嵌套未同步的读取点、worker 检查顺序。教训：**配置快照哈希必须对原始字节/dict 计算，绝不能对模型序列化结果计算**，只有「写快照→读快照回放」往返测试能捕获。
+- **已验证**：`tests/test_scan_config.py` 26 passed / 1 skipped（PG 回放用例需 `WMS_AGENT_TEST_DB_URL`）；全量 pytest 带 PG 测试库 **313 passed / 5 skipped / 1 warning**（阶段3 基线 277 → +36）、不带 PG **284 passed / 34 skipped**；`./init.sh --java-test` HARNESS_EXIT=0，10 个门禁类 41 tests BUILD SUCCESS；真实 e2e **STAGE4_E2E_OK**（与 router 同构的入队路径写 A → 改文件为 B → `claim_next_queued` + `execute_queued_scan` 消费）：A `sha256:479605f8…`/noUp 8/4/2，B `sha256:451c2e31…`/noUp 3/2/1，执行结果 `status=succeeded`、`config_hash`/`config_version` 回读为 A、执行快照 `p0Hours=8.0`（未变成 B 的 3.0）；脚本结束自动还原 `scan.yaml` 并已核对回 8/4/2。
+- **未验证 / 限制**：调度器仍未启用（`schedule.enabled` 默认 false，阶段5 实现）；多仓未开放（强制单仓）；不做热重载；e2e 走的是与 router 同构的入队路径而非真实 HTTP POST（运行中的 agent worker 会立即抢走 queued 任务，且进程级 `WMS_AGENT_NOTIFICATION_MODE=in_app` 会让生效哈希与纯文件哈希天然不同——这是「最终生效配置」语义）；网关 GET 无 token 仍被第三方 starter 放行，安全未闭环项保留至生产验收。
+- **阶段4 退出判定**：满足——V007 迁移通过并已写入真实 PG；启动校验生效（非法配置拒绝启动）；所有新扫描都有 `config_snapshot/config_hash/config_version`；worker 不重读 YAML；路由与通知模式来自生效快照；ADR-018 落盘；Memory/PG 契约测试与真实 e2e 通过。F-015 保持 `in_progress/runtime_unverified`。
+- **下一步**：阶段5 自动 resolved + 内部调度（用 `schedule.enabled`/cron/timezone 触发，按 YAML 路由解析接收人，自动关闭消失的告警但保留 partial 期间不自动关闭）。改动均未 git add/commit。
+
+### 追加：剩余实施路线图阶段3 backlog+一致快照（2026-11-25，用户 m02548 指定、m04555 确认进入）
+
+- **目标**：按用户路线图阶段3 落地第四类规则 BACKLOG-GROWTH——Java 新增一致快照端点、Python 数据源/规则/编排、V006 观测表、必测场景与真实 e2e；不接 LLM、不做自动 resolved、不加调度器、Python 不直读 MySQL、旧 Dashboard 缓存端点不改、不用四队列总和掩盖单队列突增。
+- **规则契约（先定后写）**：receipt/to_up/pick 三队列分别判定，cur_pick 只诊断；前 3 次完整扫描只建基线；第 4 次起单周期 `growth≥30% 且 absolute_delta≥10` → P2；P1 = 最近 3 次相邻增长均满足门槛（最早第 6 次）；基线 0 不做百分比判断；负值/非法值该队列跳过不落样本不告警；partial/快照失败/业务码失败不落样本不告警（只有 SCAN-PARTIAL 元告警）；手动扫描计入基线但受 requestId 幂等约束；基线严格按 rule_version 过滤。
+- **已改**：
+  - Java：`wms-domain/.../vo/j1/dashboard/PendSnapshotVO.java`、`wms-j1-dashboard/.../service/IPendSnapshotService.java` + `impl/PendSnapshotServiceImpl.java`（`@Transactional(readOnly=true, isolation=REPEATABLE_READ)`）、`WmOmQmIMapper.java` 一条 `@Select` 四个标量子查询（`IFNULL(SUM(CAST(col AS DECIMAL(18,4))),0)`，绕过 Redis 缓存，BigDecimal）、`DashboardApis.java`/`DashboardController.java` 新增 `GET /dashboard/query-pend-snapshot`；测试 `PendSnapshotContractTest`（4）/`PendSnapshotResourceRoleSeedTest`（3）；资源种子 `documents/02、项目需求/数据库/seed_dashboard_pend_snapshot_role.sql`（纯增量，ID 用 `FN-DASH-PEND-SNAPSHOT`/`RF-DASH-PEND-SNAPSHOT-INSPECT`，已在真实 MySQL 幂等执行并刷 Redis）；`init.sh` 门禁纳入两个新测试类（10 类）。
+  - Python：`app/scan/rules/backlog.py`、`sources/backlog.py`（`parse_snapshot`/`normalize_observed_at`）、`service.py`（HANDLERS/SUPPORTED_TYPES/DEFAULT_CONFIG.backlog/`_evaluate_backlog`/`_is_non_negative_number`）、`repository.py`（`save_backlog_observations`/`list_backlog_observations` 双后端、`_parse_observed_at`）、`migrations/V006__backlog_observations.{up,down}.sql`；测试 `tests/test_scan_backlog_rule.py`（32）、`tests/test_scan_backlog_scan.py`（27）、`test_scan_store_contract.py` 新增 3 例（双后端唯一/稳定排序、Java ZonedDateTime observedAt、PG 并发唯一约束）。
+- **本轮捕获并修复的真实运行时缺陷（单测全绿、真实 e2e 才暴露）**：①MyBatis 无法把列映射到 interface（`ReflectionException: Error instantiating interface …PendSnapshotRow`），JDK8 契约测试只 mock service 覆盖不到 → `PendSnapshotRow` 改 static class；②Dashboard `observedAt` 为 Java `ZonedDateTime.toString()` 带 `[Asia/Shanghai]` 区域 ID，psycopg 解析 TIMESTAMPTZ 抛 `InvalidDatetimeFormat` → 整次扫描 failed（Memory 后端只存字符串故单测全绿；PG 探针手写无方括号时间未复现）→ 源头 `normalize_observed_at` 去后缀 + 存储层 `_parse_observed_at` 兜底转 aware datetime（只接受带偏移 ISO，不把 naive 当 UTC 猜），Memory 同样规范化并按真实时刻排序；`run_scan` 失败日志加 `exc_info`（errorSummary 仍只给类型名）。教训：**Memory/PG 契约测试必须喂真实上游形态（含时区后缀）**，手写简化样本会漏掉这类缺陷。
+- **已验证**：全量 pytest 带 PG 测试库 **277 passed / 4 skipped / 1 warning**；`./init.sh --java-test` HARNESS_EXIT=0，10 个门禁测试类 41 tests BUILD SUCCESS；真实 e2e **STAGE3_E2E_OK**（evidence `.runtime_tmp/_e2e_stage3_out.txt`）：dashboard(10010，JDK17 重新打包启动) 经网关 `GET /dashboard/query-pend-snapshot` code 10000，`observedAt=2026-11-25T13:12:59.319353300+08:00[Asia/Shanghai]`、`receipt 0.0 / toUp 0.0 / pick 45.0 / curPick 74.0`（与 MySQL `wm_om_qm_i bin_sta='I'` 两行 45 一致）；admin JWT 连发 7 次 `POST /agent/scan{scanTypes:[backlog]}` 全部 succeeded partial=False backlogSamplesSaved=3；PG `agent_backlog_observations` 恰 21 行（7×3，`pick=45.0000`，observed_at 已去方括号带纳秒 +08:00，`rule_version=v0.2.0 source_status=ok`，与 `agent_scan_runs.trace_id` 串联）；真实 pick 恒 45 → 增长 0 → 0 条 BACKLOG-GROWTH（基线不误报）。告警路径（P2/三连 P1）由 32+27 单测覆盖。
+- **未验证 / 限制**：真实数据只有一个恒定队列值，P2/P1 升级未在真实环境触发（单测与编排测试覆盖）；Dashboard 服务为本地 JDK17 启动（harness 门禁是 JDK8 单测）。
+- **阶段3 退出判定**：满足——规则契约先定并有 32 例规则测试；Java 快照端点 REPEATABLE READ/绕过缓存/BigDecimal/整体失败 + insp_read 资源映射已刷 Redis；Python 数据源/规则/编排与 V006 双后端契约一致；必测 9 类场景全部覆盖（含 PG 并发唯一约束、规则版本隔离）；真实 e2e 核对样本/基线/告警/trace 全过。F-015 保持 `in_progress/runtime_unverified`（LLM 摘要未做，阶段6）。
+- **下一步**：阶段4 版本化 YAML + ADR-018 已完成（见上条）；接着进入阶段5 自动 resolved + 内部调度。改动均未 git add/commit。
+
+### 追加：剩余实施路线图阶段2 最小前端 /inspection/alerts（2026-11-25，用户 m02548 指定、m02550 授权）
+
+- **范围**：用户路线图阶段2——新增巡检 API 与单页（筛选/游标/30s 轮询按 alertId 去重/partial 横幅/详情抽屉/ack/claim/resolve/ignore 关闭必填 reason），挂 MENU-DAILY-CHECK-05，Vitest+生产构建，真实浏览器权限与全链路 e2e；不引入 SSE、不改问数交互。
+- **已改**：`wms-frontend/src/apis/inspection/alerts.ts`（API 层+纯函数）、`src/apis/inspection/alerts.test.ts`（3 例）、`src/views/inspection/alerts/index.vue`（页面）；`wms-agent/app/scan/repository.py`（`_ALERT_LIST_COLUMNS` 23→27 列：补 resolved_at/resolved_reason/ignored_until/rule_version 并在 `_row_to_alert` 映射，MemoryScanStore 新建告警对关闭字段 setdefault None）；`wms-agent/app/scan/worker.py`（`acquire_service_token` 有限重试：SERVICE_TOKEN_ATTEMPTS=3，502/503/504 与传输错误重试，其它 4xx 直接抛出）；`wms-agent/tests/test_scan_round4.py`（+4 例服务令牌重试）、`tests/test_scan_round5.py`（+1 例关闭信息与 ruleVersion 契约）；`documents/02、项目需求/数据库/seed_menu_daily_check_05_inspection.sql`（新增，纯增量菜单种子）。
+- **本轮发现并修复的真实缺陷**：①关闭原因/忽略截止/rule_version 从未被查询与映射，列表与详情把关闭信息全部丢弃（抽屉「规则」显示（-）、看不到解决原因）——已补列与映射并在双后端契约测试中断言；②partial 横幅用「列表里是否有 SCAN-PARTIAL 元告警」判定，元告警关闭前一直在导致干净扫描后误显示——改为独立取最新扫描自身 partial；③运行时父菜单 MENU-DAILY-CHECK 只绑 gly，菜单树按父构建导致 ckjl/cg 看不到子菜单 05——种子补父绑定；④worker 取服务令牌无重试，远端 Nacos gRPC 间歇 3s 超时使整次扫描 failed——加有限重试并区分确定性 4xx。
+- **已验证**：Vitest 纯函数 4 files 15 tests passed；`vite build --mode production` BUILD_EXIT=0；全量 pytest 不带 PG **190 passed/26 skipped/1 warning**，带 PG 测试库 **213 passed/3 skipped/1 warning**（契约套件真跑 27 列 SELECT）。浏览器 e2e（agent-browser 0.43.0 + Chrome，dev server 3000，登录经 oauth token 写入 Redis `{user}:token` JSON 字符串后注入 localStorage）：admin(gly) 菜单可见、5 条数据、认领→解决成功；ckjl001(ckjl，新建测试账号) 菜单可见、认领成功、他人已认领告警仅显示详情；cw(新建 cwtest001) 菜单无每日检查/异常巡检、深链 0 行并提示无权、直连与经网关 API 均 code 9997；无 token 直连 HTTP 401。「扫描→告警→认领→关闭」：API 触发 scan-f67059e0c3b145de（succeeded、partial=False、findings=5）→ 浏览器轮询承接新告警 9 → admin 认领→确认→忽略（空 reason 被拦、填 reason 后 claim/ack/ignore 均 200、状态 已忽略），抽屉显示 规则 EXP-NEAR（v0.2.0）/确认人/解决原因/忽略截止 2026/12/2。菜单种子在真实 MySQL 幂等执行两轮一致；ckjl001 经网关 get-menus 含异常巡检。
+- **未验证 / 限制**：页面无触发扫描按钮（用户路线图页面范围不含触发扫描，e2e 以 API 触发）；全量 `vitest run` 另有 5 个既有失败（daycheck/temperature、sysmanager/catagory、use-request/path 向 localhost:3000 发真实 XHR，baseline 环境依赖，与本轮无关）；vite-plugin-autogeneration-import-file 的 FSWatcher 在 HMR 文件变更时会崩溃（Node v24.21.0），需重启 dev server；本机 stockln(10610) 原未运行，已按 daycheck 同样方式启动后 expiry 源恢复 200。测试账号 ckjl001/cwtest001 为本轮新建的运行时数据。改动均未 git add/commit。
+- **F-014**：浏览器证据（cg/gly/ckjl 可见可操作、KH/cw/cs 不可见）已在本次 e2e 覆盖；压测证据仍待并行补。
+- **阶段2 退出判定**：满足——Vitest/生产构建通过；cg/gly 真实浏览器可见可操作；ckjl 测试用户已补并验证；KH/cw/cs 菜单与 API 均不可访问；「扫描→告警→认领→关闭」浏览器 e2e 通过。F-015 保持 in_progress/runtime_unverified（backlog 规则与 LLM 摘要未实现）。
+- **下一步**：阶段3 backlog+一致快照（Dashboard GET /dashboard/query-pend-snapshot REPEATABLE READ 直读、新增 backlog 观测表迁移（V006 起，V005 已用于 actor_user_id）、receipt/to_up/pick 参与、前 3 次基线/第 4 次 P2/连续 3 次 P1）。
+
+### 追加：剩余实施路线图阶段1 告警详情/认领/已读/真实 in_app（2026-11-25）
+
+- 目标：按用户 m02548 路线图阶段1 实施——告警详情、认领、已读、真实 in_app 通知，并落盘 V004/V005 迁移与网关通知路由。
+- ① 迁移：新增 `V004__alert_claim_read`（agent_alerts 增 acknowledged_by/acknowledged_at/assignee_user_id/claimed_at/routed_to；agent_notifications 增 recipient_user_id；索引 idx_agent_alerts_cursor、idx_agent_notifications_user）与 `V005__scan_actor_user_id`（agent_scan_runs 增 actor_user_id——异步执行时 worker 只有服务账号身份，发起用户稳定 user_id 必须落库才能按稳定 id 隔离已读）。真实 PG apply_migrations_sync 返回已应用版本 1..5，列与索引全部核对存在。
+- ② 数据层（repository.py）：ScanStore Protocol 与 Memory/PG 双后端实现 claim_alert（FOR UPDATE + 他人已认领返回 None→409 + claimed 事件）、list_alerts_page（复合游标 `(last_seen_at, alert_id)` 严格小于，排序与 PG 一致）、get_alert_detail（evidence/ruleParams/events/触发 scan）、list_notifications、mark_notification_read；`_notification_rows` 带 recipientUserId，新增 `_notification_owned`（优先稳定 id、回退用户名）；`_ALERT_INSERT_SQL` 与活动态 UPDATE 补 routed_to。
+- ③ 服务层（service.py）：通知 status 规则 dry_run→dry_run / in_app→sent / 其余→pending（in_app 在告警事务内写 sent 并由 PG 填 sent_at）；通知带 recipientUserId，告警带 routedTo；run 落 actorUserId。
+- ④ 路由与权限（router.py / security.py）：新增 GET `/agent/alerts/page`（游标翻页）、GET `/agent/alerts/{id}`、POST `/agent/alerts/{id}/claim`、GET `/agent/notifications`、POST `/agent/notifications/{id}/read`；入口落库发起用户稳定 id（服务账号不落）；`_transition` 传 actor_user_id；新增 `can_view_notifications`（服务账号不可读）与 `notification_identity`。
+- ⑤ 网关落盘：`wms-gateway/src/main/resources/application.yaml` inner-paths 追加 `/agent/notifications` 与 `/agent/notifications/**`。
+- ⑥ 验证：新增 `tests/test_scan_round5.py` 13 例 + `tests/test_scan_store_contract.py` 5 个双后端契约用例；全量 pytest 不带 PG **185 passed / 26 skipped / 1 warning**，带独立 PG 测试库 `wms_agent_scan_test` **208 passed / 3 skipped / 1 warning**（契约单跑 38 passed）；`./init.sh --java-test`（harness JDK8 1.8.0_512）**HARNESS_EXIT=0**，daycheck 22 tests + wms-login 12 tests，BUILD SUCCESS。
+- ⑦ 修 PG 详情缺陷：`_get_alert_detail_sync` 曾把列表第 6 列 dimension 当 evidence 返回且 evidence 不在列表列内，改为单独查 `evidence/rule_params` 后用 `_safe_json` 解析。
+- 阶段1 退出判定：功能代码与自动化验证完成，F-015 仍 `in_progress/runtime_unverified`（backlog/LLM/前端未做）。下一步：阶段2 最小前端 `/inspection/alerts` + 浏览器权限测试。改动均未 git add/commit。
+
+### 追加：剩余实施路线图阶段0 安全与真实运行门（2026-11-25，用户 m02548 指定、m02550 授权）
+
+- 目标：按用户「异常巡检 Agent 剩余实施路线图」阶段 0–8 严格串行推进（阶段 9 才登记 v0.2.1），基线不重做队列/租约/fencing/幂等/三类规则/V001~V003。阶段0 聚焦安全与真实运行门。
+- ① 种子改纯增量：`documents/02、项目需求/数据库/seed_daycheck_no_up_goods_page_role.sql` 重写为 DELIMITER// 存储过程，按 rolecode 动态取唯一 insp_read 角色 ID（0/>1 行 SIGNAL 中止）、ID/URL 冲突 SIGNAL 中止、移除全部 DELETE、不触碰 MENU-DAILY-CHECK-05；`NoUpPageResourceRoleSeedTest.java` 加 stripComments() 配合，JDK8 下 3 tests/0 failures BUILD SUCCESS。
+- ② 真实 MySQL zo_wms 执行种子成功（幂等、二次执行结果一致），两端点均绑 insp_read、MENU-05 未变；evidence `.runtime_tmp/stage0_seed_result.json`。
+- ③ Redis 刷新：网关 10001 `/open/resources/cache/reload` 404（未路由），改直连 oauth2 10400 PUT 成功（HTTP 200 code=10000）；AUTH:RESOURCE_ROLES 两 no-up 端点均为 `["insp_read"]`；evidence `.runtime_tmp/stage0_redis_result.json`。
+- ④ 真实运行门：旧裸 List 端点 N/I/Y 三态齐全且无 rowId/noticeId；巡检分页端点 2001 行跨 21 页 fetched=2001/unique=2001/stable_order=true/max_latency=88ms 全覆盖；服务 JWT claims 收敛（agent_service/insp_read/agent-inspector/W01）；用户 JWT 不落库（wms_agent 全表无敏感列）；evidence `.runtime_tmp/stage0_security_result.json`、`stage0_pagination_2001_result.json`。
+- 环境限制（如实记录）：网关 GET 端点无 token 仍 200（第三方 starter 全局放行，非新端点回归；POST /agent/scan 无 token 由 agent 侧自验 401），网关层 401/403 在本 harness 无法实测，鉴权按 ADR-007 由 agent 侧自验承接；当前 PG 为 postgres 超级用户，「Agent PG 账号只写 wms_agent」属部署配置约束需部署时建专用账号。
+- 阶段0 退出判定：运行态门已用真实 MySQL/Redis/daycheck 复现通过；F-015 仍 `in_progress/runtime_unverified`（阶段1–8 未做）。下一步：阶段1 告警详情/认领/已读/真实 in_app（V004 迁移、claim 端点、游标分页、详情、通知已读、网关通知路由）。改动均未 git add/commit。
+
+### 追加：F-015 第四轮签收补强（2026-11-25，用户 m01292 复跑复核后）
+
+- 目标：用户复跑认定「主体修复完成但不能签收全部闭环」，指定 4 项必修 + 2 处 evidence 修正 + 3 项 e2e，全部完成。
+- 必修① JDK8 兼容：`NoUpPageContractTest.java:71` `List.of`→`Arrays.asList`，`./init.sh --java-test` 用 harness PATH 的 JDK8 1.8.0_512 真跑 19 tests/0 failures、HARNESS_EXIT=0（直接取 harness 退出码，勿用 PowerShell Tee 管道，管道本身会返 exit 1）。
+- 必修② 资源角色映射：新建 `documents/02、项目需求/数据库/seed_daycheck_no_up_goods_page_role.sql`（旧/新端点资源均绑 insp_read；不复用 MENU-DAILY-CHECK-05 以免破坏 ckjl/cg/gly 菜单授权），新增 `NoUpPageResourceRoleSeedTest.java` 3 例，init.sh 门禁 7→8 类，JDK8 下 8 类 22 tests BUILD SUCCESS。种子未在真实 MySQL 执行、网关 401/403/200 负例未跑 → runtime_unverified。
+- 必修③ 分页重叠与元数据漂移：`app/scan/sources/base.py` fetch_paged 区分页内去重（page_seen，不算漂移）与跨页重复稳定键（page_drift→partial），并校验 total/pages 翻页期间不变（pagination_metadata_changed→partial）。初版顺序误伤 3 个页内去重测试，调整顺序后全绿。
+- 必修④ 令牌 claim 强校验：新增 `WMS_AGENT_SERVICE_ACCOUNT_NAME`（默认 agent-inspector，对齐 Java agent.service.username），worker 新增 `validate_service_principal` 强制 token_use=agent_service / insp_read / 账号名匹配 / warehouse_scope 非空且含本次仓库；新增覆盖 5 种失败 claim 的测试。
+- 必修⑤（用户第 3 项含此）告警重放幂等：观测键 `(scanId,traceId,fingerprint)`——MemoryScanStore 用 dict、PG 用 V003 迁移新表 agent_scan_observations（原子认领），命中返回 UPSERT_REPLAYED 不增 occurrence/不写事件/不通知；service 增 alertsReplayed 计数。
+- 2 处 evidence 修正已并入 feature_list.json F-015 第四轮条目：①旧 JSON 表述（DTO @JsonInclude(NON_NULL) 保证旧响应不输出 null，但默认排序由无序改确定性 DESC+id，属兼容性行为扩展而非完全不变）；②NoUpMapperXmlTest:94 定性（XML 解析+MetaObject 赋值，非 JDBC ResultSet 逐行实映射测试）。
+- 验证：全量 pytest（不带 PG）**167 passed / 21 skipped / 1 warning in 13.28s**；带独立 PG 测试库契约测试通过；Java `./init.sh --java-test` JDK8 下 PASS。
+- 3 项真实 e2e 全 PASS：①真实用户 JWT 手动扫描（网关 POST /auth/oauth/token 取 admin JWT，agent 直接接受 Bearer，POST /agent/scan→立即 202 queued→轮询 succeeded，scan-ee077b4c1976449b）；②201 行运行态分页不截断（zo_wms.wm_in_qm_i 插 201 行测后清理，daycheck 10320 分页端点 total=201/pages=3、3 页 100/100/1、唯一 rowId 201/201 全覆盖）；③进程崩溃接管（真实 PG 插 lease 过期 running，recover_stale→queued、attempt 保留，测后清理）。evidence 留档 `.runtime_tmp/e2e_round4_result.json`、`e2e_round4_pagination_result.json`、`wms-agent/_e2e_recovery_result.json`。
+- 状态：F-015 仍 `in_progress/runtime_unverified`，本轮认定「主体修复完成」，不升级 passing（backlog/LLM/in_app/告警详情/前端未做）。下一步按用户指定顺序：告警详情/已读与 in_app → 最小前端+浏览器权限测试 → backlog → LLM 摘要 → v0.2.1。改动均未 git add/commit。
 
 ### 追加：F-011 真实 LLM 浏览器 e2e 复跑（2026-11-23 晚）
 
@@ -74,6 +234,116 @@
   - 本机 `postgres/123456` 是明文口令且本轮在库中建了 `ragent` 库，属测试环境痕迹，交付前宜改口令或清理该库。
 
 ## 最近会话（append-only）
+
+### 2026-11-24 F-015 第四轮缺陷返修（评审不通过后只修缺陷，不扩功能）
+
+- 目标：用户转交评审结论（“队列与权限闭环”不通过），要求修复全部缺陷并纠正 evidence；保留第三轮成果，状态仍 `in_progress`。
+- Java no_up：`NoUpGoods` 补 `id/im_notice_id`（`@ExcelIgnore`）；`NoUpServiceImpl` 显式映射 `rowId/noticeId`（`BeanUtils` 不会按语义映射）；Mapper 拆两条语句——旧 `getNoUpGoodsPage` 恢复不过滤（旧页面 `received-unsold/index.vue` 的 `statusText` 按 N/I/Y 三态展示，给旧端点加过滤才是改契约），新 `getNoUpGoodsForInspection` 未上架口径 + 显式列（避免三表 `select *` 同名列歧义）+ 稳定排序；DTO 新字段 `@JsonInclude(NON_NULL)`，旧 JSON 不变。修复前实测：旧实例上新端点直连 10320 也是 404（运行中的 daycheck 早于第三轮代码）。
+- 队列：领取写 `lease_owner/leased_at` 且 `attempt` 列 +1；执行回写按租约 fencing（`ScanLeaseLostError`）；非 fencing 写入不覆盖 `queued_at/attempt/lease_*`；`recover_stale` 读 `attempt` 列（不再从 counts 读、不再归零）且有界（3 次后 `failed(stale)`）；worker 心跳续租 + 周期恢复；`payload_hash/trace_id` 入队生成并沿用；`rule_version` 回写组合版本串；执行身份取自服务令牌 claims；服务 scanKey 含仓库、无槽位不去重；`get_run_by_scan_key` 活动态优先。
+- 告警事务：`upsert_alert` 先 `FOR UPDATE` 锁最新行，告警 + 事件 + 通知同事务；升级按“更新前级别”判定；去重键 `alertId:event:severity:trace:recipient`；ignored 显式返回 `suppressed`；接收人 = 手动扫描发起人 / 定时扫描配置 `WMS_AGENT_ALERT_RECIPIENTS`（解析不出按 `notificationsUnrouted` 记账）；新增迁移 V002（事件类型 + 级别变化）。
+- 权限：拆分 `inspection:alert:view` / `inspection:scan:trigger` / `inspection:alert:handle`；菜单业务角色 `cg/ckjl` 可看/发起/操作；服务账号只允许 trigger；告警列表与状态操作按令牌仓库范围过滤（越权 403）；首版强制单仓（多仓拒绝启动）；`ignoredUntil` 非法/无时区/过去时间统一 422。
+- 其他：三个数据源共用 `fetch_paged`（total 缺失不再按 0 首页即完成；总数不一致/翻页漂移/缺 total 标 partial）；迁移 rollback 只允许已应用且最新版本、down 先备份再删列、apply 加 advisory lock；list 环境变量改逗号分隔可解析；`init.sh --java-test` 门禁扩到 7 个测试类并逐一确认执行。
+- 验证：新增 `tests/test_scan_round4.py`、`tests/test_scan_store_contract.py`（Memory/PG 同一份契约，共 53 个用例）；全量 pytest 带测试库 `wms_agent_scan_test` → **184 passed, 3 skipped**，不带 PG → **166 passed, 21 skipped**；Java `./init.sh --java-test` → **31 tests BUILD SUCCESS**（新增 `NoUpMapperXmlTest` 6 例用真实 MyBatis 解析并逐行映射）；运行态 42 项检查全过（巡检分页端点直连/经网关返回探针行且 `rowId/noticeId` 正确；服务令牌定时 no_up 扫描 202 → worker 消费 succeeded，PG 行 attempt=1/租约释放/payload_hash/trace_id/rule_version/executor_id 正确；告警 trace_id、created 事件与通知同事务、`recipient=admin`、去重键含事件与级别；权限负例与跨仓 403；`ignoredUntil` 422）。
+- 既有测试的契约变更（按新契约更新，非削弱）：权限拆分后只读码不能发起/操作；`upsert_alert` 返回 `AlertUpsertResult`；残留 running 先重入队而非直接 failed；no_up 去重用例 `total` 改为原始行数 3（原 2 与 3 行原始数据不一致）；trace 表断言由“恰好三表”改为“包含三表”（同 schema 已有巡检表）；`test_scan_round3.py` 跨仓用例的 `_service(("W01",))` 原本把仓库误传成权限，改为 `_service()`。
+- 运行态操作留痕：daycheck 重新打包重启（首次打包因旧进程占用 jar 致 repackage 失败，服务中断约 4 分钟后恢复）；agent 重启加载新代码；PG 开发库 `ragent` 应用 V002（增量、幂等）；新建本机测试库 `wms_agent_scan_test`；临时探针（MySQL 1 条 `codex-noup-probe-*` 验收行、PG 探针告警与扫描记录）已清理；结果留档 `.runtime_tmp/round4_runtime_result.json`。
+- 未验证/剩余风险：开发库 `wm_in_qm_i` 为空表 → 真实多页数据未在运行态复现（由 mock 单测覆盖）；真实进程崩溃下的租约接管未在运行态演练（由 PG 契约测试覆盖并发/行锁）；真实用户 JWT 的手动扫描未在网关复跑（本轮用服务令牌经网关 + 自签 JWT 直连）；服务令牌为 Redis 等值校验，worker 每次扫描取新令牌会使旧服务令牌失效。
+- 状态：`feature_list.json` F-015 纠正第三轮 evidence 中“同事务”“旧端点不变”“_pg_e2e 5 项”三处不准确表述并追加第四轮 2 条；仍 `in_progress/runtime_unverified`。下一步按用户顺序：告警详情/已读与 in_app → 最小前端 + 浏览器权限测试 → backlog → LLM 摘要。
+
+### 2026-11-24 F-015 第三轮「队列与权限闭环加固」（用户 m00644 指定，P0+P1）
+
+- 目标：用户复跑 121 passed 但只读 PG 发现 `agent_scan_runs` 仅 17 列、新字段根本没落库，MemoryScanStore 全绿不能证明真实队列正确；指定本轮不加 backlog、不上前端，先做闭环加固，8 条退出条件全满足再进前端/in_app。
+- P0 队列表结构与迁移：新建 `app/scan/migrations/{__init__,runner}.py` 版本化迁移机制（无第三方框架，`wms_agent.schema_migrations` 记版本，`apply_migrations_sync`/`apply_migrations`/`rollback_migration`），`V001__scan_queue_columns.up.sql`/`.down.sql` 可回滚；`repository.py` 用 28 列 `RUN_COLUMNS` 统一 INSERT/SELECT/ON CONFLICT UPDATE，真实 PG `agent_scan_runs` 经迁移 17→28 列（新增 `queued_at/warehouse/dry_run/notification_mode/payload_hash/trace_id/attempt/lease_owner/leased_at/executor_type/executor_id`），`agent_notifications.dedupe_key` 部分唯一索引。
+- P0 异步凭证：`POST /agent/scan` 只 `insert_run` 立即返回 202 `queued`，不再同步消费；`worker.execute_queued_scan` 统一用 `insp_read` 服务账号取短时令牌，失败→`failed(auth_failed)` 不回退，用户 JWT 不落库；run 保留发起用户 `actor_type/actor_id` 与执行身份 `executor_type/executor_id`。
+- P0 权限与状态机：`security.py` 收紧 `can_start_scan`/`can_view_alerts` 为管理员或 `SCAN_AUTHORITIES`，新增 `can_operate_alert` 禁服务账号 ack/resolve/ignore；`repository.py` 加 `ALLOWED_TRANSITIONS`（open→acknowledged/resolved/ignored、acknowledged→resolved/ignored），非法转移→409，resolve/ignore 缺 reason→422，跨仓 403。
+- P0 no_up 全量分页：Java 子代理新增 `GET /daycheck/no-up/get-no-up-goods-page`（`JsonVO<PageDTO<NoUpGoodsDTO>>`，data.rows/total/pages，旧裸 List 端点契约不变；JDK17+Maven 3.6.3 实跑 10 tests BUILD SUCCESS）；Python `sources/no_up.py` 改新端点按 data.rows/total/pages 循环翻页，裸 List 标 partial；201 行跨 3 页全覆盖测试通过。
+- P1 告警一致性：upsert ON CONFLICT 同步 `severity/evidence/dimension/title/suggested_actions/rule_degraded`，`ignored_until` 未过期抑制复发（内存/PG 两后端），通知 `dedupeKey=alertId:digest` 去重 + `recipient=scan-owner`，PG 故障仍 503 拒绝受理。
+- 验证：新增 `tests/test_scan_round3.py` 8 例 + `test_scan_no_up_delay.py` 2 例；真实 PG `_pg_e2e.py` 5 项全过（入队读出一致、并发同 requestId 只一条、残留 running 恢复、dryRun 零告警零通知、不可达 DSN 拒绝）；全量 pytest → **131 passed, 3 skipped, 1 warning in 10.61s**；Java `mvn -o -pl wms-j3-daycheck -am test -DskipTests=false -DfailIfNoTests=false` → 10 tests BUILD SUCCESS（static_pass + 单测通过，e2e runtime_unverified）。
+- 未验证/剩余风险：Java 仅模块单测（无真实网关+DB e2e）；`WMS_AGENT_TEST_DB_URL` 未设使 `test_storage_postgres.py` skip（预期）；F-015 仍 in_progress/runtime_unverified（backlog、LLM 摘要、in_app 真实通知、告警详情/已读、前端页面未做）；用户指定后续顺序：告警详情/已读与 in_app → 最小前端+浏览器权限测试 → backlog → LLM 摘要 → v0.2.1；F-014 菜单浏览器/压测证据并行补。
+- 状态：`feature_list.json` F-015 evidence 追加 2 条、notes 更新第三轮成果；`PROGRESS.md` 记本轮。
+
+### 2026-11-24 F-015 第二轮 no_up/delay 两类规则（用户指定第一轮后再做）
+
+- 目标（用户 m00001 开发顺序）：第一轮 5 项测试通过后，第二轮开发 no_up/delay 两类规则与数据源，backlog 后置；F-014 菜单浏览器/压测证据并行补。
+- 公共取数：`sources/base.py` 抽出 `get_with_retry`（5xx/超时重试 1 次、4xx 不重试）、`classify_error`、`SUCCESS_CODES`、`SourceResult.fail`；`sources/expiry.py` 改为复用公共逻辑，行为不变、第一轮测试仍全绿。
+- no_up：新增 `sources/no_up.py`（GET `/daycheck/no-up/get-no-up-goods`、显式 `sort=oldest`、裸 List/PageDTO 兼容、`rowId` 组合键去重）与 `rules/no_up.py`（NOUP-OVERDUE：>8h→P0 / >4h→P1 / >2h→P2，`objectId=notice|goods|tin_id` 不含储位，建议 MOVE_TO_BIN/CONTACT_CUSTOMER，未来/解析失败跳过）。
+- delay：新增 `sources/delay.py`（GET `/daycheck/delay/im-delay`、`sort=oldest`、PageDTO rows、`noticeId` 去重）与 `rules/delay.py`（DELAY-OVERDUE：>24h→P0 / >2h→P1 / 0~2h→P2，`objectId=noticeId`，司机姓名/电话/车号脱敏保留头尾，建议 CONTACT_CUSTOMER/NOTIFY_QC）。
+- 编排：`service.py` 的 `SUPPORTED_TYPES` 扩为 `(expiry, no_up, delay)`，`DEFAULT_CONFIG` 增 `noUp={8,4,2}h` / `delay={24,2,0}h` / `sourceBudgetSeconds=30`，新增 `HANDLERS` 分派三类取数与规则参数，统一按 fingerprint 去重；backlog 仍记入 `counts.skippedTypes`。
+- 验证：新增 `tests/test_scan_no_up_delay.py` 17 例（分级/边界、未来时间/解析失败跳过、脱敏、source 去重与 sort=oldest、5xx 重试 1 次成功、4xx 不重试标 partial、service 三类合并+backlog skipped、自定义阈值生效）；自纠 1 处测试期望（3h 前 no_up 默认落 P2，抬高 p2 阈值才不触发，非生产缺陷）；全量 pytest → **121 passed, 3 skipped, 1 warning in 9.18s**（原 104 passed + 新增 17）。
+- 未验证/剩余风险：仍只做单元/契约级，未做真实运行态 PG 队列恢复证据；backlog 规则后置、LLM 摘要、真实 in_app 通知、前端页面未做；F-015 仍 in_progress/runtime_unverified，F-014 6 项证据并行补。
+- 状态：`feature_list.json` F-015 evidence 追加 2 条、notes 更新第二轮成果；`PROGRESS.md` 记本轮。
+
+### 2026-11-24 F-015 第一轮 5 项加固（用户指定开发顺序）
+
+- 目标（用户 m00001）：第一轮只做 5 项——①统一 dryRun 与通知 dry-run 语义；②补角色、仓库范围和查询越权控制；③实现持久队列、worker 恢复和 PG 故障拒绝；④补幂等、原子 upsert、告警升级；⑤修分页完整性并落盘网关路径。测试通过后再做 no_up/delay，backlog 后置；F-014 菜单浏览器/压测证据并行补，不需等待。
+- ①语义：`service.py` 明确请求级 `dryRun=true`（只算 findings 写 scan_runs，不落告警不通知）与服务端 `notification_mode=dry_run`（仅通知策略，告警照常落库、只写 status=dry_run 通知记录）互不短路，`schemas.py` 更新 dryRun 文案；原 3 例旧语义断言测试已改为正确契约并新增 `test_request_dry_run_skips_alerts_and_notifications`。
+- ②角色/越权：`security.py` 新增 `ADMIN_AUTHORITIES={gly,ROLE_ADMIN,admin}`、`SCAN_AUTHORITIES`、`has_authority/is_scan_admin/can_start_scan/can_view_scan/can_view_alerts`，服务扫描仅管理员可见、用户只看 actorId；router 入队前 `check_warehouse_scope` 越权拒绝；GET scans 越权返回 9997。
+- ③持久队列/恢复/PG 故障拒绝：`repository.py` 新增 `ScanStoreUnavailableError`（PG 故障不降级内存）、`FOR UPDATE SKIP LOCKED` 领队列、部分唯一索引 uq_scan_runs_active_key、`build_scan_store` 未知后端/无 db_url 拒绝；`worker.py` 启动 `recover_stale` 残留 running→failed(stale)、后台轮询消费、服务令牌失败→failed(auth_failed) 不回退；`main.py` lifespan 巡检 store 故障拒绝启动。
+- ④幂等/upsert/升级：`repository.py` 加 requestId 与 scheduleSlot+configHash+scanTypes 唯一索引，insert_run 冲突抛 `ScanStoreConflictError`→幂等命中返回既有扫描；`upsert_alert` 返回 (alertId, created, first_severity) 原子判定升级（`SEVERITY_RANK={P0:3,P1:2,P2:1}`），只在 created/escalated 通知；router 新增 `POST /agent/alerts/{id}/{ack,resolve,ignore}`（终态后 409、ignore 默认 7 天）。
+- ⑤分页/网关：`sources/expiry.py` 5xx/超时重试 1 次（4xx 不重试）、单源预算 30s、按 id 去重、任一页失败标 partial + `SCAN-PARTIAL` P2 元告警；`wms-java/wms-gateway/.../application.yaml` inner-paths 补 `/agent/scan`、`/agent/scans/**`、`/agent/alerts`、`/agent/alerts/**`（真实 Nacos 需纯 ASCII，中文注释不可直接拷贝）。
+- 修复缺陷：router 同步消费路径原直接调 `get_client(request)` 绕过可覆盖依赖，导致 E2E mock 网关失效只产生 1 条 partial 告警；改为注入 `client: GatewayClient = Depends(get_client)` 后 E2E 恢复 2 条告警。
+- 验证：venv `.venv/Scripts/python.exe` 跑 `pytest` → **104 passed, 3 skipped, 1 warning in 9.23s**（原 92 passed + 新增 `tests/test_scan_round1.py` 16 例 + 原用例语义修正 1 例）。新增用例覆盖幂等键/冲突查找、upsert 三元组、状态机与 409、角色/越权、查询他人扫描 403、worker 残留恢复、PG 故障拒绝、5xx 重试成功/4xx 不重试。
+- 未验证/剩余风险：第一轮只做单元/契约级（无真实 PG 队列恢复运行态证据）；F-015 仍 in_progress/runtime_unverified，no_up/delay/backlog、LLM 摘要、真实 in_app 通知、前端页面未做（用户指定后置）；F-014 6 项证据并行补。升级 passing 前需补真实队列恢复运行态证据。
+- 状态：`feature_list.json` F-015 evidence 追加 2 条、notes 更新第一轮成果；`PROGRESS.md` 记本轮。
+
+### 2026-11-24 F-015 效期规则纵向切片跑通真实链路
+
+- 目标：用户确认启动 F-015，先做效期单类纵向切片，不把 no_up/delay/backlog 与 v0.2.1 混进来。
+- 代码：新增 `wms-agent/app/scan/`（schemas / repository 四表 / service 编排 / router 三个端点 / rules 与 sources 的 expiry 实现），`app/main.py` 挂载 scan router 与 scan_store；规则确定性、LLM 不参与级别、dry_run 只落通知不发送。
+- 自动化：`tests/test_scan_expiry.py` 15 例全通过（分级/降级/数据质量跳过、指纹分离、分页去重、partial、manual/schedule trigger、越权 failed、重复扫描只更新、router 端到端与缺 JWT 401）；全量 `uv run pytest` → 92 passed, 3 skipped。
+- 真实运行态：重启 wms-agent 加载新代码，service token 经网关 `POST /agent/scan` → 202 `scanId=scan-3d2d32c67e2442dc`；`GET /agent/scans/{id}` → succeeded / schedule / service / partial=false / sourceStatus=expiry rows=6 / findings=5 / alertsCreated=5 / notifications=5；`GET /agent/alerts` → 5 条（2×EXP-EXPIRED/P0、3×EXP-NEAR/P1）。
+- PG 核对（`psql -d ragent`）：`wms_agent.agent_scan_runs`=1、`agent_alerts`=5、`agent_notifications`=5（in_app/dry_run）、`agent_alert_events`=0（本切片无状态转移）。
+- 状态：`feature_list.json` F-015 `not_started` → `in_progress/runtime_unverified`，evidence 记入本轮 4 条；F-014 因用户确认启动 F-015，按 single_in_progress 由 `in_progress` 转 `blocked`（保留证据、待补项可并行），`next_candidate`=F-015。
+- 未做：no_up/delay/backlog 三类规则、告警状态机（ack/resolve/ignore 与 409）、LLM 摘要与真实 in_app 通知、前端 `/inspection/alerts` 页面；这些完成前 F-015 不能记 passing。
+
+### 2026-11-24 F-014 前置项收口复验与状态纠偏
+
+- 目标：按门槛补齐 F-014 运行态证据并纠正过宽状态，不继承「F-014 passing/e2e_pass、F-015 in_progress」的旧结论。
+- 自动化复跑（本轮亲自执行）：Git Bash `./init.sh --java-test` → BUILD SUCCESS，Surefire 实测 `AgentServiceTokenTest` 12/12、`DaycheckSortContractTest` 3/3、`DelayServiceSortTest` 2/2、`DelayControllerSortTest` 1/1（18 例 0 失败），「0 tests 也算通过」保护通过；`wms-agent uv run pytest` → 77 passed, 3 skipped。
+- service-token 经网关运行态（本轮实测）：`POST /login/service-token`（API Key + k1 + W01）→ `code=10000`、`expiresIn=1800`、`roles=[insp_read]`、`warehouseScope=[W01]`；JWT 解码 `exp-iat=1800`、`token_use=agent_service`、`warehouse_scope=[W01]`；Redis `agent-inspector:token` TTL=1800 且 JSON 反序列化后值与返回 token 一致；token 未入日志；无/错 Key→401、W02→403。
+- 角色映射决策（用户确认）：`MENU-DAILY-CHECK-05` 授予 `ckjl/cg/gly`，`KH/cw/cs` 不可见；DB 实测映射一致，`agent-inspector` 仅绑定 `insp_read`；ckjl 当前 0 用户。
+- 只读端点复验（本轮实测）：新 service token 经网关调用 no-up/delay/expiry/yichang/temperature + dashboard 4 计数，全部 `code=10000`；delay 无 sort 为 11-20→11-19→11-18，`sort=oldest` 为 11-18→11-19→11-20，`sort=invalid`→9995。
+- 状态纠偏：`feature_list.json` F-014 `passing/e2e_pass` → `in_progress/runtime_unverified`（已完成证据与待补证据分开）；F-015 `in_progress` → `not_started`；`next_candidate` 改 F-014。校验 15 条 feature、唯一 in_progress=F-014。
+- 待补证据（影响 F-015 验收）：菜单浏览器可见性、未上架真实数据 `bin_sta='N'` 过滤（当前 0 行）、201/2001 分页边界、未上架真实排序、性能压测、conda 根解释器包漂移清理。
+- flaky 测试 `tests/test_query_replay.py::test_scenarios_are_deterministic`（determinism 断言排除 `durationMs`，`durationMs>=0` 仍在第 123 行断言）**待用户确认**后单独提交，不并入 F-014/F-015。
+
+### 2026-11-24 异常巡检 v0.2 前置项实测与落地
+
+- 目标：按用户授权完成 service-token、`insp_read` 角色、`sort=oldest`、菜单/资源映射、索引和网关链路测试。
+- 结果：
+  - `POST /login/service-token` 经网关 200：`expiresIn=1800`、`roles=[insp_read]`、`warehouseScope=[W01]`；服务账号 `agent-inspector` 已创建并绑定 `insp_read`。
+  - 服务账号 JWT 调用 no-up、delay、expiry、dashboard 4 个计数端点均 200；`sort=oldest` 已生效（delay 按 `im_data` 升序）；无 sort 保持新→旧；非法 sort 返回 9995。
+  - `MENU-DAILY-CHECK-05` 已创建并挂到 `MENU-DAILY-CHECK`；映射 `ckjl/cg/gly`；`ckjl` 当前 0 用户，实际可见主要来自 `cg/gly`。
+  - 已创建 `idx_wm_in_qm_i_create_date`、`idx_wm_im_notice_h_im_data`、`idx_wm_to_down_goods_create_date`。
+  - 鉴权负例：无/错 API Key → 401；越权仓库 → 403。
+  - Maven：`wms-login`、`wms-oauth2`、`wms-j3-daycheck` 打包成功；服务已重启。
+- 登记：`F-014` 前置项 `passing/e2e_pass`；`F-015` v0.2.0 实现 `in_progress`（代码尚未开始）；传统队列 F-002/F-003/F-004 后移为 13/14/15。
+- 端到端复验（harness 环境）：service-token `expiresIn=1800` `roles=[insp_read]` `warehouseScope=[W01]`；`POST /agent/query` → `code=10000`、`persisted=true`、`traceId=t-20261124155015-7eb501`，真实 LLM 给出具体答案（含 A01 库位为 0 条记录、建议用实际储位编码），toolCalls=[STOCK-QUERY/empty/0 行]。
+- 环境事实（重要）：**Codex 执行沙箱会阻断 Windows 原生扩展 DLL 加载**（`python314.dll` / `_ctypes.pyd` / `cryptography._rust.pyd` → 退出码 `0xC0000142`），因此沙箱内 `uv run pytest` 必然假失败；`wms-agent/.venv` 必须按 README 用 `uv sync --python /d/DownloadPackage/environment/python.exe` 从 conda 3.14.7 基座重建，**验证必须在 harness 环境（提权执行 = 用户终端）下跑**，不要为了迁就沙箱去改 pyproject / init.sh / .gitignore。
+- 顺带修复：`tests/test_query_replay.py::test_scenarios_are_deterministic` 原先把 `durationMs` 也纳入两次回放比较，存在 1ms 抖动导致随机失败；现只比对确定性字段（排除 `durationMs`），`./init.sh --agent` → **69 passed / 3 skipped / PASS**。
+- 运行态：wms-agent 已换回 harness 的 `.venv\Scripts\uvicorn.exe`（pid 22024，11200），直连与经网关 `/agent/health` 均 200。
+- 待办：开始 F-015 的 `app/scan/`、四张表、`/agent/scan`、状态机、in_app dry-run 与前端最小页面；v0.2.1 另开条目。
+
+### 2026-11-24 启动网关并实测异常巡检前置验证门 #3 / #6
+
+- 目标：用户要求启动「无法实测」项所缺的服务（核心是网关 10001），把验证门 #3（网关 Redis 校验语义）与 #6（网关 IP 白名单实际地址）从「运行时缺服务」变为有运行态证据。
+- 前置实测：VM `192.168.89.128` 的 Nacos 8848 / Redis 6379 / MySQL 3306 均可达；Java 业务服务 10010/10200/10320/10400/10610、wms-agent 11200、本机 PG 5432 均在运行；**唯独网关 10001 未监听**，即此前阻塞根因。
+- 操作：以 JDK17 + 16 个 `--add-opens`（Redisson）启动 `wms-gateway-1.0.0-SNAPSHOT.jar`（日志 `.runtime_tmp/gateway.log`，gitignore 排除）。启动日志：`Netty started on port(s): 10001`、`nacos registry, DEFAULT_GROUP GATEWAY 192.168.101.91:10001 register finished`、`Started GatewayApplication in 16.072 seconds`。
+- 验证门 #6（网关 IP 白名单实际地址）：**192.168.101.91**（网关注册到 Nacos 的本机 IP，端口 10001），即阶段 A `POST /login/service-token` 的 IP 白名单应放行地址；此前因网关未起无法取。
+- 验证门 #3（Redis 校验语义）端到端实测：`TokenExtendsValidateImpl.java:38` 为 `Objects.equals(redisValue, token)`（Jackson 反序列化回明文 JWT，确为等值校验）。用 Redis `admin:token`（VM 6379，密码见 nacos-config/key-config.yaml，JSON 字符串去引号后 700 字符裸 JWT）经网关 `GET /login/current-user`：
+
+  1. 真实 token → HTTP 200 `code=10000`（username=admin，roles=[gly]）；
+  2. 临时把 Redis 值改为 `jwt+'X'`，原 token 再请求 → HTTP 200 `code=401 用户凭证已注销`（证明等值校验：新 token 覆盖会把旧 token 踢下线，支撑方案中「全局串行或按仓拆账号」结论）；
+  3. `finally` 恢复原值后再次请求 → `code=10000`，且断言 Redis 值与原值完全一致（`restored_ok=True`），未破坏现有登录态。
+- 边界（非启动服务可解，本轮未做）：`INSPECTION_READ` 角色注册（验证门 #4/#7）是 DB 资源/角色映射改造，属阶段 A Java 前置，不是服务；真实短信（#8）有外部费用副作用，仅能影子运行；温度地点词表（#10）是业务决策，需业务提供 `wenduDd` 受控词表与 aliases。
+- 状态：仅补运行态证据，未改业务代码、未注册新功能条目、未提交；`feature_list.json` 不变。网关进程留在 10001 运行（pid 78544）。
+
+### 2026-11-24 异常巡检 Agent v0.2 设计完成
+
+- 目标：基于《异常巡检agent业务背景.md》完成 v0.2.0/v0.2.1 设计，不写业务代码。
+- 决策：复用 `wms-agent` 进程新增 `app/scan/`；v0.2.0 四类（效期、收货未上架、进货延时、待办积压），v0.2.1 两类（出货异常、温度）；规则确定性判定，LLM 只摘要；手动 + 内部定时；Java 侧 `service-token` + `INSPECTION_READ`；告警四态；Agent 自有 `in_app`；四张表；版本化 YAML；Java 前置项单列。
+- 结果：新增 `wms-agent/docs/implement/异常巡检Agent实施方案.md`；未改代码、未改 feature 状态；`./init.sh --quick --snapshot` PASS。
+- 2026-11-24 追加实测：网关 `10001` 已启动并注册 `192.168.101.91:10001`；`/agent/health` 200，`/agent/tools` 无 token 401、带现有 admin token 200，`/agent/trace/not-exist` 200/code=9999；经网关验证 `pageSize=100` 对 delay/no-up/yichang/temperature/expiry 均 200；`sort=oldest` 直连与经网关均被忽略，delay 顺序为新→旧；`wm_in_qm_i` 无 `create_date` 索引、`wm_im_notice_h` 无 `im_data` 索引；`admin:token` Redis 值为带引号 JSON 字符串，网关接受；`MENU-DAILY-CHECK` 及子资源 `01~04` 已查到；`INSPECTION_READ` 角色未注册；`POST /agent/scan` 与 `/login/service-token` 当前 404；短信 Controller 固定模板/签名且只传 `message`。
+- 待办：实施前补齐未验证项（网关 IP、服务账号端点权限、短信平台变量、温度词表），登记 v0.2.0/v0.2.1 功能条目，再按阶段 A 开始 Java 前置改造。
 
 ### 2026-11-24 问数 Agent 三合一合并 e2e（真实 LLM + 浏览器 + PG 持久化同时打开）
 
