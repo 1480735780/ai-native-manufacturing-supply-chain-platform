@@ -14,7 +14,7 @@
 - F-015 阶段3（2026-11-25，backlog+一致快照）：Python 全量 pytest 带独立 PG 测试库 **277 passed / 4 skipped**；Java `./init.sh --java-test`（harness JDK8）已把 `PendSnapshotContractTest`/`PendSnapshotResourceRoleSeedTest` 纳入门禁（10 个测试类）→ **wms-login 12 + dashboard 7 + daycheck 22 = 41 tests BUILD SUCCESS**；真实 e2e **STAGE3_E2E_OK**——dashboard(10010) 直读 MySQL 一致快照 `receipt 0 / to_up 0 / pick 45 / cur_pick 74`，admin 连发 7 次 backlog 扫描全部 succeeded、PG `agent_backlog_observations` 恰 21 行（7×3 队列，observed_at 为 Java 纳秒时间已去 `[Asia/Shanghai]` 后缀）与 scan trace 串联，真实 pick 恒 45 → 0 条 BACKLOG-GROWTH 误报。四类规则（效期/未上架/延时/积压）至此全部落地；F-015 仍 `in_progress/runtime_unverified`（后续阶段见上条）。
 - F-015 阶段1（2026-11-25，告警详情/认领/已读/真实 in_app）：Python 全量 pytest 带独立 PG 测试库 **208 passed / 3 skipped**、不带 PG **185 passed / 26 skipped**；Java `./init.sh --java-test`（harness JDK8）**daycheck 22 + wms-login 12 tests BUILD SUCCESS**；V004/V005 迁移已在真实 PG 应用并核对列与索引。F-015 仍 `in_progress/runtime_unverified`（backlog/LLM/前端未做）。前一阶段第四轮返修基线：带 PG **184 passed / 3 skipped**、不带 PG **166 passed / 21 skipped**，Java 31 tests BUILD SUCCESS，真实 daycheck+网关+agent+PG 运行态 42 项检查全过。**运行态注意**：agent 进程当前带进程级环境变量 `WMS_AGENT_SERVICE_API_KEY` / `WMS_AGENT_SERVICE_KEY_ID` / `WMS_AGENT_ALERT_RECIPIENTS=admin` 启动（未写入 `.env`），不带这些变量重启后 worker 取不到服务令牌会 `failed(auth_failed)`。
 - 问数 Agent 收尾（2026-11-24 晚）：默认持久化配置已固化到 `.env`（本地）与 `.env.example`/实施方案/README（入库模板），正常重启即从 `.env` 读 PG 配置，无需进程级临时覆盖；复验 `persisted=true`。相关测试隔离修复后 `uv run pytest` 72 passed、`init.sh --agent` 69 passed 3 skipped PASS。问数 Agent（F-006~F-013）就此结项。
-- 父仓库：`main`（F-006~F-013 已提交；本轮追加 F-011 浏览器 e2e 证据并单独提交，HEAD 见 `git log`）
+- 父仓库：`main`（F-006~F-013 已提交；F-015 异常巡检 Agent 阶段 0–7.7 已分 5 批提交：`4a64e3e` → `ccf22ef` → `9d270c3` → `d1e467d` → `c0182cc`，未 push）
 - 嵌套历史仓库：`zero-one-10wms/.git` 仍存在，HEAD `7ef08d8`，但父仓库不维护其指针，不作为提交目标
 - 跟踪结构：**单仓模式**。父仓库索引中 `zero-one-10wms/*` 全部为 mode `100644` 普通文件，无 `160000` gitlink 条目；`zero-one-10wms/` 下的 ADR、`init.sh`、`AGENTS.md`、`architecture.md`、`process.md`、`feature_list.json`、`PROGRESS.md` 均已直接被父仓库跟踪。
 - 推送范围：父仓库根新增 `.gitignore`，排除 `node_modules/`、`node_modules.bak/`（**2.55 GB**，本轮明确不入库）、`target/`、`dist/`、`*.class`、`*.jar`、`*.pdb`、`*.log`、`__pycache__/`、`*.pyc`、`.venv/`、`.env`/`.env.*`、`.idea/`、`.vs/`、`.runtime_tmp/`（临时联调目录，含私钥/token/HAR）。其余文件全部入库（含 `.dsh-scratch/` 辅助脚本 6.4 MB / 210 文件）。
@@ -40,7 +40,8 @@
 - **已验证**：全量 pytest 带 PG 531 passed / 11 skipped、不带 PG 474 passed / 68 skipped；Java harness PASS；真实环境 e2e 21/21（日聚合 180 仓库·日且重跑幂等；合成过期扫描连同摘要、评估覆盖、命中观测、积压样本一次整批归档；100 天前通知归档；扫描记录/摘要/告警详情扫描简报读回落并标 archived；`hours=2160` 实时、`hours=2200` 走日聚合、`hours=17521` 422、越权仓库 9997；二次运行全 0）。
 - **未验证与限制**：日聚合只回看 180 天补算，首次启用前更早的日期不补算（`coverage.missingDays` 如实暴露）；日聚合不提供分位数；真实库已由真实历史数据算出 180 行日聚合并保留；归档行无通用查询接口（读回落仅覆盖摘要与扫描简报）。
 - **退出判定**：通过。F-015 按用户决定置为 passing / e2e_pass；生产上线阻塞项 ADR-021 不变。
-- **下一步**：清除待提交文件中的连接串/口令 → 分 5 批提交阶段 0–7（明确路径、不 push）→ 用户确认后登记阶段8 v0.2.1。
+- **提交记录（2026-11-25 23:59）**：待提交文件中新增的连接串口令已替换为 `<口令>` 占位；阶段 0–7.7 已分 5 批提交到父仓库 `main`（明确路径、未 push）：`4a64e3e` → `ccf22ef` → `9d270c3` → `d1e467d` → `c0182cc`（Java 前置端点/服务令牌/角色种子与门禁测试 → Python 巡检核心 → 存储契约与阶段 7/7.7 测试 → 前端异常巡检页面与摘要展示 → ADR-018~021/实施方案/状态文件）。未提交的基线文件：`.workbuddy-ai/memory/2026-11-23.md`、`.workbuddy-ai/memory/2026-11-24.md`、`wms-java/wms-oauth2/pom.xml`、`documents/07、AI-Agent化/业务场景分析/` 两份模板、`wms-agent/_e2e_recovery_result.json`、`wms-agent/docs/agent_architecture/问数agent-architecture.svg`、`wms-agent/docs/业务分析/异常巡检agent业务背景.md`。
+- **下一步**：用户确认后登记阶段8 v0.2.1。
 
 ### 追加：剩余实施路线图阶段7（2026-11-25，用户 m07804 签收阶段6 并给定范围）
 
