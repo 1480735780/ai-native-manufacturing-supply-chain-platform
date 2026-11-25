@@ -17,6 +17,33 @@ from app.contracts import Message, ModelReply, ToolCall, ToolSchema
 from app.llm.provider import ProviderError
 
 CHAT_COMPLETIONS_PATH = "/chat/completions"
+ERROR_DETAIL_MAX_CHARS = 200
+
+
+def _error_detail(response: httpx.Response, *, secret: str = "") -> str:
+    """从错误响应里取一句可读的原因，附在状态码后面。
+
+    只取 ``error.message``（OpenAI 风格）或正文开头，压成单行并截断；完整正文与 API Key
+    一律不进异常和日志——否则现场只看到 "http status 400"，分不清是 key、模型还是网络出口的问题。
+    """
+    try:
+        body = response.json()
+    except ValueError:
+        body = None
+    message: Any = None
+    if isinstance(body, dict):
+        error = body.get("error")
+        if isinstance(error, dict):
+            message = error.get("message")
+        elif isinstance(error, str):
+            message = error
+    text = message if isinstance(message, str) else response.text
+    text = " ".join(str(text).split())
+    if secret:
+        text = text.replace(secret, "<redacted>")
+    if len(text) > ERROR_DETAIL_MAX_CHARS:
+        text = text[: ERROR_DETAIL_MAX_CHARS - 1] + "…"
+    return text
 
 
 class OpenAICompatibleProvider:
@@ -77,7 +104,11 @@ class OpenAICompatibleProvider:
             ) from exc
 
         if response.status_code >= 400:
-            raise ProviderError(f"llm returned http status {response.status_code}")
+            detail = _error_detail(response, secret=self._api_key)
+            raise ProviderError(
+                f"llm returned http status {response.status_code}"
+                + (f": {detail}" if detail else "")
+            )
 
         try:
             data = response.json()

@@ -1,0 +1,63 @@
+version: "v0.2.0"
+warehouses: ["W01"]
+scan:
+  pageSize: 100
+  maxPages: 20
+  requestTimeoutSeconds: 3
+  sourceBudgetSeconds: 30
+  scanBudgetSeconds: 120
+  concurrency: 1
+rules:
+  expiry:
+    expiredDays: 0
+    nearDays: 7
+    nearRatio: 0.3333
+    watchDays: 30
+  noUp:
+    p0Hours: 8
+    p1Hours: 4
+    p2Hours: 2
+  delay:
+    p0Hours: 24
+    p1Hours: 2
+    p2Hours: 0
+  backlog:
+    growthRatio: 0.30
+    absoluteDelta: 10
+    baselineScans: 3
+    consecutiveForP1: 3
+routing:
+  - rule_id: "EXP-*"
+    warehouse: "W01"
+    assignee_role: "qc_lead"
+    recipients: ["admin"]
+  - rule_id: "NOUP-OVERDUE"
+    warehouse: "W01"
+    assignee_role: "putaway_lead"
+    recipients: ["admin"]
+  - rule_id: "DELAY-OVERDUE"
+    warehouse: "W01"
+    assignee_role: "receiving_lead"
+    recipients: ["admin"]
+  - rule_id: "BACKLOG-GROWTH"
+    warehouse: "W01"
+    assignee_role: "duty_supervisor"
+    recipients: ["admin"]
+notifications:
+  mode: "dry_run"
+  recipients: ["admin"]
+schedule:
+  enabled: false
+  scanTypes: ["expiry", "no_up", "delay", "backlog"]
+  cron: "*/15 7-23 * * *"
+  timezone: "Asia/Shanghai"
+# LLM 聚合摘要：只负责“怎么说”，不参与“是否异常/级别”的判定。
+# 默认关闭 → 全部使用确定性模板摘要。API Key 只走环境变量 WMS_AGENT_LLM_API_KEY，不写在这里。
+llm:
+  enabled: false
+  maxCallsPerScan: 20      # 单次扫描 LLM 调用上限（方案硬边界 ≤20，超出部分用模板）
+  timeoutSeconds: 8        # 单次调用超时（≤8）
+  concurrency: 4           # 并发调用数
+  maxSummaryChars: 300     # 摘要最大字数（≤300）
+  maxActions: 3            # 建议动作最多条数（≤3）
+  maxActionChars: 100      # 单条建议动作最大字数（≤100）

@@ -76,7 +76,11 @@ class MockProvider:
         self._cursor += 1
 
         if item["type"] == TYPE_TEXT:
-            return ModelReply(content=str(item.get("content") or ""))
+            # 场景条目可选 "usage": {"prompt_tokens": .., "completion_tokens": ..}，
+            # 形状与 OpenAI 兼容响应的 raw["usage"] 一致，供摘要记账测试回放。
+            usage = item.get("usage")
+            raw = {"usage": dict(usage)} if isinstance(usage, dict) else None
+            return ModelReply(content=str(item.get("content") or ""), raw=raw)
 
         call = ToolCall(
             id=str(item.get("id") or f"mock_call_{self._cursor}"),

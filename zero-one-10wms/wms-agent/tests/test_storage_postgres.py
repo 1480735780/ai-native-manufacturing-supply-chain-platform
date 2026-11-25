@@ -85,7 +85,8 @@ class TestRealPostgres:
                 (SCHEMA,),
             ).fetchall()
         table_names = {row[0] for row in rows}
-        assert table_names == {"agent_sessions", "agent_tool_calls", "agent_traces"}
+        # 同一 schema 自 F-015 起还有巡检四表 + schema_migrations；这里只断言 trace 三表存在
+        assert {"agent_sessions", "agent_tool_calls", "agent_traces"} <= table_names
 
         assert await store.save(SUMMARY) is True
 

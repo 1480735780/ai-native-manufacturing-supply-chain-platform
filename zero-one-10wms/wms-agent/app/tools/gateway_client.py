@@ -44,6 +44,14 @@ class GatewayClient:
         self.timeout_seconds = timeout_seconds
         self._transport = transport
 
+    def with_timeout(self, timeout_seconds: float) -> GatewayClient:
+        """为一次扫描创建独立超时配置，保留测试注入的 transport。"""
+        return GatewayClient(
+            self.base_url,
+            timeout_seconds=timeout_seconds,
+            transport=self._transport,
+        )
+
     async def get(
         self,
         path: str,
