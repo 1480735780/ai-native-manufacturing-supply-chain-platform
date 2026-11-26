@@ -6,6 +6,7 @@ import fnmatch
 import hashlib
 import json
 from dataclasses import dataclass
+from math import isfinite
 from pathlib import Path
 from typing import Any
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
@@ -22,11 +23,15 @@ KNOWN_RULE_IDS = (
     "NOUP-OVERDUE",
     "DELAY-OVERDUE",
     "BACKLOG-GROWTH",
+    "OUTBOUND-EXCEPTION",
+    "TEMP-EXCURSION",
     "SCAN-PARTIAL",
 )
 
 # 巡检类型白名单（与 app/scan/schemas.py 的 Literal 一致，这里给的是可枚举的元组）。
-SUPPORTED_SCAN_TYPE_LIST: tuple[str, ...] = ("expiry", "no_up", "delay", "backlog")
+SUPPORTED_SCAN_TYPE_LIST: tuple[str, ...] = (
+    "expiry", "no_up", "delay", "backlog", "outbound", "temperature",
+)
 
 
 @dataclass(frozen=True)
@@ -111,6 +116,14 @@ class HourRules(_Model):
     p1Hours: float = Field(ge=0)
     p2Hours: float = Field(ge=0)
 
+    @field_validator("p0Hours", "p1Hours", "p2Hours")
+    @classmethod
+    def _hour_thresholds_finite(cls, value: float) -> float:
+        # inf/NaN 会让分级恒真或恒假（例如 p0Hours=inf 时永远停在 P1），必须启动期拒绝。
+        if not isfinite(float(value)):
+            raise ValueError("小时阈值必须是有限数值")
+        return value
+
     @model_validator(mode="after")
     def _severity_order(self) -> HourRules:
         if not (self.p0Hours > self.p1Hours > self.p2Hours):
@@ -125,6 +138,115 @@ class BacklogRules(_Model):
     consecutiveForP1: int = Field(default=3, ge=1)
 
 
+def _finite_positive(value: float, label: str) -> float:
+    """只允许有限正数；NaN / Infinity 会让 max_silence=inf 永不报无录入，必须拒绝。"""
+    if not isfinite(float(value)) or float(value) <= 0:
+        raise ValueError(f"{label} 必须是有限正数")
+    return value
+
+
+class OutboundRules(_Model):
+    """出货异常（v0.2.1）：enabled 默认为 True，24h 自然时间老化。"""
+
+    enabled: bool = True
+    p0Hours: float = Field(default=24, gt=0)
+    # 分页预算：出货异常源是全历史候选集，最新差异行在 oldest 正序下位于末尾。
+    # 20 × 100 只覆盖 2000 行时会漏掉最新异常（审计 m01655/m01902），因此默认放宽到
+    # 50 页并允许按仓库配置——溢出仍会标 partial + SCAN-PARTIAL，不会静默当作无异常。
+    pageSize: int = Field(default=100, ge=1, le=500)
+    maxPages: int = Field(default=50, ge=1, le=500)
+
+    @field_validator("p0Hours")
+    @classmethod
+    def _p0_hours_finite(cls, value: float) -> float:
+        # inf 会让所有行都落在 P1 侧（age > inf 永远为假），NaN 让分级结果不确定；
+        # 两者都不是可配置的老化阈值，必须启动期拒绝（审计 m01655）。
+        return _finite_positive(value, "p0Hours")
+
+
+class TemperatureLocation(_Model):
+    """地点词表：min_c/max_c 与录入间隔必须由用户提供真实业务值。"""
+
+    name: str = Field(min_length=1)
+    aliases: list[str] = Field(default_factory=list)
+    min_c: float
+    max_c: float
+    # 地点级录入间隔为必填业务值：缺失会回退默认 8h，违背"真实间隔由业务提供"。
+    expected_interval_hours: float
+
+    @field_validator("name")
+    @classmethod
+    def _name_not_blank(cls, value: str) -> str:
+        if not value.strip():
+            raise ValueError("地点 name 不能为空白")
+        return value.strip()
+
+    @field_validator("aliases")
+    @classmethod
+    def _aliases_clean(cls, value: list[str]) -> list[str]:
+        cleaned = [a.strip() for a in value if a and a.strip()]
+        if len(cleaned) != len(set(cleaned)):
+            raise ValueError("同一地点 aliases 不允许重复")
+        return cleaned
+
+    @field_validator("expected_interval_hours")
+    @classmethod
+    def _interval_finite(cls, value: float) -> float:
+        return _finite_positive(value, "expected_interval_hours")
+
+    @field_validator("min_c", "max_c")
+    @classmethod
+    def _temp_finite(cls, value: float) -> float:
+        if not isfinite(float(value)):
+            raise ValueError("min_c / max_c 必须是有限数值")
+        return value
+
+    @model_validator(mode="after")
+    def _range_order(self) -> TemperatureLocation:
+        if self.min_c > self.max_c:
+            raise ValueError("min_c 必须小于等于 max_c")
+        if self.name in self.aliases:
+            raise ValueError("地点 aliases 不能与 name 重复")
+        return self
+
+
+class TemperatureRules(_Model):
+    """温度巡检（v0.2.1）：enabled 默认 False，无真实阈值时不产生生产告警。"""
+
+    enabled: bool = False
+    expectedIntervalHours: float = Field(default=8, gt=0)
+    consecutivePoints: int = Field(default=2, ge=1)
+    p0AbsC: float = Field(default=2.0, ge=0)
+    p0SpanHours: float = Field(default=4.0, ge=0)
+    # 必须严格 >0：为 0 时任何 exceed=0 的正常读数都会被判成单点 P0（m01655）。
+    p0SinglePointAbsC: float = Field(default=5.0, gt=0)
+    locations: list[TemperatureLocation] = Field(default_factory=list)
+
+    @field_validator(
+        "expectedIntervalHours", "p0AbsC", "p0SpanHours", "p0SinglePointAbsC"
+    )
+    @classmethod
+    def _thresholds_finite(cls, value: float) -> float:
+        if not isfinite(float(value)):
+            raise ValueError("温度阈值必须是有限数值")
+        return value
+
+    @model_validator(mode="after")
+    def _require_locations_when_enabled(self) -> "TemperatureRules":
+        # fail-closed：没有真实地点词表/阈值时绝不启用温度告警，
+        # 避免用示例 2–8℃ / 8h 当生产值，也避免开启后把每次采集都报成未知地点 P2。
+        if self.enabled and not self.locations:
+            raise ValueError("temperature.enabled=true 时必须提供真实 locations 地点词表")
+        # 地点名与别名在所有地点间唯一：重复 alias 会按首匹配套用错误阈值。
+        seen: dict[str, str] = {}
+        for loc in self.locations:
+            for token in [loc.name] + list(loc.aliases):
+                if token in seen:
+                    raise ValueError(f"地点名/别名重复: {token}")
+                seen[token] = loc.name
+        return self
+
+
 class RuleSet(_Model):
     expiry: ExpiryRules = Field(default_factory=ExpiryRules)
     noUp: HourRules = Field(
@@ -134,6 +256,8 @@ class RuleSet(_Model):
         default_factory=lambda: HourRules(p0Hours=24, p1Hours=2, p2Hours=0)
     )
     backlog: BacklogRules = Field(default_factory=BacklogRules)
+    outbound: OutboundRules = Field(default_factory=OutboundRules)
+    temperature: TemperatureRules = Field(default_factory=TemperatureRules)
 
 
 class RoutingRule(_Model):

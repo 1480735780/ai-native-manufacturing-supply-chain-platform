@@ -1,4 +1,4 @@
-version: "v0.2.0"
+version: "v0.2.1"
 warehouses: ["W01"]
 scan:
   pageSize: 100
@@ -26,6 +26,44 @@ rules:
     absoluteDelta: 10
     baselineScans: 3
     consecutiveForP1: 3
+  # v0.2.1 出货异常：24 小时自然时间老化；独立开关，不进默认 schedule.scanTypes。
+  # maxPages 默认 50（大于全局 scan.maxPages=20）：候选集是全历史，按 oldest 正序翻页时
+  # 最新的差异行在末尾，20 × 100 会漏掉（审计 m01655/m01902）。溢出仍标 partial + SCAN-PARTIAL。
+  outbound:
+    enabled: true
+    p0Hours: 24
+    pageSize: 100
+    maxPages: 50
+  # 开发演示配置（用户 2026-11-26 授权编造）：仅用于当前 dev 验收，不是生产温区标准。
+  # 正式 prod 必须由业务重新确认地点、aliases、min/max 与录入间隔后再替换。
+  temperature:
+    enabled: true
+    expectedIntervalHours: 4
+    consecutivePoints: 2
+    p0AbsC: 2.0
+    p0SpanHours: 4.0
+    p0SinglePointAbsC: 5.0
+    locations:
+      - name: "一号冷库"
+        aliases: ["1号冷库", "冷库1"]
+        min_c: 2.0
+        max_c: 8.0
+        expected_interval_hours: 4
+      - name: "二号冷库"
+        aliases: ["2号冷库", "冷库2"]
+        min_c: -20.0
+        max_c: -15.0
+        expected_interval_hours: 4
+      - name: "常温库A"
+        aliases: ["常温A"]
+        min_c: 10.0
+        max_c: 25.0
+        expected_interval_hours: 8
+      - name: "三号冷库"
+        aliases: ["3号冷库", "冷库3"]
+        min_c: 2.0
+        max_c: 8.0
+        expected_interval_hours: 4
 routing:
   - rule_id: "EXP-*"
     warehouse: "W01"
@@ -42,6 +80,14 @@ routing:
   - rule_id: "BACKLOG-GROWTH"
     warehouse: "W01"
     assignee_role: "duty_supervisor"
+    recipients: ["admin"]
+  - rule_id: "OUTBOUND-EXCEPTION"
+    warehouse: "W01"
+    assignee_role: "qc_lead"
+    recipients: ["admin"]
+  - rule_id: "TEMP-EXCURSION"
+    warehouse: "W01"
+    assignee_role: "qc_lead"
     recipients: ["admin"]
 notifications:
   mode: "dry_run"

@@ -53,6 +53,9 @@ RULE_TITLES: dict[str, str] = {
     "NOUP-OVERDUE": "上架超时",
     "DELAY-OVERDUE": "入库延迟",
     "BACKLOG-GROWTH": "待办积压增长",
+    # v0.2.1：出货异常文案固定为“下架后超过 24 小时仍未处理”，不声称未闭环。
+    "OUTBOUND-EXCEPTION": "出货异常（下架后超时未处理）",
+    "TEMP-EXCURSION": "温度超限",
 }
 
 ACTION_TEXTS: dict[str, str] = {
@@ -261,6 +264,10 @@ def build_metrics(group: SummaryGroup) -> dict[str, Any]:
         metrics["waitingHours"] = _metric_range(e.get("ageHours") for e in evidences)
     elif rule_id == "DELAY-OVERDUE":
         metrics["delayHours"] = _metric_range(e.get("delayHours") for e in evidences)
+    elif rule_id == "OUTBOUND-EXCEPTION":
+        metrics["waitingHours"] = _metric_range(e.get("ageHours") for e in evidences)
+    elif rule_id == "TEMP-EXCURSION":
+        metrics["maxExceedC"] = _metric_range(e.get("maxExceedC") for e in evidences)
     elif rule_id == "BACKLOG-GROWTH":
         metrics["queues"] = [
             {
@@ -290,6 +297,12 @@ def _sample_label(rule_id: str, evidence: dict[str, Any]) -> str:
                       f"（已延迟 {hours if hours is not None else '未知'} 小时，供应商 {evidence.get('supplierName') or '未知'}）")
     if rule_id == "BACKLOG-GROWTH":
         return _short(f"{evidence.get('queueType') or '队列'}：{evidence.get('previous')} → {evidence.get('current')}")
+    if rule_id == "OUTBOUND-EXCEPTION":
+        return _short(f"{evidence.get('goodsName') or evidence.get('goodsId') or '下架单'}"
+                      f"（{evidence.get('description') or '下架后超时未处理'}）")
+    if rule_id == "TEMP-EXCURSION":
+        return _short(f"{evidence.get('location') or '未知地点'}"
+                      f"（超限 {evidence.get('maxExceedC') if evidence.get('maxExceedC') is not None else '未知'}℃）")
     return _short(evidence.get("noticeId") or evidence.get("goodsId") or evidence.get("queueType") or "")
 
 
@@ -414,6 +427,10 @@ def template_summary(
             span, unit, lead = metrics.get("waitingHours"), "小时", "已等待 "
         elif group.rule_id == "DELAY-OVERDUE":
             span, unit, lead = metrics.get("delayHours"), "小时", "已延迟 "
+        elif group.rule_id == "OUTBOUND-EXCEPTION":
+            span, unit, lead = metrics.get("waitingHours"), "小时", "下架后已等待 "
+        elif group.rule_id == "TEMP-EXCURSION":
+            span, unit, lead = metrics.get("maxExceedC"), "℃", "最大超限 "
         else:
             span, unit, lead = None, "", ""
         ranged = _format_range(span, unit)

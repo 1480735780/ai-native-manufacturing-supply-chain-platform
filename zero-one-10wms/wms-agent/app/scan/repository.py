@@ -460,13 +460,17 @@ class ScanStore(Protocol):
         self, run: dict[str, Any], *, lease_owner: str | None = None
     ) -> bool: ...
     async def get_run(self, scan_id: str) -> dict[str, Any] | None: ...
+    async def find_healthy_source_scan(
+        self, *, warehouse: str, source: str, after_iso: str,
+    ) -> dict[str, Any] | None: ...
     async def get_run_by_scan_key(self, scan_key: str) -> dict[str, Any] | None: ...
     async def claim_next_queued(self, worker_id: str | None = None) -> dict[str, Any] | None: ...
     async def renew_lease(self, scan_id: str, lease_owner: str) -> bool: ...
     async def recover_stale(self, stale_cutoff_iso: str, max_scan: int = 100) -> int: ...
     async def insert_run(self, run: dict[str, Any]) -> bool: ...
     async def upsert_alert(
-        self, alert: dict[str, Any], *, notification: dict[str, Any] | None = None
+        self, alert: dict[str, Any], *, notification: dict[str, Any] | None = None,
+        no_downgrade: bool = False,
     ) -> AlertUpsertResult: ...
     async def get_alert(self, alert_id: int) -> dict[str, Any] | None: ...
     async def list_alerts(
@@ -703,6 +707,40 @@ class MemoryScanStore:
         found = self.runs.get(scan_id)
         return dict(found) if found else None
 
+    async def find_healthy_source_scan(
+        self, *, warehouse: str, source: str, after_iso: str,
+    ) -> dict[str, Any] | None:
+        cutoff = _parse_iso(after_iso)
+        if cutoff is None:
+            return None
+        matches: list[dict[str, Any]] = []
+        for run in self.runs.values():
+            if run.get("status") != "succeeded" or run.get("warehouse") != warehouse:
+                continue
+            finished = _parse_iso(run.get("finishedAt"))
+            if finished is None or finished <= cutoff:
+                continue
+            if any(
+                item.get("source") == source
+                and item.get("status") == "ok"
+                and not bool(item.get("truncated", False))
+                for item in (run.get("sourceStatus") or [])
+                if isinstance(item, dict)
+            ):
+                matches.append({
+                    "scanId": run.get("scanId"),
+                    "finishedAt": run.get("finishedAt"),
+                })
+        if not matches:
+            return None
+        return max(
+            matches,
+            key=lambda item: (
+                _parse_iso(item.get("finishedAt")) or _EPOCH,
+                str(item.get("scanId") or ""),
+            ),
+        )
+
     async def get_run_by_scan_key(self, scan_key: str) -> dict[str, Any] | None:
         matches = [r for r in self.runs.values() if r.get("scanKey") == scan_key]
         if not matches:
@@ -837,7 +875,8 @@ class MemoryScanStore:
         return any(saved)
 
     async def upsert_alert(
-        self, alert: dict[str, Any], *, notification: dict[str, Any] | None = None
+        self, alert: dict[str, Any], *, notification: dict[str, Any] | None = None,
+        no_downgrade: bool = False,
     ) -> AlertUpsertResult:
         severity = alert.get("severity")
         trace_id = alert.get("traceId")
@@ -861,6 +900,18 @@ class MemoryScanStore:
                 )
             if old.get("state") in ACTIVE_STATES:
                 previous = old.get("severity")
+                # no_downgrade：本轮该规则有数据质量跳过，禁止低级别 finding 覆盖高级别旧告警。
+                # 保持旧 severity 及其配套 evidence/title，只累计 occurrence 与新鲜度。
+                if no_downgrade and _severity_rank(severity) <= _severity_rank(previous):
+                    old["occurrenceCount"] = int(old.get("occurrenceCount") or 1) + 1
+                    old["lastSeenAt"] = alert.get("lastSeenAt") or old["lastSeenAt"]
+                    old["scanId"] = alert.get("scanId") or old.get("scanId")
+                    old["traceId"] = trace_id or old.get("traceId")
+                    if obs_key is not None:
+                        self._observations[obs_key] = existing_id
+                    return AlertUpsertResult(
+                        existing_id, UPSERT_UPDATED, previous, previous, False
+                    )
                 old["occurrenceCount"] = int(old.get("occurrenceCount") or 1) + 1
                 old["lastSeenAt"] = alert.get("lastSeenAt") or old["lastSeenAt"]
                 old["scanId"] = alert.get("scanId") or old.get("scanId")
@@ -1503,8 +1554,19 @@ class MemoryScanStore:
             last_seen = _parse_iso(alert.get("lastSeenAt"))
             if cutoff is None or last_seen is None or last_seen >= cutoff:
                 continue
+            if alert.get("ruleId") == "SCAN-PARTIAL":
+                source_run = self.runs.get(str(alert.get("scanId") or ""))
+                finished = _parse_iso((source_run or {}).get("finishedAt"))
+                if (
+                    source_run is None
+                    or source_run.get("status") not in TERMINAL_RUN_STATES
+                    or finished is None
+                    or finished >= cutoff
+                ):
+                    continue
             candidates.append({
                 "alertId": alert.get("alertId"),
+                "fingerprint": alert.get("fingerprint"),
                 "ruleId": alert.get("ruleId"),
                 "ruleVersion": alert.get("ruleVersion"),
                 "objectId": alert.get("objectId"),
@@ -1533,6 +1595,16 @@ class MemoryScanStore:
         last_seen = _parse_iso(alert.get("lastSeenAt"))
         if cutoff is None or last_seen is None or last_seen >= cutoff:
             return False
+        if rule_id == "SCAN-PARTIAL":
+            source_run = self.runs.get(str(alert.get("scanId") or ""))
+            finished = _parse_iso((source_run or {}).get("finishedAt"))
+            if (
+                source_run is None
+                or source_run.get("status") not in TERMINAL_RUN_STATES
+                or finished is None
+                or finished >= cutoff
+            ):
+                return False
         from_state = alert.get("state")
         alert["state"] = "resolved"
         alert["resolvedAt"] = datetime.now(timezone.utc).isoformat()
@@ -1658,6 +1730,37 @@ class PostgresScanStore:
         except Exception as exc:  # noqa: BLE001
             raise ScanStoreUnavailableError(f"get scan run failed: {type(exc).__name__}") from exc
 
+    def _find_healthy_source_scan_sync(
+        self, *, warehouse: str, source: str, after_iso: str,
+    ) -> dict[str, Any] | None:
+        pattern = json.dumps([{"source": source, "status": "ok", "truncated": False}])
+        with self._connect() as conn:
+            row = conn.execute(
+                f"SELECT scan_id, finished_at FROM {SCHEMA}.agent_scan_runs "
+                f"WHERE warehouse = %s AND status = 'succeeded' AND finished_at > %s "
+                f"AND source_status::jsonb @> %s::jsonb "
+                f"ORDER BY finished_at DESC, scan_id DESC LIMIT 1",
+                (warehouse, after_iso, pattern),
+            ).fetchone()
+            conn.commit()
+        return {
+            "scanId": row[0],
+            "finishedAt": row[1].isoformat() if row[1] is not None else None,
+        } if row is not None else None
+
+    async def find_healthy_source_scan(
+        self, *, warehouse: str, source: str, after_iso: str,
+    ) -> dict[str, Any] | None:
+        try:
+            return await asyncio.to_thread(
+                self._find_healthy_source_scan_sync,
+                warehouse=warehouse, source=source, after_iso=after_iso,
+            )
+        except Exception as exc:  # noqa: BLE001
+            raise ScanStoreUnavailableError(
+                f"find healthy source scan failed: {type(exc).__name__}"
+            ) from exc
+
     def _get_run_by_scan_key_sync(self, scan_key: str) -> dict[str, Any] | None:
         with self._connect() as conn:
             # 活动态优先（幂等冲突时唯一索引挡住的就是它），其次最近开始的
@@ -1779,7 +1882,8 @@ class PostgresScanStore:
     """
 
     def _upsert_alert_sync(
-        self, alert: dict[str, Any], notification: dict[str, Any] | None
+        self, alert: dict[str, Any], notification: dict[str, Any] | None,
+        no_downgrade: bool = False,
     ) -> AlertUpsertResult:
         """告警 + 事件 + 通知在同一事务内提交；按 fingerprint 锁最新一行后再决策。
 
@@ -1839,13 +1943,27 @@ class PostgresScanStore:
                     if latest is not None and latest[1] in ACTIVE_STATES:
                         alert_id = int(latest[0])
                         previous = latest[2]
+                        # no_downgrade：本轮该规则有数据质量跳过，禁止低级别 finding
+                        # 覆盖高级别旧告警；只累计 occurrence 与新鲜度，保留旧 severity。
+                        if no_downgrade and _severity_rank(severity) <= _severity_rank(previous):
+                            conn.execute(
+                                f"UPDATE {SCHEMA}.agent_alerts SET "
+                                f"occurrence_count = occurrence_count + 1, "
+                                f"last_seen_at = COALESCE(%s::timestamptz, now()), "
+                                f"scan_id = %s, trace_id = %s WHERE alert_id = %s",
+                                (alert.get("lastSeenAt"), scan_id, trace_id, alert_id),
+                            )
+                            _remember(alert_id)
+                            return AlertUpsertResult(alert_id, UPSERT_UPDATED, previous, previous)
                         conn.execute(
                             f"UPDATE {SCHEMA}.agent_alerts SET "
-                            f"occurrence_count = occurrence_count + 1, last_seen_at = now(), "
+                            f"occurrence_count = occurrence_count + 1, "
+                            f"last_seen_at = COALESCE(%s::timestamptz, now()), "
                             f"scan_id = %s, trace_id = %s, severity = %s, evidence = %s, "
                             f"dimension = %s, title = %s, suggested_actions = %s, "
                             f"rule_degraded = %s, routed_to = %s WHERE alert_id = %s",
                             (
+                                alert.get("lastSeenAt"),
                                 scan_id, trace_id, severity,
                                 _json(alert.get("evidence") or {}),
                                 _json(alert.get("dimension") or {}),
@@ -1962,10 +2080,13 @@ class PostgresScanStore:
         return cur.fetchone() is not None
 
     async def upsert_alert(
-        self, alert: dict[str, Any], *, notification: dict[str, Any] | None = None
+        self, alert: dict[str, Any], *, notification: dict[str, Any] | None = None,
+        no_downgrade: bool = False,
     ) -> AlertUpsertResult:
         try:
-            return await asyncio.to_thread(self._upsert_alert_sync, alert, notification)
+            return await asyncio.to_thread(
+                self._upsert_alert_sync, alert, notification, no_downgrade
+            )
         except ScanStoreUnavailableError:
             raise
         except Exception as exc:  # noqa: BLE001
@@ -3158,25 +3279,34 @@ class PostgresScanStore:
         self, *, warehouse: str, rule_ids: list[str], before_iso: str, limit: int = 200,
     ) -> list[dict[str, Any]]:
         sql = (
-            f"SELECT alert_id, rule_id, rule_version, object_id, state, last_seen_at, "
-            f"warehouse_id FROM {SCHEMA}.agent_alerts "
-            f"WHERE state IN ('open','acknowledged') AND warehouse_id = %s "
-            f"AND last_seen_at < %s"
+            f"SELECT a.alert_id, a.fingerprint, a.rule_id, a.rule_version, a.object_id, "
+            f"a.state, a.last_seen_at, a.warehouse_id FROM {SCHEMA}.agent_alerts a "
+            f"WHERE a.state IN ('open','acknowledged') AND a.warehouse_id = %s "
+            f"AND a.last_seen_at < %s"
         )
         params: list[Any] = [warehouse, before_iso]
         if rule_ids:
-            sql += f" AND rule_id IN ({','.join(['%s'] * len(rule_ids))})"
+            sql += f" AND a.rule_id IN ({','.join(['%s'] * len(rule_ids))})"
             params.extend(rule_ids)
-        sql += " ORDER BY alert_id LIMIT %s"
+        sql += (
+            " AND (a.rule_id <> 'SCAN-PARTIAL' OR EXISTS ("
+            f"SELECT 1 FROM {SCHEMA}.agent_scan_runs r "
+            "WHERE r.scan_id = a.scan_id "
+            "AND r.status IN ('succeeded','failed','cancelled') "
+            "AND r.finished_at < %s))"
+        )
+        params.append(before_iso)
+        sql += " ORDER BY a.alert_id LIMIT %s"
         params.append(limit)
         with self._connect() as conn:
             rows = conn.execute(sql, tuple(params)).fetchall()
         return [
             {
-                "alertId": r[0], "ruleId": r[1], "ruleVersion": r[2], "objectId": r[3],
-                "state": r[4],
-                "lastSeenAt": r[5].isoformat() if r[5] is not None else None,
-                "warehouseId": r[6],
+                "alertId": r[0], "fingerprint": r[1], "ruleId": r[2],
+                "ruleVersion": r[3], "objectId": r[4],
+                "state": r[5],
+                "lastSeenAt": r[6].isoformat() if r[6] is not None else None,
+                "warehouseId": r[7],
             }
             for r in rows
         ]
@@ -3209,14 +3339,23 @@ class PostgresScanStore:
             cur = conn.execute(
                 f"""
                 WITH prev AS (
-                    SELECT alert_id, state, severity
-                    FROM {SCHEMA}.agent_alerts
-                    WHERE alert_id = %s
-                      AND state IN ('open','acknowledged')
-                      AND rule_id = %s AND rule_version = %s
-                      AND warehouse_id = %s
-                      AND last_seen_at < %s
-                    FOR UPDATE
+                    SELECT a.alert_id, a.state, a.severity
+                    FROM {SCHEMA}.agent_alerts a
+                    WHERE a.alert_id = %s
+                      AND a.state IN ('open','acknowledged')
+                      AND a.rule_id = %s AND a.rule_version = %s
+                      AND a.warehouse_id = %s
+                      AND a.last_seen_at < %s
+                      AND (
+                        %s <> 'SCAN-PARTIAL'
+                        OR EXISTS (
+                            SELECT 1 FROM {SCHEMA}.agent_scan_runs r
+                            WHERE r.scan_id = a.scan_id
+                              AND r.status IN ('succeeded','failed','cancelled')
+                              AND r.finished_at < %s
+                        )
+                      )
+                    FOR UPDATE OF a
                 )
                 UPDATE {SCHEMA}.agent_alerts a
                 SET state = 'resolved', resolved_at = now(), resolved_reason = %s
@@ -3224,7 +3363,10 @@ class PostgresScanStore:
                 WHERE a.alert_id = prev.alert_id
                 RETURNING prev.state, prev.severity, a.severity
                 """,
-                (alert_id, rule_id, rule_version, warehouse, before_iso, reason),
+                (
+                    alert_id, rule_id, rule_version, warehouse, before_iso,
+                    rule_id, before_iso, reason,
+                ),
             )
             row = cur.fetchone()
             if row is None:

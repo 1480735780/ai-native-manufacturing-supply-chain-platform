@@ -265,7 +265,9 @@ async def test_delay_source_4xx_not_retried_and_marks_partial() -> None:
 async def test_run_scan_supports_three_row_types_with_no_skips() -> None:
     # backlog 自阶段3起是受支持类型（需要快照端点与历史基线），见 test_scan_backlog_scan.py；
     # 本用例只覆盖三类"逐行"规则的多类型合并。
-    assert SUPPORTED_TYPES == ("expiry", "no_up", "delay", "backlog")
+    assert SUPPORTED_TYPES == (
+        "expiry", "no_up", "delay", "backlog", "outbound", "temperature"
+    )
 
     def handler(request: httpx.Request) -> httpx.Response:
         path = request.url.path

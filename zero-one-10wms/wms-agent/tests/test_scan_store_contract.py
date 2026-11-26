@@ -19,6 +19,7 @@ import threading
 from datetime import datetime, timedelta, timezone
 from decimal import Decimal
 from typing import Any, AsyncIterator, Iterator
+from unittest.mock import patch
 
 import pytest
 
@@ -536,6 +537,35 @@ async def test_list_alerts_page_cursor_covers_all_without_gap_or_dup(store: Scan
     assert len(set(seen)) == 5
 
 
+async def test_find_healthy_source_scan_requires_successful_untruncated_after_cutoff(
+    store: ScanStore,
+) -> None:
+    await store.save_run(_run(
+        "scan-healthy-source", status="succeeded", finishedAt="2026-11-24T11:00:00+00:00",
+        sourceStatus=[{"source": "no_up", "status": "ok", "truncated": False}],
+    ))
+    await store.save_run(_run(
+        "scan-truncated-source", status="succeeded", finishedAt="2026-11-24T10:45:00+00:00",
+        sourceStatus=[{"source": "no_up", "status": "ok", "truncated": True}],
+    ))
+    await store.save_run(_run(
+        "scan-failed-source", status="failed", finishedAt="2026-11-24T10:50:00+00:00",
+        sourceStatus=[{"source": "no_up", "status": "error", "truncated": True}],
+    ))
+    await store.save_run(_run(
+        "scan-other-source", status="succeeded", finishedAt="2026-11-24T10:55:00+00:00",
+        sourceStatus=[{"source": "delay", "status": "ok", "truncated": False}],
+    ))
+
+    found = await store.find_healthy_source_scan(
+        warehouse="W01", source="no_up", after_iso="2026-11-24T10:15:00+00:00",
+    )
+    assert found is not None and found["scanId"] == "scan-healthy-source"
+    assert await store.find_healthy_source_scan(
+        warehouse="W01", source="no_up", after_iso="2026-11-24T11:00:00+00:00",
+    ) is None
+
+
 async def test_get_alert_detail_returns_evidence_events_and_scan(store: ScanStore) -> None:
     await store.insert_run(_run("scan-detail"))
     created = await store.upsert_alert(
@@ -975,6 +1005,104 @@ async def test_concurrent_auto_resolve_only_one_winner(pg_store: PostgresScanSto
     assert sum(1 for item in results if item) == 1
     events = [e for e in _events(pg_store) if e["eventType"] == "condition_cleared"]
     assert len(events) == 1
+
+
+async def test_pg_partial_alert_commit_during_healthy_scan_is_not_resolved(
+    pg_store: PostgresScanStore,
+) -> None:
+    """真实 PG：健康扫描查询时 partial 尚未提交，提交后也不能被该健康扫描关闭。"""
+    partial_run = _run(
+        "scan-partial-slow",
+        status="running",
+        partial=True,
+        startedAt="2026-11-24T10:00:00+00:00",
+        finishedAt=None,
+        sourceStatus=[{"source": "no_up", "status": "partial", "truncated": True}],
+    )
+    await pg_store.save_run(partial_run)
+    inserted = threading.Event()
+    release = threading.Event()
+    original_insert_event = pg_store._insert_event_sync
+
+    def delayed_insert_event(*args: Any, **kwargs: Any) -> None:
+        original_insert_event(*args, **kwargs)
+        inserted.set()
+        assert release.wait(5), "test did not release the open PG transaction"
+
+    partial_alert = _alert(
+        fp="fp-partial-slow",
+        ruleId="SCAN-PARTIAL",
+        ruleVersion="v1",
+        objectId="no_up",
+        dimension={"warehouse": "W01", "source": "no_up"},
+        scanId="scan-partial-slow",
+        lastSeenAt="2026-11-24T11:00:00+00:00",
+    )
+    healthy_started = "2026-11-24T11:30:00+00:00"
+    with patch.object(pg_store, "_insert_event_sync", side_effect=delayed_insert_event):
+        writer = asyncio.create_task(pg_store.upsert_alert(partial_alert))
+        try:
+            assert await asyncio.to_thread(inserted.wait, 5), "PG alert insert did not reach pre-commit"
+            candidates = await pg_store.list_auto_resolve_candidates(
+                warehouse="W01",
+                rule_ids=["SCAN-PARTIAL"],
+                before_iso=healthy_started,
+            )
+            assert candidates == [], "uncommitted alert must not be visible to the healthy scan"
+        finally:
+            release.set()
+        created = await writer
+
+    candidates = await pg_store.list_auto_resolve_candidates(
+        warehouse="W01",
+        rule_ids=["SCAN-PARTIAL"],
+        before_iso=healthy_started,
+    )
+    assert candidates == [], "running source scan must fence the newly committed partial alert"
+
+    await pg_store.save_run({
+        **partial_run,
+        "status": "succeeded",
+        "finishedAt": "2026-11-24T11:40:00+00:00",
+    })
+    candidates = await pg_store.list_auto_resolve_candidates(
+        warehouse="W01",
+        rule_ids=["SCAN-PARTIAL"],
+        before_iso=healthy_started,
+    )
+    assert candidates == [], "source scan finished after healthy start must remain fenced"
+    assert await pg_store.auto_resolve_alert(
+        created.alert_id,
+        reason="condition_cleared",
+        scan_id="scan-healthy",
+        trace_id="trace-healthy",
+        before_iso=healthy_started,
+        rule_id="SCAN-PARTIAL",
+        rule_version="v1",
+        warehouse="W01",
+    ) is False
+
+    await pg_store.save_run({
+        **partial_run,
+        "status": "succeeded",
+        "finishedAt": "2026-11-24T11:20:00+00:00",
+    })
+    candidates = await pg_store.list_auto_resolve_candidates(
+        warehouse="W01",
+        rule_ids=["SCAN-PARTIAL"],
+        before_iso=healthy_started,
+    )
+    assert [item["alertId"] for item in candidates] == [created.alert_id]
+    assert await pg_store.auto_resolve_alert(
+        created.alert_id,
+        reason="condition_cleared",
+        scan_id="scan-healthy",
+        trace_id="trace-healthy",
+        before_iso=healthy_started,
+        rule_id="SCAN-PARTIAL",
+        rule_version="v1",
+        warehouse="W01",
+    ) is True
 
 
 # ---------------------------------------------------------------------------

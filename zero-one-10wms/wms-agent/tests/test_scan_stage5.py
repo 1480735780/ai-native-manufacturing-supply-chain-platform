@@ -233,6 +233,8 @@ async def test_scan_type_registers_all_rules_even_without_findings():
         "no_up": ("NOUP-OVERDUE",),
         "delay": ("DELAY-OVERDUE",),
         "backlog": ("BACKLOG-GROWTH",),
+        "outbound": ("OUTBOUND-EXCEPTION",),
+        "temperature": ("TEMP-EXCURSION",),
     }
     store = MemoryScanStore()
     await _seed_alert(store, fingerprint="fp-exp", rule_id="EXP-NEAR", object_id="W01|C1|G1|D1")

@@ -6,7 +6,9 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
-SUPPORTED_SCAN_TYPES = Literal["expiry", "no_up", "delay", "backlog"]
+SUPPORTED_SCAN_TYPES = Literal[
+    "expiry", "no_up", "delay", "backlog", "outbound", "temperature"
+]
 
 
 class ScanRequest(BaseModel):

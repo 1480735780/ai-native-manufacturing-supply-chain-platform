@@ -91,16 +91,24 @@ class EvaluatedKey:
 
 @dataclass
 class RuleEvaluation:
-    """规则求值的三件套：命中、覆盖、数据质量跳过。"""
+    """规则求值的四件套：命中、覆盖、规则级质量跳过、对象级质量跳过。"""
 
     findings: list[Finding] = field(default_factory=list)
     evaluated_keys: list[EvaluatedKey] = field(default_factory=list)
     data_quality_skipped: list[str] = field(default_factory=list)
+    # 对象级质量跳过（rule_id, object_id）：仅这些对象本次禁止自动关闭/降级。
+    # 与 data_quality_skipped（整条规则级，v0.2.0 既有语义）并存：
+    # 边缘坏行只应冻结同一对象的告警生命周期，不应拖累同规则其它正常对象（审计 m01655）。
+    quality_skipped_objects: set[tuple[str, str]] = field(default_factory=set)
 
     def skip(self, rule_id: str) -> None:
-        """标记某规则本次存在数据质量跳过（该规则本次禁止自动关闭）。"""
+        """整条规则级跳过：该规则本次整体禁止自动关闭（v0.2.0 既有语义）。"""
         if rule_id not in self.data_quality_skipped:
             self.data_quality_skipped.append(rule_id)
+
+    def skip_object(self, rule_id: str, object_id: str) -> None:
+        """对象级跳过：仅该对象本次禁止自动关闭与降级，同规则其它对象不受影响。"""
+        self.quality_skipped_objects.add((rule_id, object_id))
 
 
 def dimension_hash(dimension: dict[str, Any]) -> str:

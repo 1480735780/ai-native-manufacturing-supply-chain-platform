@@ -203,7 +203,7 @@ def test_post_freezes_effective_config_snapshot(tmp_path: Path) -> None:
     assert queued["status"] == "queued"
     assert queued["configSnapshot"] == loaded.snapshot
     assert queued["configHash"] == loaded.config_hash
-    assert queued["configVersion"] == "v0.2.0"
+    assert queued["configVersion"] == loaded.version
     assert queued["notificationMode"] == "in_app"
 
 

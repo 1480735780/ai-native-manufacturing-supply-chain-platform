@@ -1,6 +1,8 @@
 """巡检编排：取数 → 规则 → 告警 → 通知 → 落扫描记录。
 
-v0.2.0 已实现四类：`expiry` / `no_up` / `delay` / `backlog`（阶段3）。规则判定确定性，LLM 不参与级别。
+v0.2.0 已实现四类：`expiry` / `no_up` / `delay` / `backlog`（阶段3）；
+v0.2.1 追加 `outbound`（出货异常）/ `temperature`（温度巡检）两类，默认不进入
+schedule.scanTypes，温度配置默认 enabled=false（真实业务阈值待用户提供）。规则判定确定性，LLM 不参与级别。
 `backlog` 需要历史基线：快照完整时读基线 + 落样本（agent_backlog_observations），
 partial / 快照失败不落样本不告警。
 
@@ -46,11 +48,23 @@ from app.scan.rules.no_up import (
     RULE_VERSION as NOUP_RULE_VERSION,
     evaluate_no_up_detailed,
 )
+from app.scan.rules.outbound import (
+    RULE_ID as OUTBOUND_RULE_ID,
+    RULE_VERSION as OUTBOUND_RULE_VERSION,
+    evaluate_outbound_detailed,
+)
+from app.scan.rules.temperature import (
+    RULE_ID as TEMPERATURE_RULE_ID,
+    RULE_VERSION as TEMPERATURE_RULE_VERSION,
+    evaluate_temperature_detailed,
+)
 from app.scan.sources.backlog import GRADED_QUEUES, fetch_backlog
 from app.scan.sources.base import SourceResult
 from app.scan.sources.delay import fetch_delay
 from app.scan.sources.expiry import fetch_expiry
 from app.scan.sources.no_up import fetch_no_up
+from app.scan.sources.outbound import fetch_outbound
+from app.scan.sources.temperature import fetch_temperature
 from app.security import Principal, check_warehouse_scope
 from app.tools.gateway_client import GatewayClient
 
@@ -59,12 +73,12 @@ if TYPE_CHECKING:  # 仅类型标注，避免编排层在导入期依赖 LLM 实
 
 logger = logging.getLogger(__name__)
 
-SUPPORTED_TYPES = ("expiry", "no_up", "delay", "backlog")
+SUPPORTED_TYPES = ("expiry", "no_up", "delay", "backlog", "outbound", "temperature")
 CODE_SUCCESS = 10000
 # 与 config/scan.yaml 同构的默认生效配置：测试与“无配置文件”的库内调用都走这里，
 # 保证 cfg["scan"] / cfg["rules"] / cfg["notifications"] 的嵌套读取路径唯一。
 DEFAULT_CONFIG: dict[str, Any] = {
-    "version": "v0.2.0",
+    "version": "v0.2.1",
     "warehouses": ["W01"],
     "scan": {
         "pageSize": 100,
@@ -81,6 +95,18 @@ DEFAULT_CONFIG: dict[str, Any] = {
         # 方案 §13.1 / 用户 m04555 固化：三队列分别判定，前 3 次只建基线
         "backlog": {
             "growthRatio": 0.30, "absoluteDelta": 10, "baselineScans": 3, "consecutiveForP1": 3,
+        },
+        # v0.2.1：出货异常按自然 24h 老化；温度默认 disabled，真实阈值待用户提供。
+        # outbound 的 maxPages 默认 50（而非全局 20）：候选集是全历史，最新差异行在末尾。
+        "outbound": {"enabled": True, "p0Hours": 24, "pageSize": 100, "maxPages": 50},
+        "temperature": {
+            "enabled": False,
+            "expectedIntervalHours": 8,
+            "consecutivePoints": 2,
+            "p0AbsC": 2.0,
+            "p0SpanHours": 4.0,
+            "p0SinglePointAbsC": 5.0,
+            "locations": [],
         },
     },
     "routing": [],
@@ -108,7 +134,12 @@ RULE_VERSIONS: dict[str, str] = {
     "no_up": NOUP_RULE_VERSION,
     "delay": DELAY_RULE_VERSION,
     "backlog": BACKLOG_RULE_VERSION,
+    "outbound": OUTBOUND_RULE_VERSION,
+    "temperature": TEMPERATURE_RULE_VERSION,
 }
+# SCAN-PARTIAL 是扫描自身的元告警（不属于任何业务类型），按来源维度收敛。
+SCAN_PARTIAL_RULE_ID = "SCAN-PARTIAL"
+SCAN_PARTIAL_RULE_VERSION = "v1"
 # 每次执行从零累计的统计；attempt 不在这里（它是 agent_scan_runs 的独立列）。
 DEFAULT_COUNTS: dict[str, Any] = {
     "findings": 0, "alertsCreated": 0, "alertsUpdated": 0, "alertsEscalated": 0,
@@ -134,6 +165,15 @@ HANDLERS: dict[str, TypeHandler] = {
     "backlog": (
         fetch_backlog, evaluate_backlog_detailed, "backlog", "/dashboard/query-pend-snapshot",
     ),
+    # v0.2.1：两类独立，默认不进入 schedule.scanTypes
+    "outbound": (
+        fetch_outbound, evaluate_outbound_detailed, "outbound",
+        "/daycheck/yi-chang/get-yichang-down-page",
+    ),
+    "temperature": (
+        fetch_temperature, evaluate_temperature_detailed, "temperature",
+        "/daycheck/temperature/query",
+    ),
 }
 
 # 规则 id → 扫描类型：自动关闭时用它取期望的 rule_version（版本不匹配的告警不自动关）。
@@ -144,6 +184,8 @@ RULE_ID_TYPES: dict[str, str] = {
     NOUP_RULE_ID: "no_up",
     DELAY_RULE_ID: "delay",
     BACKLOG_RULE_ID: "backlog",
+    OUTBOUND_RULE_ID: "outbound",
+    TEMPERATURE_RULE_ID: "temperature",
 }
 
 # 扫描类型 → 规则 id 全集（RULE_ID_TYPES 的反向表）：
@@ -195,6 +237,24 @@ def _rule_config(config: dict[str, Any], config_key: str) -> dict[str, Any]:
         return dict(rules.get(config_key) or {})
     legacy = config.get(config_key)
     return dict(legacy) if isinstance(legacy, dict) else {}
+
+
+# 各类型的取数分页预算默认值 (pageSize, maxPages)。
+# outbound 的候选集是全历史、按 oldest 正序翻页时最新差异行在末尾，20 × 100 只覆盖
+# 2000 行会漏掉最新异常（审计 m01655/m01902），因此单独给到 50 页。这里做兜底，
+# 使得即使传入的 config 未经过 pydantic 归一化（缺 pageSize/maxPages 键）也生效。
+PAGING_DEFAULTS: dict[str, tuple[int, int]] = {"outbound": (100, 50)}
+
+
+def _type_enabled(scan_type: str, config: dict[str, Any], config_key: str) -> bool:
+    """v0.2.1 两类独立开关：outbound/temperature 各读自身 rules.<key>.enabled。
+
+    v0.2.0 四类无 enabled 字段，默认开启，不影响既有行为；温度默认 enabled=false
+    且地点阈值未配置，缺值时绝不产生生产告警。
+    """
+    if scan_type not in ("outbound", "temperature"):
+        return True
+    return bool(_rule_config(config, config_key).get("enabled", False))
 
 
 def resolve_route_targets(
@@ -484,7 +544,22 @@ async def run_scan(
         concurrency = int(runtime.get("concurrency", 1))
         deadline = time.monotonic() + float(runtime.get("scanBudgetSeconds", 120))
         semaphore = asyncio.Semaphore(concurrency)
-        supported = [(scan_type, HANDLERS[scan_type]) for scan_type in types if scan_type in HANDLERS]
+        # v0.2.1 独立开关：outbound/temperature 未启用时请求直接跳过，不建 sourceStatus。
+        supported = [
+            (scan_type, HANDLERS[scan_type])
+            for scan_type in types
+            if scan_type in HANDLERS
+            and _type_enabled(scan_type, cfg, HANDLERS[scan_type][2])
+        ]
+        skipped_by_switch = [
+            scan_type for scan_type in types
+            if scan_type in HANDLERS
+            and not _type_enabled(scan_type, cfg, HANDLERS[scan_type][2])
+        ]
+        if skipped_by_switch:
+            counts["skippedTypes"] = list(dict.fromkeys(
+                counts["skippedTypes"] + skipped_by_switch
+            ))
 
         async def fetch_one(scan_type: str, handler: TypeHandler) -> SourceResult:
             fetcher, _evaluator, config_key, endpoint = handler
@@ -500,11 +575,14 @@ async def run_scan(
                         error_summary="scan_budget_exceeded",
                     )
                 try:
+                    default_page_size, default_max_pages = PAGING_DEFAULTS.get(
+                        scan_type, (page_size, max_pages)
+                    )
                     return await asyncio.wait_for(
                         fetcher(
                             client, token,
-                            page_size=int(type_cfg.get("pageSize", page_size)),
-                            max_pages=int(type_cfg.get("maxPages", max_pages)),
+                            page_size=int(type_cfg.get("pageSize", default_page_size)),
+                            max_pages=int(type_cfg.get("maxPages", default_max_pages)),
                             source_budget_seconds=float(
                                 type_cfg.get("sourceBudgetSeconds", budget)
                             ),
@@ -542,6 +620,12 @@ async def run_scan(
         evaluations: dict[str, RuleEvaluation] = {}
         # rule_ok：规则 id → 该规则本次的取数是否可信（源 status=ok 且未截断）
         rule_ok: dict[str, bool] = {}
+        # untrusted_rules：本次取数不完整的规则 → 其告警一律禁止被降级（审计 m01902）。
+        # 旧 P0 若在残缺数据里只看到一条“看起来更轻”的行，会被误降成 P1。
+        untrusted_rules: set[str] = set()
+        # untrusted_sources：本次取数不完整的来源名（scan_type）。SCAN-PARTIAL 告警按来源维度收敛，
+        # 后续同一来源的健康扫描才能关掉它（审计 m03535：原按 scan_id 建指纹，永远关不掉）。
+        untrusted_sources: set[str] = set()
         for (scan_type, handler), source in zip(supported, sources):
             fetcher, evaluator, config_key, _endpoint = handler
             type_cfg = _rule_config(cfg, config_key)
@@ -549,6 +633,9 @@ async def run_scan(
             if source.status in ("partial", "timeout", "error"):
                 run["partial"] = True
             source_trusted = source.status == "ok" and not source.truncated
+            if not source_trusted:
+                untrusted_rules.update(SCAN_TYPE_RULE_IDS.get(scan_type, ()))
+                untrusted_sources.add(scan_type)
 
             if scan_type == "backlog":
                 # 待办积压需要历史基线：只在快照完整时读基线 + 落样本；partial 不落样本不告警；
@@ -560,6 +647,12 @@ async def run_scan(
                 counts["backlogSamplesSaved"] = (
                     counts.get("backlogSamplesSaved", 0) + saved
                 )
+            elif not source_trusted and scan_type == "temperature":
+                # 温度连续性/静默判定依赖完整历史序列：partial/error/截断的行不完整，
+                # 继续求值会误报。跳过求值并登记规则级数据质量跳过，同时禁止自动关闭。
+                evaluation = RuleEvaluation()
+                for rule_id in SCAN_TYPE_RULE_IDS.get(scan_type, ()):
+                    evaluation.skip(rule_id)
             else:
                 evaluation = _evaluate(fetcher, evaluator, type_cfg, source.rows, ctx)
             evaluations[scan_type] = evaluation
@@ -575,10 +668,23 @@ async def run_scan(
                 rule_ok[rule_id] = source_trusted
             counts["findings"] += len(findings)
             for finding in findings:
-                by_fingerprint[finding.fingerprint] = finding
+                previous = by_fingerprint.get(finding.fingerprint)
+                # 指纹碰撞时保留最高级别，禁止后到的低级别覆盖高级别
+                # （例如同地点 P2 无录入覆盖 P0 超限）。
+                if previous is None or SEVERITY_RANK.get(
+                    finding.severity, 0
+                ) > SEVERITY_RANK.get(previous.severity, 0):
+                    by_fingerprint[finding.fingerprint] = finding
 
         if run["partial"]:
-            by_fingerprint[_partial_fingerprint(scan_id)] = _partial_finding(scan_id, ctx)
+            # 每个残缺来源一条 SCAN-PARTIAL，object_id=来源名，指纹只由「仓库+来源」决定，
+            # 这样同一来源下次健康扫描才能按来源关掉旧告警（审计 m03535）。
+            for source_name in sorted(untrusted_sources):
+                partial = _partial_finding(scan_id, ctx, source_name)
+                by_fingerprint[partial.fingerprint] = partial
+        # SCAN-PARTIAL 的自动关闭登记：本次没有任何来源残缺时该规则“取数可信”，
+        # 由 _auto_resolve_cleared 按「本次扫描过的来源」逐条关闭对应来源的旧告警。
+        rule_ok[SCAN_PARTIAL_RULE_ID] = not run["partial"]
 
         if no_persist_alerts:
             # dryRun：只算 findings 写 scan_runs，不落告警、不发通知
@@ -589,19 +695,36 @@ async def run_scan(
             recipient_user_id = (
                 base.get("actorUserId") if actor_type == "user" else None
             ) or (principal.user_id if actor_type == "user" else None)
+            # 本轮出现数据质量跳过的对象/规则：其告警不得被降级或被自动关闭。
+            # 规则级（data_quality_skipped）：整条规则数据不可信（如温度 partial 源）；
+            # 对象级（quality_skipped_objects）：仅该对象的坏行（如旧 P0 行数量非法、
+            # 远古 NaN、未知地点）冻结该对象自身，不得拖累同规则其它正常对象（审计 m01655）。
+            quality_skipped_rules = {
+                rule_id
+                for evaluation in evaluations.values()
+                for rule_id in evaluation.data_quality_skipped
+            }
+            quality_skipped_objects: set[tuple[str, str]] = set()
+            for evaluation in evaluations.values():
+                quality_skipped_objects.update(evaluation.quality_skipped_objects)
+            # 取数不完整的来源：其规则本轮一律不降级（审计 m01902）。
+            no_downgrade_rules = quality_skipped_rules | untrusted_rules
             await _persist_findings(
                 by_fingerprint, store, scan_id, warehouse, ctx.now.isoformat(),
                 notification_mode, counts, trace_id=trace_id, config=cfg,
                 actor_type=actor_type, actor_id=run["actorId"],
                 configured_recipients=configured_recipients,
                 recipient_user_id=recipient_user_id,
+                no_downgrade_rules=no_downgrade_rules,
+                no_downgrade_objects=quality_skipped_objects,
             )
             # 阶段5：先幂等落覆盖记录（自动关闭的证据），再逐条条件关闭。
             await _auto_resolve_cleared(
                 store, evaluations=evaluations, rule_ok=rule_ok, findings=by_fingerprint,
                 scan_id=scan_id, warehouse=warehouse, trace_id=trace_id,
                 started_at=started, dry_run=no_persist_alerts, partial=bool(run["partial"]),
-                counts=counts,
+                counts=counts, quality_skipped_objects=quality_skipped_objects,
+                scanned_sources=set(evaluations.keys()),
             )
             # 阶段6：告警与通知已落库之后才做聚合摘要；摘要失败不影响扫描结果。
             await _summarize_scan_findings(
@@ -683,11 +806,21 @@ def _evaluate(
             p1_hours=float(type_cfg.get("p1Hours", 2)),
             p2_hours=float(type_cfg.get("p2Hours", 0)),
         )
+    if fetcher is fetch_outbound:
+        # 24 小时自然时间老化（用户 m00024 确认），不新增闭环字段。
+        return evaluator(rows, ctx, p0_hours=float(type_cfg.get("p0Hours", 24)))
+    if fetcher is fetch_temperature:
+        # 地点词表与阈值来自 versioned YAML；缺省空词表 → 未知地点只报数据质量。
+        return evaluator(
+            rows, ctx,
+            locations=list(type_cfg.get("locations") or []),
+            expected_interval_hours=float(type_cfg.get("expectedIntervalHours", 8)),
+            consecutive_points=int(type_cfg.get("consecutivePoints", 2)),
+            p0_abs_c=float(type_cfg.get("p0AbsC", 2.0)),
+            p0_span_hours=float(type_cfg.get("p0SpanHours", 4.0)),
+            p0_single_point_abs_c=float(type_cfg.get("p0SinglePointAbsC", 5.0)),
+        )
     return RuleEvaluation()
-
-
-def _partial_fingerprint(scan_id: str) -> str:
-    return "sha256:" + hashlib.sha256(f"SCAN-PARTIAL|v1|{scan_id}".encode()).hexdigest()
 
 
 async def _evaluate_backlog(
@@ -762,6 +895,8 @@ async def _auto_resolve_cleared(
     dry_run: bool,
     partial: bool,
     counts: dict[str, Any],
+    quality_skipped_objects: set[tuple[str, str]] | None = None,
+    scanned_sources: set[str] | None = None,
 ) -> None:
     """阶段5 安全自动 resolved。
 
@@ -769,12 +904,17 @@ async def _auto_resolve_cleared(
       1. 非 dryRun；
       2. 该规则本次取数可信（源 status=ok 且未截断）；
       3. 整次扫描非 partial（无超时 / 分页漂移 / 截断）；
-      4. 该规则本次没有数据质量跳过（时间缺失、未来、数值非法 → 不算“已评估且正常”）；
+      4. 该告警对象本次没有数据质量跳过（时间缺失、未来、数值非法 → 不算“已评估且正常”；
+       对象级跳过仅冻结该对象自身，同规则其它对象不受影响）；
       5. 覆盖记录已落库；
       6. 告警仓库 / ruleId / ruleVersion 与本次规则一致；
-      7. 告警 last_seen_at < 本次扫描 startedAt（乱序 / 并发扫描不关）；
-      8. 告警对象本次未命中（命中集 = 本次 findings 的 (rule_id, object_id)）；
+      7. 告警 last_seen_at < 本次扫描 startedAt；SCAN-PARTIAL 还要求其触发扫描已在本轮开始前结束；
+      8. 告警指纹本次未命中（命中集 = 本次 findings 的 fingerprint，含 dimension.kind）；
       9. 告警仍是 open / acknowledged（ignored 终态不复活）。
+
+    SCAN-PARTIAL 的额外边界（审计 m03535）：该告警按「仓库+来源」收敛，只在
+    本次确实扫描过同一来源时才允许关闭；扫描其它来源的健康结果不能顺带关掉它。
+    其规则版本固定为 v1（不在 RULE_ID_TYPES 里）。
 
     “本次覆盖集中不存在该告警对象”按“该对象本次未违反条件”解读：
     覆盖集记录的是本次评估过的对象（命中与未命中都记），其中仍违反条件的对象构成命中集；
@@ -806,26 +946,46 @@ async def _auto_resolve_cleared(
     skipped: set[str] = set()
     for evaluation in evaluations.values():
         skipped.update(evaluation.data_quality_skipped)
+    # 整条规则级数据质量跳过：该规则整体不参与自动关闭（本轮数据不完整，宁可漏关不可误关）。
+    # 对象级跳过：仅冻结 (rule_id, object_id) 对应的告警对象，同规则其它对象照常关闭
+    # （审计 m01655：避免一个远古 NaN/未知地点坏行冻结同规则所有正常对象）。
     eligible = sorted(
         rule_id for rule_id, ok in rule_ok.items() if ok and rule_id not in skipped
     )
+    quality_skipped_objects = quality_skipped_objects or set()
     if not eligible:
         return
 
-    hit_objects = {
-        (finding.rule_id, finding.object_id) for finding in findings.values()
-    }
+    # 命中集按 fingerprint（含 dimension.kind）判定，不再只看 (rule_id, object_id)。
+    # 理由：同地点 TEMP-EXCURSION 的 P0 超限与 P2 无录入共用 object_id，
+    # 若按对象判命中，旧 P0 即使本次已消失、只剩 P2，也会被误判“仍命中”而永不关闭。
+    hit_fingerprints = {finding.fingerprint for finding in findings.values()}
     candidates = await store.list_auto_resolve_candidates(
         warehouse=warehouse, rule_ids=eligible, before_iso=started_at,
     )
     for candidate in candidates:
         rule_id = str(candidate.get("ruleId") or "")
         object_id = str(candidate.get("objectId") or "")
-        if (rule_id, object_id) in hit_objects:
-            # 本次仍命中：条件没有消失，不关。
+        candidate_fp = str(candidate.get("fingerprint") or "")
+        if candidate_fp in hit_fingerprints:
+            # 本次仍命中同一指纹：条件没有消失，不关。
+            # 指纹不同（如同地点 P0 超限→P2 无录入）视为旧条件已消失，可关。
             continue
-        scan_type = RULE_ID_TYPES.get(rule_id)
-        expected_version = RULE_VERSIONS.get(scan_type or "")
+        if (rule_id, object_id) in quality_skipped_objects:
+            # 该对象本次存在数据质量坏行（远古 NaN / 非法数量 / 未知地点等）：
+            # 不能据本次结果断言其异常条件已消失，冻结该对象自身（不影响其它对象）。
+            counts["staleCheckSkipped"] = counts.get("staleCheckSkipped", 0) + 1
+            continue
+        if rule_id == SCAN_PARTIAL_RULE_ID:
+            # 只关「本次确实扫描过的来源」的 partial 告警（审计 m03535）：
+            # 健康扫描别的来源时，未被扫描来源的旧 partial 告警必须保持 open。
+            if object_id not in (scanned_sources or set()):
+                counts["staleCheckSkipped"] = counts.get("staleCheckSkipped", 0) + 1
+                continue
+            expected_version = SCAN_PARTIAL_RULE_VERSION
+        else:
+            scan_type = RULE_ID_TYPES.get(rule_id)
+            expected_version = RULE_VERSIONS.get(scan_type or "")
         if not expected_version or candidate.get("ruleVersion") != expected_version:
             # 规则版本不一致：不自动关（避免旧版本告警被新版本语义误关）。
             counts["staleCheckSkipped"] = counts.get("staleCheckSkipped", 0) + 1
@@ -856,12 +1016,16 @@ def _is_non_negative_number(value: Any) -> bool:
     return number == number and number not in (float("inf"), float("-inf")) and number >= 0
 
 
-def _partial_finding(scan_id: str, ctx: RuleContext) -> Finding:
+def _partial_finding(scan_id: str, ctx: RuleContext, source: str) -> Finding:
     return Finding(
-        rule_id="SCAN-PARTIAL", rule_version="v1", severity="P2",
-        object_type="scan", object_id=scan_id,
-        dimension={"warehouse": ctx.warehouse},
-        evidence={"reason": "source partial", "observedAt": ctx.now.isoformat()},
+        rule_id=SCAN_PARTIAL_RULE_ID, rule_version=SCAN_PARTIAL_RULE_VERSION,
+        severity="P2",
+        object_type="scan_source", object_id=source,
+        dimension={"warehouse": ctx.warehouse, "source": source},
+        evidence={
+            "reason": "source partial", "source": source, "scanId": scan_id,
+            "observedAt": ctx.now.isoformat(),
+        },
         suggested_actions=("RETRY_SCAN",),
     )
 
@@ -872,6 +1036,8 @@ async def _persist_findings(
     trace_id: str, config: dict[str, Any], actor_type: str | None,
     actor_id: str | None, configured_recipients: list[str],
     recipient_user_id: str | None = None,
+    no_downgrade_rules: set[str] | None = None,
+    no_downgrade_objects: set[tuple[str, str]] | None = None,
 ) -> None:
     """落告警/事件/通知：三者由存储在同一事务内提交。
 
@@ -889,6 +1055,7 @@ async def _persist_findings(
         "dry_run" if notification_mode == "dry_run"
         else ("sent" if notification_mode == "in_app" else "pending")
     )
+    # 每条告警单独取落库时刻；SCAN-PARTIAL 的提交顺序另由触发扫描完成时间 fencing。
     for finding in findings.values():
         roles, recipients = resolve_route_targets(
             finding,
@@ -904,7 +1071,7 @@ async def _persist_findings(
         alert["scanId"] = scan_id
         alert["traceId"] = trace_id
         alert["title"] = f"{finding.rule_id} {finding.severity} {finding.object_id}"
-        alert["lastSeenAt"] = observed_at
+        alert["lastSeenAt"] = _now_iso()
         # routed_to 表示责任岗位；assignee 仍由用户认领后写入，不能由路由自动抢占。
         alert["routedTo"] = ",".join(roles) if roles else None
         notification = None
@@ -917,7 +1084,15 @@ async def _persist_findings(
                 "payloadDigest": finding.fingerprint,
                 "scope": trace_id,
             }
-        result = await store.upsert_alert(alert, notification=notification)
+        # 降级防护按「规则级 OR 对象级」命中：规则级数据不可信，或该 finding 的对象
+        # 自身存在数据质量坏行，都不允许本条低级别 finding 覆盖库中更高级别告警。
+        no_downgrade = bool(
+            (no_downgrade_rules and finding.rule_id in no_downgrade_rules)
+            or (no_downgrade_objects and (finding.rule_id, finding.object_id) in no_downgrade_objects)
+        )
+        result = await store.upsert_alert(
+            alert, notification=notification, no_downgrade=no_downgrade,
+        )
         if result.outcome == UPSERT_CREATED:
             counts["alertsCreated"] += 1
             _count_notification(counts, result.notification_saved, recipients)

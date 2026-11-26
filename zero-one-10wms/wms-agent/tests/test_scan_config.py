@@ -165,7 +165,8 @@ def test_repo_scan_yaml_loads_and_hash_is_stable() -> None:
     first = load_scan_config(REPO_CONFIG)
     second = load_scan_config(REPO_CONFIG)
 
-    assert first.version == "v0.2.0"
+    # v0.2.1：新增 OUTBOUND-EXCEPTION / TEMP-EXCURSION 两类规则，配置版本同步升级。
+    assert first.version == "v0.2.1"
     assert first.document.warehouses == ["W01"]
     assert first.config_hash == second.config_hash
     assert first.snapshot == second.snapshot
