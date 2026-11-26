@@ -2,7 +2,13 @@
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.zeroone.star.daycheck.mapper.YichangDownMapper">
 
+    <!--
+      wtdg.id 来自 wm_to_down_goods，是巡检数据源的稳定行键（rowId）；
+      实体 YichangDown 必须有对应 setter，否则 MyBatis 逐行映射时抛
+      "There is no setter for property named 'id'"（YichangDownMapperXmlTest 守护）。
+    -->
     <resultMap id="yichangDownResultMap" type="com.zeroone.star.daycheck.entity.YichangDown">
+        <result property="id" column="id" />
         <result property="create_date" column="create_date" />
         <result property="create_name" column="create_name" />
         <result property="update_name" column="update_name" />
@@ -20,34 +26,137 @@
         <result property="zhong_wen_qch" column="zhong_wen_qch" />
     </resultMap>
 
-    <!-- 分页查询 -->
+    <!-- 旧页面（出货异常）的可选过滤条件 -->
+    <sql id="yichangQueryFilters">
+        <if test="query.bin_id != null">
+            AND wtdg.bin_id_from = #{query.bin_id}
+        </if>
+        <if test="query.zhong_wen_qch != null">
+            AND md_cus.zhong_wen_qch = #{query.zhong_wen_qch}
+        </if>
+        <if test="query.ku_wei_bian_ma != null">
+            AND wtdg.ku_wei_bian_ma = #{query.ku_wei_bian_ma}
+        </if>
+        <if test="query.update_name != null">
+            AND wtdg.update_name = #{query.update_name}
+        </if>
+        <if test="query.create_name != null">
+            AND wtdg.create_name = #{query.create_name}
+        </if>
+        <if test="query.create_date != null">
+            AND DATE(wtdg.create_date) = DATE(#{query.create_date})
+        </if>
+    </sql>
+
+    <!--
+      巡检语句专用过滤条件：客户名字段只对展示列（去重派生表 mc 的 MAX）生效，
+      过滤走 EXISTS 对原始 md_cus 按 ke_hu_bian_ma 匹配，避免 MAX 丢掉同一客户的其它合法名称；
+      派生表仍按 ke_hu_bian_ma 去重，保证一行一 wtdg.id。
+    -->
+    <sql id="yichangInspectionFilters">
+        <if test="query.bin_id != null">
+            AND wtdg.bin_id_from = #{query.bin_id}
+        </if>
+        <if test="query.zhong_wen_qch != null">
+            AND EXISTS (SELECT 1 FROM md_cus
+                        WHERE md_cus.ke_hu_bian_ma = wtdg.cus_code
+                          AND md_cus.zhong_wen_qch = #{query.zhong_wen_qch})
+        </if>
+        <if test="query.ku_wei_bian_ma != null">
+            AND wtdg.ku_wei_bian_ma = #{query.ku_wei_bian_ma}
+        </if>
+        <if test="query.update_name != null">
+            AND wtdg.update_name = #{query.update_name}
+        </if>
+        <if test="query.create_name != null">
+            AND wtdg.create_name = #{query.create_name}
+        </if>
+        <if test="query.create_date != null">
+            AND DATE(wtdg.create_date) = DATE(#{query.create_date})
+        </if>
+    </sql>
+
+    <!-- sort 只接受枚举 oldest（YichangDownQuery @Pattern + Controller 校验），分支硬编码，
+         禁止用 ${} 字符串拼接注入 sort；两个分支都带稳定二级排序键 wtdg.id，保证翻页不抖动。 -->
+    <sql id="yichangOrderBy">
+        <choose>
+            <when test="query.sort != null and query.sort == 'oldest'">
+                ORDER BY wtdg.create_date ASC, wtdg.id ASC
+            </when>
+            <otherwise>
+                ORDER BY wtdg.create_date DESC, wtdg.id DESC
+            </otherwise>
+        </choose>
+    </sql>
+
+    <!-- 旧页面端点 GET /daycheck/yi-chang/get-yichang-down：
+         select * 与字符串数量比较契约不变，只新增可选 sort 与确定性排序防止翻页抖动。 -->
     <select id="getYichangDownPage" resultMap="yichangDownResultMap">
         SELECT * FROM wm_to_down_goods wtdg
         LEFT JOIN md_goods ON wtdg.goods_id = md_goods.shp_bian_ma
         LEFT JOIN md_cus ON wtdg.cus_code = md_cus.ke_hu_bian_ma
         <where>
-            <if test="query.bin_id != null">
-                AND wtdg.bin_id_from = #{query.bin_id}
-            </if>
-            <if test="query.zhong_wen_qch != null">
-                AND md_cus.zhong_wen_qch = #{query.zhong_wen_qch}
-            </if>
-            <if test="query.ku_wei_bian_ma != null">
-                AND wtdg.ku_wei_bian_ma = #{query.ku_wei_bian_ma}
-            </if>
-            <if test="query.update_name != null">
-                AND wtdg.update_name = #{query.update_name}
-            </if>
-            <if test="query.create_name != null">
-                AND wtdg.create_name = #{query.create_name}
-            </if>
-            <if test="query.create_date != null">
-                AND DATE(wtdg.create_date) = DATE(#{query.create_date})
-            </if>
-
+            <include refid="yichangQueryFilters"/>
             AND wtdg.goods_qua != wtdg.goods_quaok
-
         </where>
+        <include refid="yichangOrderBy"/>
     </select>
 
+    <!-- 巡检专用 GET /daycheck/yi-chang/get-yichang-down-page：
+         显式列清单避免三表 select * 的同名列歧义；数量候选谓词只排除"双方均为合法数字且
+         数值相等"的行，避免全历史分页时旧的相等行淹没新异常；NULL、非法串（含相同非法串
+         'abc'/'abc'）以及数值不等的行全部保留，由规则侧 Decimal 比较 + 有限性检查做最终判定
+         并记录数据质量 skip。数字合法性用 REGEXP 守卫后才 CAST DECIMAL(38,10) 比较，
+         不对非法串做 CAST；不用裸字符串 <>，避免 '01'/'1' 这类等值被误报。
+         md_cus.ke_hu_bian_ma 非唯一（zowms.sql:1882 仅普通 INDEX），直接 JOIN 会
+         复制同一 wtdg.id 造成翻页漂移；改用 GROUP BY 去重派生表，保证一行一 wtdg.id。
+         wtdg.id 作为稳定行键 rowId，create_date + id 稳定分页。
+          列的表归属以仓库 DDL（zowms.sql）为准并由 YichangDownMapperXmlTest 逐列校验：
+          base_unit 属于 wm_to_down_goods（:3319），md_goods 没有该列——2026-11-26 首次在真实
+          MySQL 上执行时写成 mg.base_unit，直接 500 Unknown column 'base_unit'。 -->
+    <select id="getYichangDownForInspection" resultMap="yichangDownResultMap">
+        select wtdg.id                as id,
+               wtdg.create_date       as create_date,
+               wtdg.create_name       as create_name,
+               wtdg.update_name       as update_name,
+               wtdg.ku_wei_bian_ma    as ku_wei_bian_ma,
+               wtdg.bin_id_from       as bin_id_from,
+               wtdg.bin_id_to         as bin_id_to,
+               wtdg.cus_code          as cus_code,
+               mc.zhong_wen_qch       as zhong_wen_qch,
+               wtdg.goods_id          as goods_id,
+               mg.shp_ming_cheng      as shp_ming_cheng,
+               wtdg.goods_pro_data    as goods_pro_data,
+               wtdg.base_unit         as base_unit,
+               wtdg.goods_qua         as goods_qua,
+               wtdg.goods_quaok       as goods_quaok,
+               wtdg.sys_company_code  as sys_company_code
+        from wm_to_down_goods wtdg
+        left join (select shp_bian_ma,
+                          MAX(shp_ming_cheng) as shp_ming_cheng
+                   from md_goods
+                   group by shp_bian_ma) mg on wtdg.goods_id = mg.shp_bian_ma
+        left join (select ke_hu_bian_ma,
+                          MAX(zhong_wen_qch) as zhong_wen_qch
+                   from md_cus
+                   group by ke_hu_bian_ma) mc on wtdg.cus_code = mc.ke_hu_bian_ma
+        <where>
+            <include refid="yichangInspectionFilters"/>
+            <!--
+              候选谓词：只排除「两侧都是合法数字、且原始字符串完全相同」的行。
+              刻意不做任何数值 CAST：
+                * DECIMAL(p,s) 会截断小数位、超范围会截顶，把 1.00000000001/1.00000000004
+                  或 29/30 位整数判成相等而误过滤真实差异（审计 m01902）；
+                * 这里用原始字符串不等，宁可多取（如 10 与 10.0 字符串不同但数值相等），
+                  由规则侧用 Decimal 做最终判定并记数据质量；
+                * NULL 与非法格式（abc 等）一律保留，交给规则侧 skip_object 记录。
+            -->
+            AND ( wtdg.goods_qua IS NULL
+                  OR wtdg.goods_quaok IS NULL
+                  OR NOT (wtdg.goods_qua REGEXP '^[+-]?[0-9]+(\\.[0-9]+)?$'
+                          AND wtdg.goods_quaok REGEXP '^[+-]?[0-9]+(\\.[0-9]+)?$')
+                  OR wtdg.goods_qua &lt;&gt; wtdg.goods_quaok )
+        </where>
+        <include refid="yichangOrderBy"/>
+    </select>
 </mapper>

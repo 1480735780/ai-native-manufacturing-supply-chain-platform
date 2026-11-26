@@ -143,32 +143,18 @@ public class TemperatureServiceImpl extends ServiceImpl<TemperatureMapper,Temper
 
     @Override
     public PageDTO<TemperatureVO> pageQueryAll(TemperaturePageQuery query) {
-        // 利用分页插件开始分页
-        Page<Temperature> page = Page.of(query.getPageIndex(), query.getPageSize());
-
-        //从数据库里面查
-        Page<Temperature> p = this.page(page);
-
-        //DO->Vo
-        List<TemperatureVO> list = p.getRecords().stream().map(e -> {
-            TemperatureVO temperatureVO = new TemperatureVO();
-            BeanUtils.copyProperties(e, temperatureVO);
-            return temperatureVO;
-        }).collect(Collectors.toList());
-        //封装数据
-        Page<TemperatureVO> page1 = new Page<>();
-        BeanUtils.copyProperties(p,page1);
-        page1.setRecords(list);
-        //调用组件，统一返回数据格式
-        PageDTO<TemperatureVO> pageResult = PageDTO.create(page1);
-        return pageResult;
+        // 巡检分页：走显式列 SQL（含 create_date）并按 wendu_cjsj + id 稳定排序，
+        // 不再用 this.page(page)（MyBatis-Plus 自动拼 SQL、无确定性排序、缺 create_date）。
+        Page<TemperatureVO> page = Page.of(query.getPageIndex(), query.getPageSize());
+        Page<TemperatureVO> p = temperatureMapper.pageQueryAll(page);
+        return PageDTO.create(p);
     }
 
     @SneakyThrows
     @Override
     public ResponseEntity<byte[]> exportTemperature() {
         //解析Excel文件
-        List<Temperature> data = temperatureMapper.selectAll();
+        List<Temperature> data = temperatureMapper.selectAllFromAnnotation();
         //导出到输出流
         ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
         excel.export("temperature", outputStream, Temperature.class, data);

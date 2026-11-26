@@ -1,6 +1,7 @@
 package com.zeroone.star.daycheck.entity;
 
 
+import com.alibaba.excel.annotation.ExcelIgnore;
 import com.alibaba.excel.annotation.ExcelProperty;
 import com.zeroone.star.daycheck.config.LocalDateTimeExcel;
 import io.swagger.annotations.ApiModelProperty;
@@ -16,6 +17,13 @@ import java.time.LocalDateTime;
  */
 @Data
 public class YichangDown {
+    // 巡检数据源需要稳定行键：YichangDownMapper.xml 的 resultMap 映射 wtdg.id，
+    // 实体必须有对应属性，否则 MyBatis 逐行映射时抛 There is no setter for property named 'id'。
+    // 该列不参与旧页面的 Excel 导出。
+    @ExcelIgnore
+    @ApiModelProperty(value = "主键（wm_to_down_goods.id，巡检行键 rowId）")
+    private String id;
+
     @ApiModelProperty(value = "下架日期")//wm_to_down_goods
     @ExcelProperty(value = "下架日期", index = 0, converter = LocalDateTimeExcel.class)
     private LocalDateTime create_date;

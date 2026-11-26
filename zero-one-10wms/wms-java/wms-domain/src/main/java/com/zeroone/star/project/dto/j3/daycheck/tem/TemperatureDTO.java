@@ -20,6 +20,10 @@ import java.time.LocalDateTime;
 @ApiModel("温度基础数据模型")
 public class TemperatureDTO {
 
+    @ApiModelProperty(value = "录入时间（create_date，服务端生成，入参可忽略）")
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+    private LocalDateTime createDate;
+
     @ApiModelProperty(value = "温度地点",example = "上海")
     private String wenduDd;
 

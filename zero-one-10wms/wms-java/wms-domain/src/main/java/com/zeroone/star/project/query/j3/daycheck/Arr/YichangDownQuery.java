@@ -7,6 +7,8 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 import org.springframework.format.annotation.DateTimeFormat;
 
+import javax.validation.constraints.Pattern;
+
 import java.time.LocalDate;
 
 /**
@@ -37,4 +39,8 @@ public class YichangDownQuery extends PageQuery {
 
     @ApiModelProperty(value = "客户名称")//md_cus
     private String zhong_wen_qch;
+
+    @ApiModelProperty(value = "排序，仅支持 oldest（最老优先）")
+    @Pattern(regexp = "oldest", message = "sort 仅支持 oldest")
+    private String sort;
 }

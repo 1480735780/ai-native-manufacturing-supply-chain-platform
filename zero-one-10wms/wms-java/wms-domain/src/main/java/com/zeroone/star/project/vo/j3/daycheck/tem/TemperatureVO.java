@@ -20,6 +20,10 @@ public class TemperatureVO {
     @ApiModelProperty(value = "温度id" ,example = "123xxxxxx")
     private String id;
 
+    @ApiModelProperty(value = "录入时间（create_date，巡检老化用；采集时间请用 wenduCjsj）")
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+    private LocalDateTime createDate;
+
     @ApiModelProperty(value = "温度地点",example = "上海")
     private String wenduDd;
 

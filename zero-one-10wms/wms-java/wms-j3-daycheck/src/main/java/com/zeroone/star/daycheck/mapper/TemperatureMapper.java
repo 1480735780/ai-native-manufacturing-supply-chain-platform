@@ -24,10 +24,11 @@ public interface TemperatureMapper extends BaseMapper<Temperature> {
     @Select("select * from zo_wms.wm_wendu where id = #{id}")
     Temperature TemperatureById(String id);
 
-    Page<TemperatureVO> pageQueryAll();
+    /** 巡检分页：显式列（含 create_date）+ wendu_cjsj/id 稳定排序，Page 由插件注入分页。 */
+    Page<TemperatureVO> pageQueryAll(Page<TemperatureVO> page);
 
     @Select("SELECT * FROM zo_wms.wm_wendu")
-    List<Temperature> selectAll();
+    List<Temperature> selectAllFromAnnotation();
 
     void saveBatch(@Param("list") List<Temperature> list);
 

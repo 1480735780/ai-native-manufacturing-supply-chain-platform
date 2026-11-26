@@ -1,5 +1,6 @@
 package com.zeroone.star.project.dto.j3.daycheck.Arr;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;
 import lombok.Data;
@@ -15,6 +16,11 @@ import java.time.LocalDateTime;
 @Data
 @ApiModel("出货异常")//wm_to_down_goods商品下架  wm_om_qm_i出库任务  md_goods
 public class YichangDownDTO {
+    // 仅巡检分页端点赋值；旧裸 List 端点保持 null 并省略输出，旧契约不变
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    @ApiModelProperty(value = "稳定行 ID（wm_to_down_goods 主键）")
+    private String rowId;
+
     @ApiModelProperty(value = "下架日期")//wm_to_down_goods
     private LocalDateTime create_date;
 

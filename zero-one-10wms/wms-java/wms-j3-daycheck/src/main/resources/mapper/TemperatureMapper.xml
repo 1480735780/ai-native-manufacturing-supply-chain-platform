@@ -53,8 +53,11 @@
             #{id}
         </foreach>
     </delete>
+    <!-- 巡检分页：补齐 create_date（映射 VO.createDate），按采集时间+id 稳定排序，防止翻页抖动。 -->
     <select id="pageQueryAll" resultType="com.zeroone.star.project.vo.j3.daycheck.tem.TemperatureVO">
-        select id, wendu_dd, wendu_cjsj, wendu_zhi, wendu_bz from zo_wms.wm_wendu;
+        select id, create_date, wendu_dd, wendu_cjsj, wendu_zhi, wendu_bz
+        from zo_wms.wm_wendu
+        order by wendu_cjsj asc, id asc
     </select>
     <select id="selectAll" resultType="com.zeroone.star.daycheck.entity.Temperature">
         select * from zo_wms.wm_wendu;
