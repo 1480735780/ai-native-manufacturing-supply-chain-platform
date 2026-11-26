@@ -46,6 +46,7 @@
 | ADR-019 | 巡检 LLM 摘要 | 只摘要不判定；输入白名单；默认关闭、快照决定；失败降级模板 |
 | ADR-020 | 巡检数据保留与归档 | 告警/事件/通知/摘要/扫描记录及证据在线 180 天、归档 1 年；trace 90 天删除；指标按仓库·日聚合保留 2 年；限批、可重入、外键顺序安全、默认关闭、先聚合后归档 |
 | ADR-021 | 网关认证与鉴权缺口 | 实测网关无 token 全放行、资源角色不生效；巡检端点由 agent 自验并加路由级回归；平台缺口阻塞生产上线 |
+| ADR-022 | 接口权限声明规范 | 新增 @ResourcePermission + Java 端点 baseline 静态门禁；新增接口先声明，存量分组治理、未落库、deny-unregistered 保持 false |
 
 ---
 
@@ -408,6 +409,10 @@ WMS_AGENT_DB_URL=postgresql+psycopg://postgres:postgres@<VM-IP>:5432/ragent
 ### ADR-021 网关认证与鉴权缺口（生产上线阻塞）
 
 **决策**：实测运行中的网关对无 token 的请求（任意方法、任意路径）直接转发，资源角色（`AUTH:RESOURCE_ROLES`）对已登录的错误角色也不生效，唯一生效的是「带 token 时必须能解析为 JWT 且未登出」。巡检端点 `/agent/**` 不依赖网关：agent 自己验签、验过期并逐端点校验角色与仓库范围，并由路由级回归固化（巡检路由表逐条对五种不可信凭据返回 401）。平台级缺口登记为生产上线阻塞项，本任务不改网关，修复方案与回归要求见单独文件。
+
+### ADR-022 接口权限声明规范
+
+**决策**：在 `wms-common` 新增 `@ResourcePermission(roles=..., allowPublic=...)`，作为接口权限的显式声明与审查契约；注解不自动改库或刷缓存。新增 Java HTTP 端点必须在 baseline 之外带该注解或等价 Spring Security 声明，否则 `init.sh --quick` 失败。当前 baseline 收录 349 个存量端点，518 条前端未登记路径只形成分组草案，未落库；`deny-unregistered` 保持 false。完整规则、迁移与审计模式见 `ADR-022-接口权限声明规范.md`。
 
 ## 4. 剩余风险
 

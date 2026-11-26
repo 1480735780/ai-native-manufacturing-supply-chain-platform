@@ -1,0 +1,145 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 680 920" width="680" height="920" font-family="Inter, 'PingFang SC', 'Microsoft YaHei', 'Noto Sans CJK SC', sans-serif">
+  <title>问数 Agent 服务架构</title>
+  <desc>基于 wms-agent 实际实现的分层架构图：Vue3 前端悬浮助手 → wms-gateway 静态路由 → FastAPI Agent 服务（鉴权、编排、ReAct、LLMProvider、工具适配、数据治理）→ Java 业务服务 → LLM 与 PostgreSQL。</desc>
+
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#4A5A72"/>
+    </marker>
+    <style>
+      .bg{fill:#F6F8FB}
+      .layer{fill:#FFFFFF;stroke:#D7DEE8;stroke-width:1;rx:6}
+      .agentbox{fill:#F1F6FB;stroke:#9DB6CE;stroke-width:1.2;rx:6}
+      .inner{fill:#FBFCFE;stroke:#DCE3EC;stroke-width:1;rx:4}
+      .mod{fill:#FFFFFF;stroke:#D3DCE7;stroke-width:1;rx:4}
+      .tag{fill:#E7F0F7;rx:3}
+      .div{stroke:#DCE3EC;stroke-width:1}
+      .flow{stroke:#4A5A72;stroke-width:1.6;fill:none;marker-end:url(#arrow)}
+      .overline{fill:#2C5F8A;font-size:10px;font-weight:600;letter-spacing:2px}
+      .title{fill:#16233A;font-size:22px;font-weight:700}
+      .sub{fill:#61708A;font-size:11px}
+      .layername{fill:#2C5F8A;font-size:12px;font-weight:700}
+      .small{fill:#77859B;font-size:9.5px}
+      .modtitle{fill:#1D2C44;font-size:12px;font-weight:700}
+      .detail{fill:#556479;font-size:10.5px}
+      .tagtxt{fill:#2C5F8A;font-size:10px;font-weight:600}
+      .foot{fill:#556479;font-size:10.5px}
+      .footkey{fill:#16233A;font-size:11px;font-weight:700}
+    </style>
+  </defs>
+
+  <rect class="bg" x="0" y="0" width="680" height="920"/>
+
+  <!-- Header -->
+  <text class="overline" x="32" y="27">WMS · ASK-DATA AGENT</text>
+  <text class="title" x="32" y="57">问数 Agent 服务架构</text>
+  <text class="sub" x="32" y="79">依据 wms-agent 实际实现绘制 · F-006 ~ F-013</text>
+  <text class="small" x="608" y="32" text-anchor="end">基于实现 · 2026-11</text>
+  <line x1="32" y1="90" x2="648" y2="90" stroke="#D7DEE8" stroke-width="1"/>
+
+  <!-- 1. Client -->
+  <rect class="layer" x="32" y="100" width="576" height="72"/>
+  <rect x="32" y="100" width="92" height="72" fill="#EEF3F8" rx="6"/>
+  <line class="div" x1="124" y1="100" x2="124" y2="172"/>
+  <text class="layername" x="78" y="136" text-anchor="middle">客户端</text>
+  <text class="small" x="78" y="152" text-anchor="middle">Vue3</text>
+  <rect class="inner" x="136" y="110" width="456" height="52"/>
+  <text class="modtitle" x="146" y="132">全局悬浮 AI 助手（F-011）· 任意业务页可唤起</text>
+  <text class="detail" x="146" y="150">独立 axios｜timeout 60s｜Bearer JWT｜code=10000 解包｜答案 + toolCalls + traceId 溯源</text>
+  <line class="flow" x1="320" y1="172" x2="320" y2="193"/>
+  <text class="small" x="330" y="187">POST /api/agent/query</text>
+
+  <!-- 2. Gateway -->
+  <rect class="layer" x="32" y="196" width="576" height="64"/>
+  <rect x="32" y="196" width="92" height="64" fill="#EEF3F8" rx="6"/>
+  <line class="div" x1="124" y1="196" x2="124" y2="260"/>
+  <text class="layername" x="78" y="230" text-anchor="middle">网关接入</text>
+  <text class="small" x="78" y="245" text-anchor="middle">唯一枢纽</text>
+  <rect class="inner" x="136" y="204" width="456" height="48"/>
+  <text class="modtitle" x="146" y="224">wms-gateway · agent-route 静态路由</text>
+  <text class="detail" x="146" y="242">Path=/agent/** → http://127.0.0.1:${sp.agent}（11200）· 不注册 Nacos · 工具 GET 同经网关</text>
+  <line class="flow" x1="320" y1="260" x2="320" y2="281"/>
+  <text class="small" x="330" y="275">转发 /agent/query</text>
+
+  <!-- 3. Agent service -->
+  <rect class="agentbox" x="32" y="284" width="576" height="348"/>
+  <rect x="32" y="284" width="92" height="348" fill="#E4EEF7" rx="6"/>
+  <line class="div" x1="124" y1="284" x2="124" y2="632"/>
+  <text class="layername" x="78" y="452" text-anchor="middle">Agent 服务</text>
+  <text class="small" x="78" y="468" text-anchor="middle">FastAPI :11200</text>
+
+  <!-- 3A -->
+  <rect class="mod" x="136" y="294" width="464" height="54"/>
+  <rect class="tag" x="144" y="304" width="74" height="34"/>
+  <text class="tagtxt" x="181" y="325" text-anchor="middle">接入鉴权</text>
+  <text class="modtitle" x="228" y="314">routers：health（匿名）· query · tools · trace/{id}</text>
+  <text class="detail" x="228" y="332">security.py：RS256 验签 public.pem + exp；user 头仅交叉校验</text>
+
+  <!-- 3B -->
+  <rect class="mod" x="136" y="356" width="464" height="54"/>
+  <rect class="tag" x="144" y="366" width="74" height="34"/>
+  <text class="tagtxt" x="181" y="387" text-anchor="middle">服务编排</text>
+  <text class="modtitle" x="228" y="376">service.py · answer_query()</text>
+  <text class="detail" x="228" y="394">system prompt 注入工具清单｜统一 {code,message,data} 外壳｜落库降级</text>
+
+  <!-- 3C -->
+  <rect class="mod" x="136" y="418" width="464" height="60"/>
+  <rect class="tag" x="144" y="428" width="74" height="40"/>
+  <text class="tagtxt" x="181" y="452" text-anchor="middle">推理核心</text>
+  <text class="modtitle" x="228" y="438">react.py · 单 Agent ReAct（工具调用硬上限 2 轮）</text>
+  <text class="detail" x="228" y="456">模型 → 工具 → 模型 → 答案｜失败回喂模型｜到上限后强制作答</text>
+
+  <!-- 3D -->
+  <rect class="mod" x="136" y="486" width="226" height="72"/>
+  <text class="modtitle" x="146" y="506">LLMProvider</text>
+  <text class="detail" x="146" y="523">mock ↔ OpenAI 兼容</text>
+  <text class="detail" x="146" y="539">OpenRouter / agnes</text>
+  <text class="detail" x="146" y="553">API Key 仅来自 env/.env</text>
+  <rect class="mod" x="370" y="486" width="230" height="72"/>
+  <text class="modtitle" x="380" y="506">工具适配层</text>
+  <text class="detail" x="380" y="523">registry：6 个只读 GET 工具</text>
+  <text class="detail" x="380" y="539">adapter：校验 / 归一化 / digest</text>
+  <text class="detail" x="380" y="553">GatewayClient：JWT 原样透传</text>
+
+  <!-- 3E -->
+  <rect class="mod" x="136" y="566" width="464" height="54"/>
+  <rect class="tag" x="144" y="576" width="74" height="34"/>
+  <text class="tagtxt" x="181" y="597" text-anchor="middle">数据治理</text>
+  <text class="modtitle" x="228" y="586">sanitizer + TraceCollector</text>
+  <text class="detail" x="228" y="604">≤20 行 / ≤4000 字 / 脱敏后才进模型｜TraceStore：Memory 或 PG 降级</text>
+
+  <line class="flow" x1="320" y1="632" x2="320" y2="653"/>
+  <text class="small" x="330" y="647">工具 GET（经网关）</text>
+
+  <!-- 4. Backend -->
+  <rect class="layer" x="32" y="656" width="576" height="76"/>
+  <rect x="32" y="656" width="92" height="76" fill="#EEF3F8" rx="6"/>
+  <line class="div" x1="124" y1="656" x2="124" y2="732"/>
+  <text class="layername" x="78" y="692" text-anchor="middle">业务数据源</text>
+  <text class="small" x="78" y="708" text-anchor="middle">Java</text>
+  <rect class="inner" x="136" y="664" width="464" height="60"/>
+  <text class="modtitle" x="146" y="684">Java 业务服务（经 wms-gateway 转发 · JWT 透传）</text>
+  <text class="detail" x="146" y="702">wms-j6-stockln 库存/效期 · wms-j3-daycheck 未上架/延时</text>
+  <text class="detail" x="146" y="719">wms-j1-dashboard 待办/趋势 · 业务事实在 MySQL/Redis，Python 不直连、不写业务库</text>
+
+  <!-- 5. External -->
+  <rect class="layer" x="32" y="748" width="576" height="76"/>
+  <rect x="32" y="748" width="92" height="76" fill="#EEF3F8" rx="6"/>
+  <line class="div" x1="124" y1="748" x2="124" y2="824"/>
+  <text class="layername" x="78" y="784" text-anchor="middle">外部依赖</text>
+  <text class="small" x="78" y="800" text-anchor="middle">可替换</text>
+  <rect class="inner" x="136" y="756" width="226" height="60"/>
+  <text class="modtitle" x="146" y="777">LLM 服务</text>
+  <text class="detail" x="146" y="794">OpenRouter / agnes（OpenAI 兼容）</text>
+  <text class="detail" x="146" y="810">结果裁剪脱敏后才进入 prompt</text>
+  <rect class="inner" x="370" y="756" width="230" height="60"/>
+  <text class="modtitle" x="380" y="777">PostgreSQL · wms_agent</text>
+  <text class="detail" x="380" y="794">agent_sessions / agent_traces</text>
+  <text class="detail" x="380" y="810">agent_tool_calls（只存审计摘要）</text>
+
+  <!-- Footer -->
+  <line x1="32" y1="844" x2="648" y2="844" stroke="#D7DEE8" stroke-width="1"/>
+  <text class="footkey" x="32" y="866">请求链路</text>
+  <text class="foot" x="32" y="885">① 前端提问 → ② 网关转发 → ③ JWT 自验签 → ④ ReAct 选工具 → ⑤ 经网关取数 → ⑥ 答案 + toolCalls + traceId</text>
+  <text class="foot" x="32" y="905">设计边界：6 个只读工具 · 2 轮硬上限 · 不存完整结果与 JWT · LLM 不可用时 code=9994 · PG 不可用时 persisted=false</text>
+</svg>

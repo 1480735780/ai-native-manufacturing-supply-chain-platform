@@ -4,7 +4,7 @@
 
 ## 当前已验证状态
 
-- 日期：2026-11-25
+- 日期：2026-11-26
 - F-015 阶段7.7（2026-11-25，扫描记录与证据归档 + 通知归档 + 指标日聚合 2 年，ADR-020 修订）：Python 全量 pytest 带独立 PG 测试库 **531 passed / 11 skipped / 1 warning**、不带 PG **474 passed / 68 skipped**；Java `./init.sh --java-test` PASS（41 tests）；真实环境 e2e **21/21**（日聚合 180 仓库·日、合成过期扫描整批归档、通知归档、读回落、长窗口指标）；新测试抓到并修复 3 个日聚合真实缺陷；F-015 按用户 m09157 决定置为 **passing / e2e_pass**；生产上线仍被 ADR-021 阻塞；改动未提交。
 - F-015 真实模型摘要质量评估 + 端到端（2026-11-25，用户 m08991 指定本轮只做这两项；未改产品代码、未提交）：`.env` 配置的外部模型对本机不可用（OpenRouter 对全部免费模型与配置模型的 `POST /chat/completions` 返回 400 `Request path cannot be relayed`，属服务端问题，未改 `.env`）。质量评估：真实巡检输入 5 组 + 按真实形状构造的注入输入 3 组 → 真实模型 glm-5.4（cc-switch-zhipu-glm，经 DSH 子代理通道；**不是生产配置的模型，也不是直连端点**）的 8 条回复全部走产品真实的解析/清洗链路 **8/8 通过**（数量与级别一致、纯文本无 Markdown/链接、动作码 ⊆ allowedActions 且文案对题、incomplete 有说明；3 组注入未改变级别与输出结构并主动提示字段含可疑指令），人工阅读结论「可用，偏啰嗦」。端到端：回放链路 `scan-8a7e9ea19c8f494b`（经网关真实 JWT 触发，summariesLlm 5 / template 0，PG 文本即模型原文；浏览器详情抽屉显示「模型摘要 / 模型：glm-5.4(replay)」、纯文本、3 条建议动作）；直连真实端点 `scan-50bb337adc9c4489`（llmCalls 5 / llmFailures 5 / 全部降级模板，`fallback_detail` 含 `llm returned http status 400: Request path cannot be relayed`，整次扫描约 4.7 秒）。证据：`.runtime_tmp/stage8_real_model_summary_quality.json`、`stage8_real_model_replay_e2e.json`、`stage8_direct_endpoint_degradation.json`、`stage8_real_model_summary.png`。**限制**：生产配置模型的摘要质量仍未评估；回放链路的 token 用量是端点固定值；接入其它模型前须按同一组 8 条输入复评。agent 已以默认配置重启（`llm.enabled=false`）。
 - F-015 阶段7（2026-11-25，retry 审计归属 + 指标 + 保留与归档 + 前端摘要展示 + 生产安全门 + v0.2.0 总验收，ADR-020/ADR-021）：Python 全量 pytest 带独立 PG 测试库 **512 passed / 10 skipped / 1 warning**、不带 PG **459 passed / 63 skipped / 1 warning**；Java `./init.sh --java-test` **PASS**（41 tests，阶段7 无 Java 改动）；前端 Vitest 15 passed、生产构建通过；真实环境总验收 e2e（真实 JWT 经网关）**STAGE7_E2E_OK 29/29**（retry 归属四列、调度槽位唯一入队、指标接口权限与取数耗时、保留任务删除/归档/摘要回落）。落地：V010 retry 审计归属（`trigger=retry` + `retry_of_scan_id` + `origin_*`）；`GET /agent/scan/metrics`（仅管理员）；V011 归档表 + `POST /agent/scan/retention/run` + 每日保留任务（默认关闭）；告警详情抽屉展示巡检摘要（模型/模板标识、降级原因、纯文本）。本轮修复：摘要可见性跟随告警可见性、`GET /agent/alerts/{id}` 内嵌完整扫描记录的越权缺口（改为摘要）、抽屉关闭动画期间重开竞态、PG 通知忽略 `createdAt`。**生产上线阻塞（ADR-021）**：实测网关无 token 任意方法均放行、资源角色不生效，范围是全部 Java 服务；巡检端点由 agent 自验并有路由级回归。待决：扫描记录与证据保留期、通知与 trace 是否归档、「聚合统计 2 年」未落地、生产配置模型的摘要质量未评估（glm-5.4 的评估见上一条）。改动未提交；F-015 状态待用户确认验收后更新（v0.2.1 在阶段8 登记）。
@@ -20,16 +20,148 @@
 - 推送范围：父仓库根新增 `.gitignore`，排除 `node_modules/`、`node_modules.bak/`（**2.55 GB**，本轮明确不入库）、`target/`、`dist/`、`*.class`、`*.jar`、`*.pdb`、`*.log`、`__pycache__/`、`*.pyc`、`.venv/`、`.env`/`.env.*`、`.idea/`、`.vs/`、`.runtime_tmp/`（临时联调目录，含私钥/token/HAR）。其余文件全部入库（含 `.dsh-scratch/` 辅助脚本 6.4 MB / 210 文件）。
 - 标准启动路径：`cd zero-one-10wms && ./init.sh --quick`（Git Bash）
 - 标准验证路径：`./init.sh --quick` → `./init.sh --cpp` → 按功能跑 `--java <module>` / `--frontend` / `--verify` / `--agent`
-- 当前工作项：**F-015 异常巡检 v0.2.0 效期纵向切片（in_progress，runtime_unverified）**；F-014 核心前置已完成，6 项待补证据并行补齐，按 single_in_progress 记 `blocked`；问数 Agent F-006~F-013 已结项。
-- AI-Agent 轨道：问数 Agent `F-006~F-013` 已走完；异常巡检 `F-014` 前置完成但待补 6 项证据（blocked），`F-015` 效期单类切片已跑通真实链路（in_progress）。
-- 优先级决策（2026-11-24）：`priority` 唯一连续 1..15；异常巡检前置项 `F-014`=11、实现项 `F-015`=12；传统队列后移为 `F-002`=13、`F-003`=14、`F-004`=15；F-005=5 保持不变。
-- 当前工作项：`F-015` 异常巡检 v0.2.0 效期切片（`in_progress`）；排队项：`F-002` 储位管理、`F-003` 商品明细（`not_started`）；`F-014` 前置完成但待补 6 项证据（`blocked`）；`F-004` 运行时基线仍 `blocked`。
-- 已通过项：`F-001`、`F-005`（`static_pass`）；问数 Agent `F-006`/`F-007`/`F-011`/`F-012`/`F-013`（`e2e_pass`）、`F-008`/`F-009`/`F-010`（`unit_pass`）；异常巡检 `F-014`（blocked）、`F-015`（in_progress，效期切片已有真实 e2e，未全类完成）。
+- 当前状态：**异常巡检 Agent dev 验收已结束**。F-014/F-015/F-016 均为 passing/e2e_pass；Java 18 类 116 tests、Python 588 passed/12 skipped、前端 15 例+生产构建、权限 baseline 349/349、init.sh --quick 均通过。温度使用用户授权的 dev 合成配置；生产温区确认、518 落库强拦截、prod 凭据与运维观察不在本次 dev 收口范围。
+- AI-Agent 轨道：问数 Agent F-006~F-013 已走完；异常巡检 F-014/F-015/F-016 均为 passing/e2e_pass。F-016 的 dev 温度超限/恢复、两类告警浏览器详情、六源扫描、审计模式与新增接口权限门禁已有真实证据。
+- 优先级决策（2026-11-26）：`priority` 唯一连续 1..16；异常巡检前置项 `F-014`=11、v0.2.0 `F-015`=12、v0.2.1 `F-016`=16；传统队列 `F-002`=13、`F-003`=14、`F-004`=15；`F-005`=5 保持不变。
+- 当前工作项：无 in_progress；异常巡检 Agent dev 验收收口。排队项：F-002 储位管理、F-003 商品明细（not_started）；F-004 运行时基线 blocked。
+- 已通过项：F-001、F-005（static_pass）；问数 Agent F-006/F-007/F-011/F-012/F-013（e2e_pass）、F-008/F-009/F-010（unit_pass）；异常巡检 F-014/F-015/F-016（passing/e2e_pass）。
 - 运行时底座（本轮实测）：本机 `192.168.101.91`；虚拟机 `192.168.89.128` 提供 Nacos 8848、Redis 6379、MySQL 3306，**PG 5432 未起**；本机原生 PostgreSQL 16.15 在 5432（库 `ragent`，`postgres`/`123456`，本轮 F-012 落库用它）
 - 工具链实测：Python 3.14.7 = `D:\DownloadPackage\environment\python.exe`；uv 0.13.1 = `C:\Users\a\.local\bin\uv.exe`（**不在 PATH**）；JDK17 = `D:\DownloadPackage\environment\jdk-17.0.20.1+1`（PATH 上的 java 是 JDK8，不能用于 Spring Boot 3）；mvn = `D:\DownloadPackage\Maven\apache-maven-3.6.3-bin\apache-maven-3.6.3\bin\mvn.cmd`；Git Bash = `D:\DownloadPackage\environment\Git\Git\bin\bash.exe`（**不在 PATH**，本轮已用它跑通 `init.sh --agent`）
-- 当前 blocker：本机无 cmake/MSVC，C++ 只能 `static_pass + runtime_unverified`；`init.sh` 需用 Git Bash 执行；异常巡检 v0.2.0 四类规则、前端 `/inspection/alerts` 与阶段4 配置版本化（`scan.yaml` + 入队 canonical 快照 + worker 快照回放）已落地，阶段5 自动 resolved+内部调度已落地（调度器默认关闭），阶段6 LLM 聚合摘要已落地（ADR-019，`llm.enabled` 默认关闭），阶段7（retry 审计归属、指标、保留与归档、前端摘要展示、v0.2.0 总验收）已落地，阶段7 与 7.7 已落地并通过验收，F-015=passing/e2e_pass；剩余阶段8 v0.2.1 登记（待用户确认）；**生产上线阻塞项（ADR-021）**：2026-11-25 实测网关无 token 任意方法任意路径均被转发、错误角色访问登记资源仍放行（第三方 starter 链路 + 未登记资源返回 null，影响全部 Java 服务）；巡检端点按 ADR-007 由 agent 侧自验承接并已有路由级回归，平台侧修复网关前不可上线。
+- 当前 blocker：dev 验收无阻断；生产上线仍有独立待办——业务确认 prod 温度词表/阈值/间隔、518 接口角色矩阵落库后开 deny-unregistered、prod 独立凭据初始化与轮换、定时巡检/失败恢复/监控/保留观察。
 
 ## 本轮记录
+
+### 追加：异常巡检 Agent dev 验收收口（2026-11-26）
+
+- 用户调整边界：dev 不按生产上线完工标准强切换；温度可用逻辑一致的合成开发值；518 先分组草案+审计模式；生产凭据只做准备。
+- 温度：`scan.yaml` 已启用四个 dev 地点；真实 MySQL→Agent→PG 产生 P0 超限告警并自动 resolved；生产构建浏览器验证 TEMP-EXCURSION 列表、详情、模板摘要与证据；六源混合扫描 `scan-cdd635abb7a449f4` 全 ok、`skippedTypes=[]`。证据 `temperature_dev_e2e.json`、`temperature_browser_result.json`、`six_source_scan_result.json`。
+- 权限：`audit-authorization=true` 只记录 `AUTHZ_AUDIT` 并放行未登记/角色不匹配；匿名 401、服务令牌越界 403 保持硬边界。518 已形成分组草案；`@ResourcePermission` + baseline 门禁接入 `init.sh --quick`，349/349 通过，新增未声明端点会失败。
+- 生产准备：环境变量模板、脱敏校验、Nacos 只读巡检与上线/回滚 SOP 已落盘；未发布 Nacos、未生成/轮换凭据、未改 DB/Redis/Mongo/JKS。
+- 最终门禁：Java 18 类 116 tests；Python 588 passed/12 skipped；前端 15 例+生产构建；权限自测 14/14、baseline 349/349；`init.sh --quick --snapshot` PASS。
+- 状态：F-014/F-015/F-016 均 `passing/e2e_pass`，无 `in_progress`。**异常巡检 Agent dev 研发验收结束；生产上线尚未完工。**
+
+### 追加：接口权限声明与新增端点门禁（ADR-022，2026-11-26）
+
+- 新增 `wms-common/.../security/ResourcePermission.java`：支持 `roles`、`allowPublic`，类级默认/方法级覆盖；注解不自动改库或刷缓存。
+- 新增 `.dsh-scratch/check-resource-permissions.mjs` 与 `resource-permission-baseline.json`：扫描 Java HTTP 映射，按“方法 + 规范化路径”对比 349 个存量端点；baseline 之外未声明端点失败。已接入 `init.sh --quick`，不会自动更新 baseline。
+- 自测 **14/14**；当前门禁 **349/349、newDeclared=0、newUndeclared=0、stale=0**；`wms-common` 编译、`node --check`、`bash -n init.sh` 均通过。
+- 新增 `documents/07、AI-Agent化/接口权限分组草案.md` 与 `ADR-022-接口权限声明规范.md`，并更新技术选型 ADR 索引。518 条清单拆为 484 端点类条目、23 拼接片段、11 基址/动态模板；孤儿候选 25（高危交集 12）；四类高危并集 207，另 PLC 执行 1。
+- 边界：未修改数据库、未刷新权限缓存、未改 deny-unregistered；审计模式与 dev 验收收口见上条。
+
+### 追加：生产上线准备（仅文件，dev 不执行运维，2026-11-26）
+
+- 用户边界：dev 不安排运维窗口、不生成/轮换凭据、不发布 Nacos、不修改 DB/Redis/Mongo/JKS 口令；本轮只做生产上线准备，未提交。
+- 已改 `nacos-config/`：新增 `java-service.env.example`（27 个启用变量均为占位符）、`validate-java-env.py`（必填/空值/占位符/弱默认值/签名与双 key 配对校验，不输出值）、`inspect-nacos-config.py`（只读 GET，输出 dataId/SHA-256/明文可疑标记/env 占位符标记，不输出正文）；扩充 `README-credentials.md` 的 prod 独立初始化、切换顺序、灰度清单、回滚触发与步骤。
+- 本地验证：环境校验最终回归 **12 项通过**（假值、缺失、空值、弱默认值、连续数字/重复模式、进程覆盖、双 key、JKS/PEM、坏文件）；巡检器 **11 项通过**（占位符/明文/URI/注释/私钥块/哈希、本地 CLI、HTTP 桩仅 GET、拒绝 302、假 token/正文不泄露）。仓库三份 Nacos 样本只读巡检均为 `plaintext_credential_suspected=false`、`env_placeholder_present=true`。
+- 未执行：未调用远端 dev/prod Nacos，未发布配置，未重启服务，未生成/轮换凭据，未修改任何数据库/Redis/Mongo/JKS。prod 将使用独立环境和新凭据初始化。
+- 状态：生产准备文件已完成；F-016 dev 验收已收口，prod 独立初始化、凭据轮换、灰度与回滚演练仍待未来 prod 变更窗口。
+
+### 追加：F-016 顺序收尾、真实回归与生产边界确认（2026-11-26）
+
+**执行顺序**：①SCAN-PARTIAL 并发/遗留维护 → ②前端路由授权 → ③状态证据 → ④温度真实验收 → ⑤生产门槛。
+
+1. **SCAN-PARTIAL**：候选查询与最终 UPDATE 都增加“触发扫描已在本轮健康扫描开始前结束”的 fencing；真实 PG 预提交并发用例通过。维护脚本改游标翻页、同来源后续健康扫描证明、当前 partial 阻断，205 条分页回归通过；真实业务 PG dry-run scanned=0/legacyActive=0/0 写入。定向 20 passed/2 skipped。
+2. **前端授权**：路径大小写归一；current-user=null、空菜单、加载失败均失败关闭；空菜单清旧授权，setToken/reset 清用户与菜单；修复 main.ts 先装 HTTP 拦截器再装路由。生产构建浏览器回归：ckjl/admin 正常与大小写变体放行，cw 两种路径均 403，mock 空用户/空菜单均 403；15 例单测通过。证据 `.runtime_tmp/r7_route_guard_result.json`。
+3. **状态证据**：F-014 补齐真实数据/规模/浏览器证据并置 passing/e2e_pass；F-016 保持 in_progress/runtime_unverified，删除“只剩两项上线”等矛盾口径。
+4. **温度**：当时仓库没有生产地点词表；后续用户明确授权 dev 合成值，已配置并完成真实超限/自动关闭/浏览器详情回归，见上条。prod 阈值仍须业务确认。
+5. **生产门槛**：issuer/logout 已修复并实测；dev 网关已改审计模式，只记录未登记/越权并放行，匿名与服务令牌硬边界不变。518 已有分组草案但未落库，deny-unregistered 保持 false；prod 凭据与运维观察按用户边界暂缓。
+
+**门禁**：Java 18 类 116 tests/0 failures/0 skipped；Python 588 passed/12 skipped（600 total），真实 PG 0 failures/0 errors；前端 15 例+生产构建；ADR-022 权限自测 14/14、baseline 349/349；init.sh --quick PASS。
+
+**下一步**：异常巡检 Agent dev 研发结束；后续仅按新需求或 prod 变更单处理生产温区确认、518 权限落库、凭据初始化与运维观察，不在 dev 阶段继续扩范围。
+
+### 追加：cs/KH 生产构建浏览器回归与 403 路由修复（2026-11-26，用户 m04010 收口范围）
+
+**为什么做**：m04299 第 2 组要求的最后一项前端缺口——cs/KH 只有合成空菜单证据、且未在生产构建上验证「手动输入 URL 能否绕过菜单隐藏」。温度真实阈值需业务提供，无法代做，故本轮只补这一项。
+
+**方法**：
+1. 临时账号：`.runtime_tmp/TempUsers.java` 克隆 `ckjl001` 的密码哈希建 `e2e-cs-R6CSKH`/`e2e-kh-R6CSKH`，各绑定单一角色 `cs`/`KH`。
+2. 令牌：密码模式取 JWT，并按登录流程把 `<用户名>:token` 写 Redis（大小写敏感，写小写键会 401「用户凭证已注销」）。
+3. 生产构建：`VITE_API_URL=/api npx vite build --mode production --outDir dist-e2e`，由 `wms-frontend/preview-e2e.mjs` 在 4173 静态服务并把 `/api` 反代到网关 10001（不指向公网 8.140.208.103）。
+4. 浏览器：无头 Chrome + 裸 CDP（`wms-frontend/scripts/e2e-route-guard.mjs`）逐角色独立 browserContext，注入 token 后访问 `/home` 取侧边栏、访问 `/inspection/alerts` 取最终路径与正文。
+
+**结果**：cs/KH `/login/get-menus` 均 200 且 `data=[]`；侧边栏 `navItems=1`（仅「首页」）、无「异常巡检」；手动访问 `/inspection/alerts` **最终 path=/forbidden**、正文含「403 抱歉，你无权访问该页面」；`gly(admin)` `navItems=130` 且 `/inspection/alerts` 正常渲染告警表。数据面另有后端 `code 9997` 兜底。
+
+**发现并修复的缺陷**：首轮回归 cs/KH 停留在 `/inspection/alerts`、页面空白。根因有两条——①`unplugin-vue-router` 只扫描 `src/views`（并排除 `**/components`），403/404/500 组件在 `src/components/status/` 下，`definePage({name,path})` **从未注册**，守卫 `next({name:'Forbidden'})` 解析失败后 vue-router 静默中止；②同处 `definePage()` 不被编译期转换，运行时 `ReferenceError: definePage is not defined`（console 实测）。修复：`src/routers/index.ts` 的 `originRoutes` 显式登记 NotFound/Forbidden/Error 并 `setupLayouts([...originRoutes, ...routes])`；三个状态页移除无效 `definePage()`；新增 `src/routers/__tests__/status-routes.spec.ts` 做源码级契约断言。
+
+**门禁**：前端单测 `npx vitest run 'src/composables/__tests__' 'src/routers/__tests__'` → **3 文件 11 例通过**；`npm run build` 通过；Java 18 类 111 tests、Python 593 tests 本轮未改动（上一轮数字仍有效）。
+
+**清理**：`TempUsers cleanup R6CSKH` → `ids=2 rowsDeleted=6`；Redis 4 个 `e2e-*:token` 已 DEL（`EXISTS=0`）；预览服务已停；`dist-e2e` 构建产物已删。
+
+**证据**：`zero-one-10wms/.runtime_tmp/r6_cs_kh_browser_regression.json`（汇总）、`r6_route_guard_result.json`、`r6_forbidden_direct_probe.json`、截图 `r6_menu_*.png`/`r6_guard_*.png`。
+
+**边界**：仍不升 `e2e_pass`——温度真实阈值缺失（生产 `temperature.enabled=false`）、生产环境部署后未回归、518 个未登记接口与 issuer/logout 属上线前治理。
+
+**未闭环（上线前）**：①温度真实地点/aliases/min-max/录入间隔；②518 接口角色治理后开启 deny-unregistered；③Nacos 发布与 DB/Redis/Mongo/JKS 凭据轮换；④生产定时巡检、失败恢复、监控与保留观察。issuer/logout 已在后续轮次修复并实测。
+
+### 追加：第六轮独立复核后的修复与研发收口（2026-11-26，用户 m04299 + m04010）
+
+**用户结论**：m04299「有实质进展但仍不能签收；温度不是唯一阻塞」，列出 5 组阻断；m04010 收口为「五步 + PG 直接证据 + 最终验收做完，v0.2.1 研发结束；生产凭据轮换与启用观察做完才上线，不再加新范围」。
+
+**本轮修复**
+1. 运行态未部署 + backlog 取数 403：`wms-java/wms-gateway/src/main/resources/application.yaml` 的 `service-token-paths` 补齐 6 条巡检数据源端点（no-up / outbound / delay / expiry / temperature / **backlog `/dashboard/query-pend-snapshot`**）；`GatewayAccessFilterTest` 增 2 例（取数端点放行、未声明端点 403）共 27 例；网关重建 pid 44168（jar 103,979,190 B @18:51:18），daycheck 重建 pid 10408（jar 211,168,102 B @18:54:10）。
+2. 六源真实 e2e：`six_source_access_result.json` 六源全部 200（no_up 0 / outbound 46 / delay 3 / expiry 6 / temperature 4 / backlog 四队列）；`six_source_scan.py` → `scan-5f76a606ca6a48be`：**status=succeeded、partial=false、errorSummary=null**，sourceStatus 全 ok，counts findings 12 / alertsUpdated 11 / suppressed 1 / summariesSaved 8 / skippedTypes `[temperature]`。
+3. 分页缺省运行态闭环：不传 pageIndex/pageSize 的 outbound → `pageIndex=1 pageSize=10 total=46 pages=5 rows=10`（修复前 0/0/0）。
+4. SCAN-PARTIAL 并发误关：`app/scan/service.py` 的 `_persist_findings` 改 `lastSeenAt = persist_seen_at`（落库时刻而非扫描开始时间）；`app/scan/repository.py` 的 PG 两次 UPDATE 改 `last_seen_at = COALESCE(%s::timestamptz, now())`，Memory/PG 统一 agent 时间戳。回归 `tests/test_scan_partial_concurrency.py` 4 例。
+5. 旧格式 `objectId=scan-*` 收敛：新增 `app/scan/maintenance.py`（`is_legacy_partial_alert` + `resolve_legacy_scan_partial_alerts`，支持 dry-run/`--apply`、幂等、保留事件原因）与 `tests/test_scan_legacy_partial_maintenance.py` 3 例；真实 PG 命中 1 条（objectId `scan-64c13510649846de`）→ `--apply` 关闭 `alertId=8`，再 dry-run 为 0（证据 `.runtime_tmp/scan_partial_legacy_migration.json`）。
+6. 前端权限：新增 `src/composables/menu-access.ts`（`normalizePath`/`collectMenuPaths`/`isSensitivePath`/`isPathPermitted`），`src/routers/index.ts` 守卫对 `/inspection` 要求菜单授权否则跳 `Forbidden`；`use-permission.ts` 改为可写角色白名单（`cg`/`ckjl`/`gly`/`admin`…），未知角色一律只读；新增 `menu-access.spec.ts` 5 例 + `use-permission.spec.ts` 4 例 = 9 passed。
+
+**门禁**：`./init.sh --quick` PASS（脏改动 73 项）；`./init.sh --java-test` PASS（18 类 **111 tests**，0 失败 0 跳过）；`uv run pytest` **593 tests / 0 failures / 68 skipped**；前端 `npx vitest run` 9 passed + `npm run build` 26.05 s。
+
+**验收证据**：`zero-one-10wms/.runtime_tmp/final_acceptance_20261126_v2.json`（五步逐项、六源实测、SCAN-PARTIAL 并发与遗留收敛、门禁数字、上线前清单）；浏览器证据在**父仓库** `.runtime_tmp/`。
+
+**仍未闭环（上线前，不属研发范围）**：温度真实阈值（地点/aliases/min-max/实际录入间隔 → `temperature.enabled=false`，扫描里 `skippedTypes=[temperature]`）；生产凭据轮换（DB/Redis/Mongo/JKS、Nacos 发布）；518 个未登记接口治理后置 `deny-unregistered=true`；`issuer` 配置与 `/login/logout` 服务令牌 `code=9999`；cs/KH 真实账号与生产 preview 浏览器回归。
+
+**v0.2.1 收口口径（已修正）**：F-016 保持 `in_progress / runtime_unverified`；代码与门禁已推进，但温度真实阈值、518 接口 RBAC、Nacos/凭据轮换与生产观察仍未闭环，不能宣告完工。
+
+### 追加：浏览器级回归与 SCAN-PARTIAL 运行时验证（2026-11-26）
+
+- 浏览器级（Vite dev + CDP，证据父仓库 `.runtime_tmp/browser_regression_20261126.json` 与 5 张截图）：gly(admin) 侧边栏 25 个一级/129 项，含「每日检查 → 异常巡检」；cw(cwtest001) 仅 9 项、无异常巡检、无静态菜单残留，数据面 `/agent/alerts/page` → HTTP 200 + `code=9997`；cs/KH 开发库无可登录用户，改用合成空菜单 + 路由守卫单测覆盖；`/inspection/alerts` 渲染 14 条告警，含 4 条 `OUTBOUND-EXCEPTION` P0（alertId 30/31/32/33），详情抽屉显示 `description=下架后超过 24 小时仍未处理`、`ageHours=125.66`、`downOrderId=YC-DOWN-002`、`locationCode=CK20261121-0002`。
+- SCAN-PARTIAL 运行时（当时 memory 后端）：临时实例 11203 + 桩网关 11204，`page_drift` → SCAN-PARTIAL open（objectId=`no_up`、v1、P2）；恢复一致 → `alertsAutoResolved=1`、SCAN-PARTIAL resolved，三条 NOUP-OVERDUE 保持 open（证据 `.runtime_tmp/scan_partial_lifecycle_runtime.json`）。后续已用**真实 PG** 复做（`scan-ae5e4c80ec63428b` → `scan-8e2e3de2ed3c42c5`，alertId=38 关闭），见 `.runtime_tmp/scan_partial_lifecycle_pg.json`。
+
+### 追加：第五轮独立复核后的加固（2026-11-26，用户 m03535）
+
+用户复核判定「有实质进展但不能签收；ADR-021 只能记部分修复」，并列出 5 组阻断。本轮修复：
+1. 网关 v1.1.0（`GatewayAccessFilter`/`GatewayAccessProperties`）：Actuator 白名单收窄到 `/actuator/health`（`wms-common` 暴露改为 `health,info`）；服务令牌边界按 `token_use=agent_service` + `service-token-paths`；未登记路径必须命中 `unregistered-allow-paths`（85 条，源自我方覆盖率快照）否则 403；路径归一（尾斜杠/`;x=1`/`//`/`..`）不可绕过；角色缓存异常 fail-closed 503；401/403 带 CORS。24 例单测入门禁。
+2. 凭据：`third-services.yaml` FastDFS `http-secret-key` → `${FASTDFS_HTTP_SECRET_KEY:}`；`init.sh check_credentials` 覆盖 password/secret/api-key 类键且不回显值；旧 API Key 宽限关闭（k2 → code=10000，k1 → HTTP 200 + code=401）。
+3. 分页与前端：`PageQuery` 默认 `pageIndex=1/pageSize=10`；`layouts/default.vue` 已登录用户空菜单不再回退静态路由；`use-permission.ts` 空角色只读并纳入 `cs`。
+4. SCAN-PARTIAL 生命周期：`object_id` 改为来源、`rule_ok` 纳入、`_auto_resolve_cleared(..., scanned_sources=...)` 只在扫描过同一来源时关闭。
+5. 证据纠偏：JWT 脱敏、服务令牌撤销时效修正、未知 API Key 标注为 HTTP 200 + body code=401；ADR-021 状态改「部分修复（第二轮加固后）＝生产仍阻塞」。
+门禁：Java 18 类 107 tests、Python 586 tests / 68 skipped、前端 3 例、`./init.sh --quick` PASS。
+
+### 追加：第二阶段门槛收尾与 F-016 真实 e2e（2026-11-26）
+
+- ADR-021 网关鉴权：新增 `wms-java/wms-gateway/src/main/java/com/zeroone/star/gateway/security/GatewayAccessProperties.java` 与 `GatewayAccessFilter.java`（`WebFilter` + `Ordered.HIGHEST_PRECEDENCE`，因为 Spring Security 的 `WebFilterChainProxy` 在 `GlobalFilter` 之前）；实测匿名 401、坏令牌 401、Basic 401、白名单 200、错角色 403、注销后 401「用户凭证已注销」、未登记 200 + WARN；错误角色 403 通过临时改 Redis `AUTH:RESOURCE_ROLES` 实测后恢复。
+- 凭据：`nacos-config/data-source.yaml`、`key-config.yaml` 全量 `${ENV}` 占位（保留中文注释、无 BOM）；`wms-login/application.yaml` 去掉 jks/key 口令默认值；新增 `nacos-config/README-credentials.md`；API Key 轮换实测（k2 生效、k1 宽限、未知 key 401），证据 `.runtime_tmp/cred_rotation_result.json`。
+- F-014：菜单可见性 API 级 6/6（cg/ckjl/gly 可见、cw/cs/KH 不可见）；真实 `bin_sta='N'` 过滤 e2e（5 行夹具 → 巡检 3 行 / 旧端点 5 行，已清理）；201/2001 条分页与排序（`sort=oldest` 全局非降、并列按 id 升序）与性能（pageSize=100 首屏 avg 59.8 ms / p95 88.1 ms）。
+- LLM：生产 `llm.enabled=false`，历史 `stage8_real_model_summary_quality.json` 的模型是 `glm-5.4` 经 DSH 通道（非生产模型），落 `llm_applicability_result.json` → `decision=not_applicable`。
+- 定时巡检（`scheduled_scan_unattended.json`）：无人值守每次重新取服务令牌、cron 连续 5 槽 succeeded、取令牌失败只落 `failed/auth_failed:*` 不影响服务、metrics 与 retention 端点可用、partial 不自动关闭、保留策略归档+清理实测。
+- F-016 真实 e2e：真实 MySQL 应用 F-016 种子两次（幂等）+ Redis `AUTH:RESOURCE_ROLES` 刷新 200 + 真实网关（匿名 401 / 服务令牌与 gly 200 / cw 403）+ agent 真实扫描：出货 46 行 → 4 条 P0，`evidence.description=下架后超过 24 小时仍未处理`、`ageHours` 125.66~167.33、无「未闭环」字样；温度按 `enabled=false` 跳过（`srcScan-fbff499dd36b4d1b`，skippedTypes `[temperature]`）。
+
+### 追加：阶段8 Python 规则完成（2026-11-26）
+
+- `wms-agent/app/scan/sources/outbound.py`、`sources/temperature.py` 走 `fetch_paged(..., require_page_dto=True)`（outbound 带 `sort=oldest`）。
+- `app/scan/rules/outbound.py`：`OUTBOUND-EXCEPTION`（v0.2.1），`create_date` 缺失/未来 → 数据质量跳过；>24h → P0、其余 → P1（不设 P2）；`object_id=bin_id_to|goods_id|cus_code`；`evidence.description` 固定「下架后超过 24 小时仍未处理」。
+- `app/scan/rules/temperature.py`：`TEMP-EXCURSION`（v0.2.1），地点 aliases 归一化、未匹配地点 P2 元告警、倒填/未来读数跳过、连续超限/单点超限/无录入分级，`knownLimitation` 记录不做商品级温区 join。
+- 注册：`service.py`（`SUPPORTED_TYPES` 增 `outbound`/`temperature`、`HANDLERS`、`RULE_VERSIONS`、`_type_enabled` 独立开关、`_evaluate` 两个分支）、`config.py`（`OutboundRules`/`TemperatureRules`/`TemperatureLocation`，`enabled` 默认 false 且 `locations=[]` 时 fail-closed）、`schemas.py`、`config/scan.yaml`（占位不写示例阈值）、`llm/summarizer.py`（标题/指标/摘要片段）。
+- 测试 `tests/test_scan_f016_outbound_temperature.py`；全量 pytest 曾达 491 passed。
+
+### 追加：阶段8 Java 数据契约完成（2026-11-26）
+
+- 出货异常新增独立分页端点 `GET /daycheck/yi-chang/get-yichang-down-page`（`PageDTO<YichangDownDTO>` + `rowId`，显式列清单、`ORDER BY create_date,id`、`CAST(goods_qua AS DECIMAL(18,4)) <> CAST(goods_quaok ...)`、数量 NULL 不静默丢弃、仅 `sort=oldest`）；旧端点保留（`SELECT *` 兼容）。
+- 温度 `TemperatureVO`/`DTO` 补 `createDate`，`pageQueryAll` 改 `order by wendu_cjsj asc, id asc` 由分页插件注入。
+- `documents/02、项目需求/数据库/seed_daycheck_f016_inspection_role.sql`（insp_read 资源与绑定，动态 rolecode、存在性预检、纯增量、`ID varchar(32)`）；5 个新测试类（Mapper XML、Controller 契约、Service、温度 XML、种子契约）加入 `init.sh` 门禁（15 类 → 当时 41 tests）。
+
+### 追加：阶段8 决策门确认与开工（2026-11-26）
+
+- m00024 决策：出货异常按 **24 小时自然时间**老化；**不新增闭环字段**，文案只描述「下架后超时未处理」，不得声称「未闭环」；数据契约按计划执行。
+- 温度：真实业务值（标准地点名 / aliases / 最低最高温度 / 实际录入间隔）由用户提供，进入版本化 `scan.yaml` 并冻结进扫描快照；**缺值时 `temperature.enabled=false` 且不产生生产告警**，禁止把示例 2–8℃/8h 当生产阈值。
+- F-016 置 `in_progress`，登记三条实施前决策与证据入口。
+
+### 追加：阶段8 v0.2.1 登记（2026-11-26）
+
+- 阶段 7.7 验收通过（F-015 保持 `passing/e2e_pass`）；新登记 `F-016：v0.2.1 出货异常与温度巡检`（priority 16，5 条验证项，`not_started`）。
+- 实施顺序：业务口径 → Java 数据契约（独立分页数据源、稳定 `rowId/create_date`、Decimal 数量、`insp_read` 资源映射与 Redis 刷新、真实 MyBatis 映射测试）→ Python 规则（`OUTBOUND-EXCEPTION` / `TEMP-EXCURSION`，两类独立开关，partial 不自动关闭）→ 验收（Memory/PG 契约、Java+网关+agent 真实 e2e、前端巡检页展示、evidence 与 v0.2.0 分开）。
 
 ### 追加：剩余实施路线图阶段7.7（2026-11-25，用户 m09157 验收决定）
 

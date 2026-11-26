@@ -1,0 +1,3153 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-11-26T14:07:17.698Z",
+  "identity": "HTTP method + normalized path",
+  "scope": "wms-java/**/src/main/java/**/*.java (excluding outbound @FeignClient)",
+  "grandfathered": true,
+  "note": "仅豁免 2026-11-26 扫描时已存在的 Java 端点；不得用自动更新掩盖新增权限债。",
+  "filesScanned": 1097,
+  "endpointCount": 349,
+  "endpoints": [
+    {
+      "key": "DELETE /baseConfig/automaticEncoding/delete",
+      "method": "DELETE",
+      "path": "/baseConfig/automaticEncoding/delete",
+      "source": "wms-java/wms-j4-baseConfig/src/main/java/com/zeroone/star/baseConfig/controller/AutomaticEncodingController.java",
+      "line": 75,
+      "typeName": "AutomaticEncodingController",
+      "methodName": "deleteEncoding"
+    },
+    {
+      "key": "DELETE /baseconfig/delete-encodingtype",
+      "method": "DELETE",
+      "path": "/baseconfig/delete-encodingtype",
+      "source": "wms-java/wms-j4-baseConfig/src/main/java/com/zeroone/star/baseConfig/controller/EncodingTypeController.java",
+      "line": 70,
+      "typeName": "EncodingTypeController",
+      "methodName": "deleteByIds"
+    },
+    {
+      "key": "DELETE /baseconfig/deletebatchunittype",
+      "method": "DELETE",
+      "path": "/baseconfig/deletebatchunittype",
+      "source": "wms-java/wms-j4-baseConfig/src/main/java/com/zeroone/star/baseConfig/controller/UnitTypeController.java",
+      "line": 106,
+      "typeName": "UnitTypeController",
+      "methodName": "deleteBatchUnitType"
+    },
+    {
+      "key": "DELETE /contshape/delete",
+      "method": "DELETE",
+      "path": "/contshape/delete",
+      "source": "wms-java/wms-j8-othermana/src/main/java/com/zeroone/star/othermana/controller/ContTypeController.java",
+      "line": 62,
+      "typeName": "ContTypeController",
+      "methodName": "removeCont_shape"
+    },
+    {
+      "key": "DELETE /cus-other/remove-cus",
+      "method": "DELETE",
+      "path": "/cus-other/remove-cus",
+      "source": "wms-java/wms-j5-basezl/src/main/java/com/zeroone/star/j5/basezl/controller/CusOtherController.java",
+      "line": 59,
+      "typeName": "CusOtherController",
+      "methodName": "removeCusOther"
+    },
+    {
+      "key": "DELETE /customer/remove-customer",
+      "method": "DELETE",
+      "path": "/customer/remove-customer",
+      "source": "wms-java/wms-j5-basezl/src/main/java/com/zeroone/star/j5/basezl/controller/CustomerController.java",
+      "line": 107,
+      "typeName": "CustomerController",
+      "methodName": "deleteCustomer"
+    },
+    {
+      "key": "DELETE /daycheck/temperature/delete",
+      "method": "DELETE",
+      "path": "/daycheck/temperature/delete",
+      "source": "wms-java/wms-j3-daycheck/src/main/java/com/zeroone/star/daycheck/controller/TemperatureController.java",
+      "line": 106,
+      "typeName": "TemperatureController",
+      "methodName": "deleteTemperature"
+    },
+    {
+      "key": "DELETE /exportmana/receipt/delete",
+      "method": "DELETE",
+      "path": "/exportmana/receipt/delete",
+      "source": "wms-java/wms-j8-exportmana/src/main/java/com/zeroone/star/exportmana/controller/ReceiptController.java",
+      "line": 58,
+      "typeName": "ReceiptController",
+      "methodName": "deleteReceipt"
+    },
+    {
+      "key": "DELETE /goods/delete-goods",
+      "method": "DELETE",
+      "path": "/goods/delete-goods",
+      "source": "wms-java/wms-j5-basezl/src/main/java/com/zeroone/star/j5/basezl/controller/GoodsController.java",
+      "line": 68,
+      "typeName": "GoodsController",
+      "methodName": "deleteGoods"
+    },
+    {
+      "key": "DELETE /measurementunit/deleteunit",
+      "method": "DELETE",
+      "path": "/measurementunit/deleteunit",
+      "source": "wms-java/wms-j4-baseConfig/src/main/java/com/zeroone/star/baseConfig/controller/MeasurementUnitController.java",
+      "line": 106,
+      "typeName": "MeasurementUnitController",
+      "methodName": "deleteUnit"
+    },
+    {
+      "key": "DELETE /menu/remove/{id}",
+      "method": "DELETE",
+      "path": "/menu/remove/{id}",
+      "source": "wms-java/wms-j1-sysmanager/src/main/java/com/zeroone/star/j1/sysmanager/controller/MenuManageController.java",
+      "line": 41,
+      "typeName": "MenuManageController",
+      "methodName": "remove"
+    },
+    {
+      "key": "DELETE /msgmw/delete",
+      "method": "DELETE",
+      "path": "/msgmw/delete",
+      "source": "wms-java/wms-j2-msgmw/src/main/java/com/zeroone/star/msgmw/controller/TSSmsTemplateSqlController.java",
+      "line": 155,
+      "typeName": "TSSmsTemplateSqlController",
+      "methodName": "delete"
+    },
+    {
+      "key": "DELETE /msgmw/delete-messageTemplate",
+      "method": "DELETE",
+      "path": "/msgmw/delete-messageTemplate",
+      "source": "wms-java/wms-j2-msgmw/src/main/java/com/zeroone/star/msgmw/controller/MessageTemplateController.java",
+      "line": 89,
+      "typeName": "MessageTemplateController",
+      "methodName": "deleteMessageTemplates"
+    },
+    {
+      "key": "DELETE /msgmw/remove-sql",
+      "method": "DELETE",
+      "path": "/msgmw/remove-sql",
+      "source": "wms-java/wms-j2-msgmw/src/main/java/com/zeroone/star/msgmw/controller/SqlController.java",
+      "line": 91,
+      "typeName": "SqlController",
+      "methodName": "removeSql"
+    },
+    {
+      "key": "DELETE /othermana/goodsbrand/remove-goodsbrand-by-ids",
+      "method": "DELETE",
+      "path": "/othermana/goodsbrand/remove-goodsbrand-by-ids",
+      "source": "wms-java/wms-j8-othermana/src/main/java/com/zeroone/star/othermana/controller/GoodsBrandController.java",
+      "line": 93,
+      "typeName": "GoodsBrandController",
+      "methodName": "removeGoodsBandByIds"
+    },
+    {
+      "key": "DELETE /othermana/port/removePorts",
+      "method": "DELETE",
+      "path": "/othermana/port/removePorts",
+      "source": "wms-java/wms-j8-othermana/src/main/java/com/zeroone/star/othermana/controller/BaPortController.java",
+      "line": 63,
+      "typeName": "BaPortController",
+      "methodName": "removePorts"
+    },
+    {
+      "key": "DELETE /othermana/specification/remove-batch",
+      "method": "DELETE",
+      "path": "/othermana/specification/remove-batch",
+      "source": "wms-java/wms-j8-othermana/src/main/java/com/zeroone/star/othermana/controller/SpecificationController.java",
+      "line": 79,
+      "typeName": "SpecificationController",
+      "methodName": "deleteSpecifications"
+    },
+    {
+      "key": "DELETE /ParameterType/deleteParameterType",
+      "method": "DELETE",
+      "path": "/ParameterType/deleteParameterType",
+      "source": "wms-java/wms-j4-baseConfig/src/main/java/com/zeroone/star/baseConfig/controller/ParameterTypeController.java",
+      "line": 70,
+      "typeName": "ParameterTypeController",
+      "methodName": "deleteMore"
+    },
+    {
+      "key": "DELETE /provider/delete-provider",
+      "method": "DELETE",
+      "path": "/provider/delete-provider",
+      "source": "wms-java/wms-j5-basezl/src/main/java/com/zeroone/star/j5/basezl/controller/ProviderController.java",
+      "line": 68,
+      "typeName": "ProviderController",
+      "methodName": "deleteProvider"
+    },
+    {
+      "key": "DELETE /rfid/delete-rfid",
+      "method": "DELETE",
+      "path": "/rfid/delete-rfid",
+      "source": "wms-java/wms-j5-basezl/src/main/java/com/zeroone/star/j5/basezl/controller/RFIDController.java",
+      "line": 74,
+      "typeName": "RFIDController",
+      "methodName": "deleteRfid"
+    },
+    {
+      "key": "DELETE /role/delete-roleUser",
+      "method": "DELETE",
+      "path": "/role/delete-roleUser",
+      "source": "wms-java/wms-j1-sysmanager/src/main/java/com/zeroone/star/j1/sysmanager/controller/RoleUserController.java",
+      "line": 78,
+      "typeName": "RoleUserController",
+      "methodName": "deleteRoleUser"
+    },
+    {
+      "key": "DELETE /stock/good-receive/{id}",
+      "method": "DELETE",
+      "path": "/stock/good-receive/{id}",
+      "source": "wms-java/wms-j6-stockln/src/main/java/com/zeroone/star/stockln/controller/GoodsReceiveController.java",
+      "line": 88,
+      "typeName": "GoodsReceiveController",
+      "methodName": "removeItem"
+    },
+    {
+      "key": "DELETE /sysmanager/catagory/remove-catagory",
+      "method": "DELETE",
+      "path": "/sysmanager/catagory/remove-catagory",
+      "source": "wms-java/wms-j3-sysmanager/src/main/java/com/zeroone/star/sysmanager/controller/TSCategoryController.java",
+      "line": 57,
+      "typeName": "TSCategoryController",
+      "methodName": "removeCatagory"
+    },
+    {
+      "key": "DELETE /sysmanager/icons/delete",
+      "method": "DELETE",
+      "path": "/sysmanager/icons/delete",
+      "source": "wms-java/wms-j3-sysmanager/src/main/java/com/zeroone/star/sysmanager/controller/TSIconController.java",
+      "line": 106,
+      "typeName": "TSIconController",
+      "methodName": "deleteIcons"
+    },
+    {
+      "key": "DELETE /sysmanager/type/remove/{id}",
+      "method": "DELETE",
+      "path": "/sysmanager/type/remove/{id}",
+      "source": "wms-java/wms-j3-sysmanager/src/main/java/com/zeroone/star/sysmanager/controller/TypeController.java",
+      "line": 83,
+      "typeName": "TypeController",
+      "methodName": "removeType"
+    },
+    {
+      "key": "DELETE /sysmanager/typegroup/remove/{id}",
+      "method": "DELETE",
+      "path": "/sysmanager/typegroup/remove/{id}",
+      "source": "wms-java/wms-j3-sysmanager/src/main/java/com/zeroone/star/sysmanager/controller/TypeGroupController.java",
+      "line": 55,
+      "typeName": "TypeGroupController",
+      "methodName": "removeTypeGroup"
+    },
+    {
+      "key": "DELETE /systemparameter/delete-SystemParameter",
+      "method": "DELETE",
+      "path": "/systemparameter/delete-SystemParameter",
+      "source": "wms-java/wms-j4-baseConfig/src/main/java/com/zeroone/star/baseConfig/controller/SystemParameterController.java",
+      "line": 135,
+      "typeName": "SystemParameterController",
+      "methodName": "deleteByIds"
+    },
+    {
+      "key": "DELETE /user/{userId}",
+      "method": "DELETE",
+      "path": "/user/{userId}",
+      "source": "wms-java/wms-j1-sysmanager/src/main/java/com/zeroone/star/j1/sysmanager/controller/UserManage3Controller.java",
+      "line": 50,
+      "typeName": "UserManage3Controller",
+      "methodName": "deleteUser"
+    },
+    {
+      "key": "GET /adpick/query-all",
+      "method": "GET",
+      "path": "/adpick/query-all",
+      "source": "wms-java/wms-j7-outgoodsmanage/src/main/java/com/zeroone/star/outgoodsmanage/controller/AdPickController.java",
+      "line": 53,
+      "typeName": "AdPickController",
+      "methodName": "queryAllAnDanPickApis"
+    },
+    {
+      "key": "GET /adpick/query-one",
+      "method": "GET",
+      "path": "/adpick/query-one",
+      "source": "wms-java/wms-j7-outgoodsmanage/src/main/java/com/zeroone/star/outgoodsmanage/controller/AdPickController.java",
+      "line": 61,
+      "typeName": "AdPickController",
+      "methodName": "queryOneAnDanPickApis"
+    },
+    {
+      "key": "GET /baseConfig/automaticEncoding/export",
+      "method": "GET",
+      "path": "/baseConfig/automaticEncoding/export",
+      "source": "wms-java/wms-j4-baseConfig/src/main/java/com/zeroone/star/baseConfig/controller/AutomaticEncodingController.java",
+      "line": 81,
+      "typeName": "AutomaticEncodingController",
+      "methodName": "exportExcel"
+    },
+    {
+      "key": "GET /baseConfig/automaticEncoding/queryAll",
+      "method": "GET",
+      "path": "/baseConfig/automaticEncoding/queryAll",
+      "source": "wms-java/wms-j4-baseConfig/src/main/java/com/zeroone/star/baseConfig/controller/AutomaticEncodingController.java",
+      "line": 49,
+      "typeName": "AutomaticEncodingController",
+      "methodName": "queryAll"
+    },
+    {
+      "key": "GET /baseconfig/export-encodingtype",
+      "method": "GET",
+      "path": "/baseconfig/export-encodingtype",
+      "source": "wms-java/wms-j4-baseConfig/src/main/java/com/zeroone/star/baseConfig/controller/EncodingTypeController.java",
+      "line": 83,
+      "typeName": "EncodingTypeController",
+      "methodName": "exportexcel"
+    },
+    {
+      "key": "GET /baseconfig/exportunittype",
+      "method": "GET",
+      "path": "/baseconfig/exportunittype",
+      "source": "wms-java/wms-j4-baseConfig/src/main/java/com/zeroone/star/baseConfig/controller/UnitTypeController.java",
+      "line": 121,
+      "typeName": "UnitTypeController",
+      "methodName": "exportUnitType"
+    },
+    {
+      "key": "GET /baseconfig/getnamelist",
+      "method": "GET",
+      "path": "/baseconfig/getnamelist",
+      "source": "wms-java/wms-j4-baseConfig/src/main/java/com/zeroone/star/baseConfig/controller/EncodingTypeController.java",
+      "line": 283,
+      "typeName": "EncodingTypeController",
+      "methodName": "encodingTypeNameList"
+    },
+    {
+      "key": "GET /baseconfig/getunittypelist",
+      "method": "GET",
+      "path": "/baseconfig/getunittypelist",
+      "source": "wms-java/wms-j4-baseConfig/src/main/java/com/zeroone/star/baseConfig/controller/UnitTypeController.java",
+      "line": 177,
+      "typeName": "UnitTypeController",
+      "methodName": "getUnitTypeList"
+    },
+    {
+      "key": "GET /baseconfig/getunittypenamelist",
+      "method": "GET",
+      "path": "/baseconfig/getunittypenamelist",
+      "source": "wms-java/wms-j4-baseConfig/src/main/java/com/zeroone/star/baseConfig/controller/UnitTypeController.java",
+      "line": 170,
+      "typeName": "UnitTypeController",
+      "methodName": "getUnitTypeNameList"
+    },
+    {
+      "key": "GET /baseconfig/query-encodingtype",
+      "method": "GET",
+      "path": "/baseconfig/query-encodingtype",
+      "source": "wms-java/wms-j4-baseConfig/src/main/java/com/zeroone/star/baseConfig/controller/EncodingTypeController.java",
+      "line": 250,
+      "typeName": "EncodingTypeController",
+      "methodName": "queryAllEncodingType"
+    },
+    {
+      "key": "GET /contshape/export",
+      "method": "GET",
+      "path": "/contshape/export",
+      "source": "wms-java/wms-j8-othermana/src/main/java/com/zeroone/star/othermana/controller/ContTypeController.java",
+      "line": 72,
+      "typeName": "ContTypeController",
+      "methodName": "exportExcel"
+    },
+    {
+      "key": "GET /contshape/query/{id}",
+      "method": "GET",
+      "path": "/contshape/query/{id}",
+      "source": "wms-java/wms-j8-othermana/src/main/java/com/zeroone/star/othermana/controller/ContTypeController.java",
+      "line": 39,
+      "typeName": "ContTypeController",
+      "methodName": "queryBaContType"
+    },
+    {
+      "key": "GET /contshape/queryAll",
+      "method": "GET",
+      "path": "/contshape/queryAll",
+      "source": "wms-java/wms-j8-othermana/src/main/java/com/zeroone/star/othermana/controller/ContTypeController.java",
+      "line": 31,
+      "typeName": "ContTypeController",
+      "methodName": "query"
+    },
+    {
+      "key": "GET /cus-other/export",
+      "method": "GET",
+      "path": "/cus-other/export",
+      "source": "wms-java/wms-j5-basezl/src/main/java/com/zeroone/star/j5/basezl/controller/CusOtherController.java",
+      "line": 84,
+      "typeName": "CusOtherController",
+      "methodName": "exportCusOther"
+    },
+    {
+      "key": "GET /cus-other/query-all",
+      "method": "GET",
+      "path": "/cus-other/query-all",
+      "source": "wms-java/wms-j5-basezl/src/main/java/com/zeroone/star/j5/basezl/controller/CusOtherController.java",
+      "line": 38,
+      "typeName": "CusOtherController",
+      "methodName": "queryAll"
+    },
+    {
+      "key": "GET /cus-other/query-one",
+      "method": "GET",
+      "path": "/cus-other/query-one",
+      "source": "wms-java/wms-j5-basezl/src/main/java/com/zeroone/star/j5/basezl/controller/CusOtherController.java",
+      "line": 45,
+      "typeName": "CusOtherController",
+      "methodName": "queryOne"
+    },
+    {
+      "key": "GET /customer/customer-name",
+      "method": "GET",
+      "path": "/customer/customer-name",
+      "source": "wms-java/wms-j5-basezl/src/main/java/com/zeroone/star/j5/basezl/controller/CustomerController.java",
+      "line": 44,
+      "typeName": "CustomerController",
+      "methodName": "queryCustomerNames"
+    },
+    {
+      "key": "GET /customer/customer-name-list",
+      "method": "GET",
+      "path": "/customer/customer-name-list",
+      "source": "wms-java/wms-j5-basezl/src/main/java/com/zeroone/star/j5/basezl/controller/CustomerController.java",
+      "line": 54,
+      "typeName": "CustomerController",
+      "methodName": "queryCustomerNameList"
+    },
+    {
+      "key": "GET /customer/download",
+      "method": "GET",
+      "path": "/customer/download",
+      "source": "wms-java/wms-j5-basezl/src/main/java/com/zeroone/star/j5/basezl/controller/CustomerController.java",
+      "line": 121,
+      "typeName": "CustomerController",
+      "methodName": "exportCustomer"
+    },
+    {
+      "key": "GET /customer/query-all",
+      "method": "GET",
+      "path": "/customer/query-all",
+      "source": "wms-java/wms-j5-basezl/src/main/java/com/zeroone/star/j5/basezl/controller/CustomerController.java",
+      "line": 63,
+      "typeName": "CustomerController",
+      "methodName": "queryAll"
+    },
+    {
+      "key": "GET /customer/query-one",
+      "method": "GET",
+      "path": "/customer/query-one",
+      "source": "wms-java/wms-j5-basezl/src/main/java/com/zeroone/star/j5/basezl/controller/CustomerController.java",
+      "line": 72,
+      "typeName": "CustomerController",
+      "methodName": "getDetailsCustomer"
+    },
+    {
+      "key": "GET /dashboard/query-cur-pick",
+      "method": "GET",
+      "path": "/dashboard/query-cur-pick",
+      "source": "wms-java/wms-j1-dashboard/src/main/java/com/zeroone/star/j1/dashboard/controller/DashboardController.java",
+      "line": 79,
+      "typeName": "DashboardController",
+      "methodName": "queryCurrentPickGoodNumber"
+    },
+    {
+      "key": "GET /dashboard/query-goods-to-down",
+      "method": "GET",
+      "path": "/dashboard/query-goods-to-down",
+      "source": "wms-java/wms-j1-dashboard/src/main/java/com/zeroone/star/j1/dashboard/controller/DashboardController.java",
+      "line": 141,
+      "typeName": "DashboardController",
+      "methodName": "queryGoodsDownNumberValidated"
+    },
+    {
+      "key": "GET /dashboard/query-goods-to-down-in-recent-days",
+      "method": "GET",
+      "path": "/dashboard/query-goods-to-down-in-recent-days",
+      "source": "wms-java/wms-j1-dashboard/src/main/java/com/zeroone/star/j1/dashboard/controller/DashboardController.java",
+      "line": 166,
+      "typeName": "DashboardController",
+      "methodName": "queryGoodsDownDaysValidated"
+    },
+    {
+      "key": "GET /dashboard/query-goods-to-up",
+      "method": "GET",
+      "path": "/dashboard/query-goods-to-up",
+      "source": "wms-java/wms-j1-dashboard/src/main/java/com/zeroone/star/j1/dashboard/controller/DashboardController.java",
+      "line": 128,
+      "typeName": "DashboardController",
+      "methodName": "queryGoodsUpNumberValidated"
+    },
+    {
+      "key": "GET /dashboard/query-goods-to-up-in-recent-days",
+      "method": "GET",
+      "path": "/dashboard/query-goods-to-up-in-recent-days",
+      "source": "wms-java/wms-j1-dashboard/src/main/java/com/zeroone/star/j1/dashboard/controller/DashboardController.java",
+      "line": 154,
+      "typeName": "DashboardController",
+      "methodName": "queryGoodsUpDaysValidated"
+    },
+    {
+      "key": "GET /dashboard/query-one-day-total-cost-statistics",
+      "method": "GET",
+      "path": "/dashboard/query-one-day-total-cost-statistics",
+      "source": "wms-java/wms-j1-dashboard/src/main/java/com/zeroone/star/j1/dashboard/controller/DashboardController.java",
+      "line": 236,
+      "typeName": "DashboardController",
+      "methodName": "queryOneDayTotalCostValidated"
+    },
+    {
+      "key": "GET /dashboard/query-pend-pick",
+      "method": "GET",
+      "path": "/dashboard/query-pend-pick",
+      "source": "wms-java/wms-j1-dashboard/src/main/java/com/zeroone/star/j1/dashboard/controller/DashboardController.java",
+      "line": 66,
+      "typeName": "DashboardController",
+      "methodName": "queryPendingPickGoodNumber"
+    },
+    {
+      "key": "GET /dashboard/query-pend-receipt",
+      "method": "GET",
+      "path": "/dashboard/query-pend-receipt",
+      "source": "wms-java/wms-j1-dashboard/src/main/java/com/zeroone/star/j1/dashboard/controller/DashboardController.java",
+      "line": 38,
+      "typeName": "DashboardController",
+      "methodName": "queryPendingReceiptGoodNumber"
+    },
+    {
+      "key": "GET /dashboard/query-pend-snapshot",
+      "method": "GET",
+      "path": "/dashboard/query-pend-snapshot",
+      "source": "wms-java/wms-j1-dashboard/src/main/java/com/zeroone/star/j1/dashboard/controller/DashboardController.java",
+      "line": 95,
+      "typeName": "DashboardController",
+      "methodName": "queryPendSnapshot"
+    },
+    {
+      "key": "GET /dashboard/query-pend-to-up",
+      "method": "GET",
+      "path": "/dashboard/query-pend-to-up",
+      "source": "wms-java/wms-j1-dashboard/src/main/java/com/zeroone/star/j1/dashboard/controller/DashboardController.java",
+      "line": 52,
+      "typeName": "DashboardController",
+      "methodName": "queryPendingToUpGoodNumber"
+    },
+    {
+      "key": "GET /daycheck/delay/download",
+      "method": "GET",
+      "path": "/daycheck/delay/download",
+      "source": "wms-java/wms-j3-daycheck/src/main/java/com/zeroone/star/daycheck/controller/DelayController.java",
+      "line": 36,
+      "typeName": "DelayController",
+      "methodName": "exportExcel"
+    },
+    {
+      "key": "GET /daycheck/delay/im-delay",
+      "method": "GET",
+      "path": "/daycheck/delay/im-delay",
+      "source": "wms-java/wms-j3-daycheck/src/main/java/com/zeroone/star/daycheck/controller/DelayController.java",
+      "line": 51,
+      "typeName": "DelayController",
+      "methodName": "queryAll"
+    },
+    {
+      "key": "GET /daycheck/no-up/download",
+      "method": "GET",
+      "path": "/daycheck/no-up/download",
+      "source": "wms-java/wms-j3-daycheck/src/main/java/com/zeroone/star/daycheck/controller/NoUpController.java",
+      "line": 73,
+      "typeName": "NoUpController",
+      "methodName": "downLoadNoUp"
+    },
+    {
+      "key": "GET /daycheck/no-up/get-no-up-goods",
+      "method": "GET",
+      "path": "/daycheck/no-up/get-no-up-goods",
+      "source": "wms-java/wms-j3-daycheck/src/main/java/com/zeroone/star/daycheck/controller/NoUpController.java",
+      "line": 47,
+      "typeName": "NoUpController",
+      "methodName": "getNoUpGoods"
+    },
+    {
+      "key": "GET /daycheck/no-up/get-no-up-goods-page",
+      "method": "GET",
+      "path": "/daycheck/no-up/get-no-up-goods-page",
+      "source": "wms-java/wms-j3-daycheck/src/main/java/com/zeroone/star/daycheck/controller/NoUpController.java",
+      "line": 60,
+      "typeName": "NoUpController",
+      "methodName": "getNoUpGoodsPaged"
+    },
+    {
+      "key": "GET /daycheck/temperature/export",
+      "method": "GET",
+      "path": "/daycheck/temperature/export",
+      "source": "wms-java/wms-j3-daycheck/src/main/java/com/zeroone/star/daycheck/controller/TemperatureController.java",
+      "line": 117,
+      "typeName": "TemperatureController",
+      "methodName": "exportTemperature"
+    },
+    {
+      "key": "GET /daycheck/temperature/id",
+      "method": "GET",
+      "path": "/daycheck/temperature/id",
+      "source": "wms-java/wms-j3-daycheck/src/main/java/com/zeroone/star/daycheck/controller/TemperatureController.java",
+      "line": 91,
+      "typeName": "TemperatureController",
+      "methodName": "temperatureById"
+    },
+    {
+      "key": "GET /daycheck/temperature/query",
+      "method": "GET",
+      "path": "/daycheck/temperature/query",
+      "source": "wms-java/wms-j3-daycheck/src/main/java/com/zeroone/star/daycheck/controller/TemperatureController.java",
+      "line": 46,
+      "typeName": "TemperatureController",
+      "methodName": "pageQueryAll"
+    },
+    {
+      "key": "GET /daycheck/yi-chang/download",
+      "method": "GET",
+      "path": "/daycheck/yi-chang/download",
+      "source": "wms-java/wms-j3-daycheck/src/main/java/com/zeroone/star/daycheck/controller/YichangDownContrller.java",
+      "line": 74,
+      "typeName": "YichangDownContrller",
+      "methodName": "downLoadYicchang"
+    },
+    {
+      "key": "GET /daycheck/yi-chang/get-yichang-down",
+      "method": "GET",
+      "path": "/daycheck/yi-chang/get-yichang-down",
+      "source": "wms-java/wms-j3-daycheck/src/main/java/com/zeroone/star/daycheck/controller/YichangDownContrller.java",
+      "line": 48,
+      "typeName": "YichangDownContrller",
+      "methodName": "getYichangDown"
+    },
+    {
+      "key": "GET /daycheck/yi-chang/get-yichang-down-page",
+      "method": "GET",
+      "path": "/daycheck/yi-chang/get-yichang-down-page",
+      "source": "wms-java/wms-j3-daycheck/src/main/java/com/zeroone/star/daycheck/controller/YichangDownContrller.java",
+      "line": 61,
+      "typeName": "YichangDownContrller",
+      "methodName": "getYichangDownPaged"
+    },
+    {
+      "key": "GET /exportmana/intransitstock/export-intransitstock",
+      "method": "GET",
+      "path": "/exportmana/intransitstock/export-intransitstock",
+      "source": "wms-java/wms-j8-exportmana/src/main/java/com/zeroone/star/exportmana/controller/InTransitStockController.java",
+      "line": 44,
+      "typeName": "InTransitStockController",
+      "methodName": "exportInTransitStock"
+    },
+    {
+      "key": "GET /exportmana/intransitstock/query-intransitstock",
+      "method": "GET",
+      "path": "/exportmana/intransitstock/query-intransitstock",
+      "source": "wms-java/wms-j8-exportmana/src/main/java/com/zeroone/star/exportmana/controller/InTransitStockController.java",
+      "line": 34,
+      "typeName": "InTransitStockController",
+      "methodName": "queryInTransitStock"
+    },
+    {
+      "key": "GET /exportmana/inventory/query-inventory",
+      "method": "GET",
+      "path": "/exportmana/inventory/query-inventory",
+      "source": "wms-java/wms-j8-exportmana/src/main/java/com/zeroone/star/exportmana/controller/InventorySummaryController.java",
+      "line": 32,
+      "typeName": "InventorySummaryController",
+      "methodName": "queryInventorySummary"
+    },
+    {
+      "key": "GET /exportmana/receipt/export",
+      "method": "GET",
+      "path": "/exportmana/receipt/export",
+      "source": "wms-java/wms-j8-exportmana/src/main/java/com/zeroone/star/exportmana/controller/ReceiptController.java",
+      "line": 80,
+      "typeName": "ReceiptController",
+      "methodName": "exExcel"
+    },
+    {
+      "key": "GET /exportmana/receipt/query",
+      "method": "GET",
+      "path": "/exportmana/receipt/query",
+      "source": "wms-java/wms-j8-exportmana/src/main/java/com/zeroone/star/exportmana/controller/ReceiptController.java",
+      "line": 28,
+      "typeName": "ReceiptController",
+      "methodName": "queryReceiptList"
+    },
+    {
+      "key": "GET /exportmana/WaveExport/exportExcel",
+      "method": "GET",
+      "path": "/exportmana/WaveExport/exportExcel",
+      "source": "wms-java/wms-j8-exportmana/src/main/java/com/zeroone/star/exportmana/controller/WaveExportController.java",
+      "line": 103,
+      "typeName": "WaveExportController",
+      "methodName": "WaveExportExcel"
+    },
+    {
+      "key": "GET /exportmana/WaveExport/query-list",
+      "method": "GET",
+      "path": "/exportmana/WaveExport/query-list",
+      "source": "wms-java/wms-j8-exportmana/src/main/java/com/zeroone/star/exportmana/controller/WaveExportController.java",
+      "line": 46,
+      "typeName": "WaveExportController",
+      "methodName": "queryWaveExportList"
+    },
+    {
+      "key": "GET /exportmana/WaveExport/query-one",
+      "method": "GET",
+      "path": "/exportmana/WaveExport/query-one",
+      "source": "wms-java/wms-j8-exportmana/src/main/java/com/zeroone/star/exportmana/controller/WaveExportController.java",
+      "line": 54,
+      "typeName": "WaveExportController",
+      "methodName": "queryWaveExportDetail"
+    },
+    {
+      "key": "GET /exportmana/WaveExport/query-print",
+      "method": "GET",
+      "path": "/exportmana/WaveExport/query-print",
+      "source": "wms-java/wms-j8-exportmana/src/main/java/com/zeroone/star/exportmana/controller/WaveExportController.java",
+      "line": 64,
+      "typeName": "WaveExportController",
+      "methodName": "queryWaveExportPrint"
+    },
+    {
+      "key": "GET /goods/download",
+      "method": "GET",
+      "path": "/goods/download",
+      "source": "wms-java/wms-j5-basezl/src/main/java/com/zeroone/star/j5/basezl/controller/GoodsController.java",
+      "line": 86,
+      "typeName": "GoodsController",
+      "methodName": "exportGoods"
+    },
+    {
+      "key": "GET /goods/print",
+      "method": "GET",
+      "path": "/goods/print",
+      "source": "wms-java/wms-j5-basezl/src/main/java/com/zeroone/star/j5/basezl/controller/GoodsController.java",
+      "line": 94,
+      "typeName": "GoodsController",
+      "methodName": "printGoodsTiaoMa"
+    },
+    {
+      "key": "GET /goods/query-all",
+      "method": "GET",
+      "path": "/goods/query-all",
+      "source": "wms-java/wms-j5-basezl/src/main/java/com/zeroone/star/j5/basezl/controller/GoodsController.java",
+      "line": 32,
+      "typeName": "GoodsController",
+      "methodName": "queryAll"
+    },
+    {
+      "key": "GET /goods/query-one",
+      "method": "GET",
+      "path": "/goods/query-one",
+      "source": "wms-java/wms-j5-basezl/src/main/java/com/zeroone/star/j5/basezl/controller/GoodsController.java",
+      "line": 40,
+      "typeName": "GoodsController",
+      "methodName": "queryOne"
+    },
+    {
+      "key": "GET /login/current-user",
+      "method": "GET",
+      "path": "/login/current-user",
+      "source": "wms-java/wms-login/src/main/java/com/zeroone/star/login/controller/LoginController.java",
+      "line": 75,
+      "typeName": "LoginController",
+      "methodName": "getCurrUser"
+    },
+    {
+      "key": "GET /login/get-menus",
+      "method": "GET",
+      "path": "/login/get-menus",
+      "source": "wms-java/wms-login/src/main/java/com/zeroone/star/login/controller/LoginController.java",
+      "line": 106,
+      "typeName": "LoginController",
+      "methodName": "getMenus"
+    },
+    {
+      "key": "GET /login/logout",
+      "method": "GET",
+      "path": "/login/logout",
+      "source": "wms-java/wms-login/src/main/java/com/zeroone/star/login/controller/LoginController.java",
+      "line": 82,
+      "typeName": "LoginController",
+      "methodName": "logout"
+    },
+    {
+      "key": "GET /measurementunit/expo",
+      "method": "GET",
+      "path": "/measurementunit/expo",
+      "source": "wms-java/wms-j4-baseConfig/src/main/java/com/zeroone/star/baseConfig/controller/MeasurementUnitController.java",
+      "line": 233,
+      "typeName": "MeasurementUnitController",
+      "methodName": "expoMeasurementUnit"
+    },
+    {
+      "key": "GET /measurementunit/getnamelist",
+      "method": "GET",
+      "path": "/measurementunit/getnamelist",
+      "source": "wms-java/wms-j4-baseConfig/src/main/java/com/zeroone/star/baseConfig/controller/MeasurementUnitController.java",
+      "line": 71,
+      "typeName": "MeasurementUnitController",
+      "methodName": "queryMeasurementUnitNameList"
+    },
+    {
+      "key": "GET /measurementunit/getunitlist",
+      "method": "GET",
+      "path": "/measurementunit/getunitlist",
+      "source": "wms-java/wms-j4-baseConfig/src/main/java/com/zeroone/star/baseConfig/controller/MeasurementUnitController.java",
+      "line": 59,
+      "typeName": "MeasurementUnitController",
+      "methodName": "queryMeasurementUnitList"
+    },
+    {
+      "key": "GET /menu/get-menu-list",
+      "method": "GET",
+      "path": "/menu/get-menu-list",
+      "source": "wms-java/wms-j1-sysmanager/src/main/java/com/zeroone/star/j1/sysmanager/controller/MenuManageController.java",
+      "line": 78,
+      "typeName": "MenuManageController",
+      "methodName": "getMenuList"
+    },
+    {
+      "key": "GET /menu/get-menu-list/{menuId}",
+      "method": "GET",
+      "path": "/menu/get-menu-list/{menuId}",
+      "source": "wms-java/wms-j1-sysmanager/src/main/java/com/zeroone/star/j1/sysmanager/controller/MenuManageController.java",
+      "line": 78,
+      "typeName": "MenuManageController",
+      "methodName": "getMenuList"
+    },
+    {
+      "key": "GET /menu/menu/{menuId}",
+      "method": "GET",
+      "path": "/menu/menu/{menuId}",
+      "source": "wms-java/wms-j1-sysmanager/src/main/java/com/zeroone/star/j1/sysmanager/controller/MenuManageController.java",
+      "line": 88,
+      "typeName": "MenuManageController",
+      "methodName": "getMenuDetail"
+    },
+    {
+      "key": "GET /menu/query-menu-list/{id}",
+      "method": "GET",
+      "path": "/menu/query-menu-list/{id}",
+      "source": "wms-java/wms-j1-sysmanager/src/main/java/com/zeroone/star/j1/sysmanager/controller/MenuManageController.java",
+      "line": 58,
+      "typeName": "MenuManageController",
+      "methodName": "queryMenuList"
+    },
+    {
+      "key": "GET /menu/query-menu-tree",
+      "method": "GET",
+      "path": "/menu/query-menu-tree",
+      "source": "wms-java/wms-j1-sysmanager/src/main/java/com/zeroone/star/j1/sysmanager/controller/MenuManageController.java",
+      "line": 68,
+      "typeName": "MenuManageController",
+      "methodName": "getMenuTree"
+    },
+    {
+      "key": "GET /msgmw/get-messageTemplateName-list",
+      "method": "GET",
+      "path": "/msgmw/get-messageTemplateName-list",
+      "source": "wms-java/wms-j2-msgmw/src/main/java/com/zeroone/star/msgmw/controller/MessageTemplateController.java",
+      "line": 30,
+      "typeName": "MessageTemplateController",
+      "methodName": "getAllTemplateNames"
+    },
+    {
+      "key": "GET /msgmw/message/{id}",
+      "method": "GET",
+      "path": "/msgmw/message/{id}",
+      "source": "wms-java/wms-j2-msgmw/src/main/java/com/zeroone/star/msgmw/controller/TSSmsController.java",
+      "line": 46,
+      "typeName": "TSSmsController",
+      "methodName": "queryById"
+    },
+    {
+      "key": "GET /msgmw/messages",
+      "method": "GET",
+      "path": "/msgmw/messages",
+      "source": "wms-java/wms-j2-msgmw/src/main/java/com/zeroone/star/msgmw/controller/TSSmsController.java",
+      "line": 40,
+      "typeName": "TSSmsController",
+      "methodName": "queryAll"
+    },
+    {
+      "key": "GET /msgmw/page-messageTemplate-list",
+      "method": "GET",
+      "path": "/msgmw/page-messageTemplate-list",
+      "source": "wms-java/wms-j2-msgmw/src/main/java/com/zeroone/star/msgmw/controller/MessageTemplateController.java",
+      "line": 45,
+      "typeName": "MessageTemplateController",
+      "methodName": "getMessageTemplates"
+    },
+    {
+      "key": "GET /msgmw/query-sql-list",
+      "method": "GET",
+      "path": "/msgmw/query-sql-list",
+      "source": "wms-java/wms-j2-msgmw/src/main/java/com/zeroone/star/msgmw/controller/SqlController.java",
+      "line": 31,
+      "typeName": "SqlController",
+      "methodName": "queryAll"
+    },
+    {
+      "key": "GET /msgmw/query-sql-name-list",
+      "method": "GET",
+      "path": "/msgmw/query-sql-name-list",
+      "source": "wms-java/wms-j2-msgmw/src/main/java/com/zeroone/star/msgmw/controller/SqlController.java",
+      "line": 43,
+      "typeName": "SqlController",
+      "methodName": "querySqlNameList"
+    },
+    {
+      "key": "GET /notice/list-notice-2-page",
+      "method": "GET",
+      "path": "/notice/list-notice-2-page",
+      "source": "wms-java/wms-j2-notice/src/main/java/com/zeroone/star/notice/controller/NoticeController.java",
+      "line": 108,
+      "typeName": "NoticeController",
+      "methodName": "queryNoticePage"
+    },
+    {
+      "key": "GET /notice/query-notice-2-by-id/{noticeId}",
+      "method": "GET",
+      "path": "/notice/query-notice-2-by-id/{noticeId}",
+      "source": "wms-java/wms-j2-notice/src/main/java/com/zeroone/star/notice/controller/NoticeController.java",
+      "line": 130,
+      "typeName": "NoticeController",
+      "methodName": "queryNoticeById"
+    },
+    {
+      "key": "GET /notice/query-notice-details-by-id/{noticeId}",
+      "method": "GET",
+      "path": "/notice/query-notice-details-by-id/{noticeId}",
+      "source": "wms-java/wms-j2-notice/src/main/java/com/zeroone/star/notice/controller/NoticeController.java",
+      "line": 74,
+      "typeName": "NoticeController",
+      "methodName": "queryNoticeDetailsById"
+    },
+    {
+      "key": "GET /notice/query-Unread-notices",
+      "method": "GET",
+      "path": "/notice/query-Unread-notices",
+      "source": "wms-java/wms-j2-notice/src/main/java/com/zeroone/star/notice/controller/NoticeController.java",
+      "line": 87,
+      "typeName": "NoticeController",
+      "methodName": "queryUnreadNotices"
+    },
+    {
+      "key": "GET /othermana/goodsbrand/modifybutton",
+      "method": "GET",
+      "path": "/othermana/goodsbrand/modifybutton",
+      "source": "wms-java/wms-j8-othermana/src/main/java/com/zeroone/star/othermana/controller/GoodsBrandController.java",
+      "line": 77,
+      "typeName": "GoodsBrandController",
+      "methodName": "modifyGoodsBrand"
+    },
+    {
+      "key": "GET /othermana/goodsbrand/name-list",
+      "method": "GET",
+      "path": "/othermana/goodsbrand/name-list",
+      "source": "wms-java/wms-j8-othermana/src/main/java/com/zeroone/star/othermana/controller/GoodsBrandController.java",
+      "line": 51,
+      "typeName": "GoodsBrandController",
+      "methodName": "queryGoodsBrandNameList"
+    },
+    {
+      "key": "GET /othermana/goodsbrand/query-goodsbrand",
+      "method": "GET",
+      "path": "/othermana/goodsbrand/query-goodsbrand",
+      "source": "wms-java/wms-j8-othermana/src/main/java/com/zeroone/star/othermana/controller/GoodsBrandController.java",
+      "line": 58,
+      "typeName": "GoodsBrandController",
+      "methodName": "queryGoodsBrand"
+    },
+    {
+      "key": "GET /othermana/port/exportPort",
+      "method": "GET",
+      "path": "/othermana/port/exportPort",
+      "source": "wms-java/wms-j8-othermana/src/main/java/com/zeroone/star/othermana/controller/BaPortController.java",
+      "line": 86,
+      "typeName": "BaPortController",
+      "methodName": "exportPort"
+    },
+    {
+      "key": "GET /othermana/specification/export",
+      "method": "GET",
+      "path": "/othermana/specification/export",
+      "source": "wms-java/wms-j8-othermana/src/main/java/com/zeroone/star/othermana/controller/SpecificationController.java",
+      "line": 102,
+      "typeName": "SpecificationController",
+      "methodName": "exportSpecificationToExcel"
+    },
+    {
+      "key": "GET /othermana/specification/get-by-id",
+      "method": "GET",
+      "path": "/othermana/specification/get-by-id",
+      "source": "wms-java/wms-j8-othermana/src/main/java/com/zeroone/star/othermana/controller/SpecificationController.java",
+      "line": 46,
+      "typeName": "SpecificationController",
+      "methodName": "querySpecificationDetails"
+    },
+    {
+      "key": "GET /othermana/specification/list",
+      "method": "GET",
+      "path": "/othermana/specification/list",
+      "source": "wms-java/wms-j8-othermana/src/main/java/com/zeroone/star/othermana/controller/SpecificationController.java",
+      "line": 39,
+      "typeName": "SpecificationController",
+      "methodName": "querySpecificationList"
+    },
+    {
+      "key": "GET /out-detail/export-excel",
+      "method": "GET",
+      "path": "/out-detail/export-excel",
+      "source": "wms-java/wms-j7-outgoodsmanage/src/main/java/com/zeroone/star/outgoodsmanage/controller/OutDetailController.java",
+      "line": 54,
+      "typeName": "OutDetailController",
+      "methodName": "exportExcel"
+    },
+    {
+      "key": "GET /out-detail/query-all",
+      "method": "GET",
+      "path": "/out-detail/query-all",
+      "source": "wms-java/wms-j7-outgoodsmanage/src/main/java/com/zeroone/star/outgoodsmanage/controller/OutDetailController.java",
+      "line": 45,
+      "typeName": "OutDetailController",
+      "methodName": "queryAll"
+    },
+    {
+      "key": "GET /out-goods-manager/export-h",
+      "method": "GET",
+      "path": "/out-goods-manager/export-h",
+      "source": "wms-java/wms-j7-outgoodsmanage/src/main/java/com/zeroone/star/outgoodsmanage/controller/OutManageController.java",
+      "line": 188,
+      "typeName": "OutManageController",
+      "methodName": "queryWonh"
+    },
+    {
+      "key": "GET /out-goods-manager/export-i",
+      "method": "GET",
+      "path": "/out-goods-manager/export-i",
+      "source": "wms-java/wms-j7-outgoodsmanage/src/main/java/com/zeroone/star/outgoodsmanage/controller/OutManageController.java",
+      "line": 416,
+      "typeName": "OutManageController",
+      "methodName": "queryWoni"
+    },
+    {
+      "key": "GET /out-goods-manager/query-out-goods-list",
+      "method": "GET",
+      "path": "/out-goods-manager/query-out-goods-list",
+      "source": "wms-java/wms-j7-outgoodsmanage/src/main/java/com/zeroone/star/outgoodsmanage/controller/OutManageController.java",
+      "line": 176,
+      "typeName": "OutManageController",
+      "methodName": "queryOutGoodsList"
+    },
+    {
+      "key": "GET /out-goods-manager/query-out-notice-item",
+      "method": "GET",
+      "path": "/out-goods-manager/query-out-notice-item",
+      "source": "wms-java/wms-j7-outgoodsmanage/src/main/java/com/zeroone/star/outgoodsmanage/controller/OutManageController.java",
+      "line": 105,
+      "typeName": "OutManageController",
+      "methodName": "getGoodsItem"
+    },
+    {
+      "key": "GET /out-goods-manager/query-out-notice-list",
+      "method": "GET",
+      "path": "/out-goods-manager/query-out-notice-list",
+      "source": "wms-java/wms-j7-outgoodsmanage/src/main/java/com/zeroone/star/outgoodsmanage/controller/OutManageController.java",
+      "line": 96,
+      "typeName": "OutManageController",
+      "methodName": "getGoodsNoticeList"
+    },
+    {
+      "key": "GET /out-goods-manager/query-picking-list",
+      "method": "GET",
+      "path": "/out-goods-manager/query-picking-list",
+      "source": "wms-java/wms-j7-outgoodsmanage/src/main/java/com/zeroone/star/outgoodsmanage/controller/OutManageController.java",
+      "line": 166,
+      "typeName": "OutManageController",
+      "methodName": "queryPickingList"
+    },
+    {
+      "key": "GET /outbound/item/queryall",
+      "method": "GET",
+      "path": "/outbound/item/queryall",
+      "source": "wms-java/wms-j7-outgoodsmanage/src/main/java/com/zeroone/star/outgoodsmanage/controller/OutBoundController.java",
+      "line": 33,
+      "typeName": "OutBoundController",
+      "methodName": "queryAllWmOmNoticeI"
+    },
+    {
+      "key": "GET /outgoodsmanage/wm-to-down-goods/{id}",
+      "method": "GET",
+      "path": "/outgoodsmanage/wm-to-down-goods/{id}",
+      "source": "wms-java/wms-j7-outgoodsmanage/src/main/java/com/zeroone/star/outgoodsmanage/controller/DownGoodsController.java",
+      "line": 67,
+      "typeName": "DownGoodsController",
+      "methodName": "getUnpublishById"
+    },
+    {
+      "key": "GET /outgoodsmanage/wm-to-down-goods/delete-down-goods",
+      "method": "GET",
+      "path": "/outgoodsmanage/wm-to-down-goods/delete-down-goods",
+      "source": "wms-java/wms-j7-outgoodsmanage/src/main/java/com/zeroone/star/outgoodsmanage/controller/DownGoodsController.java",
+      "line": 130,
+      "typeName": "DownGoodsController",
+      "methodName": "deleteDownGoods"
+    },
+    {
+      "key": "GET /outgoodsmanage/wm-to-down-goods/export-down-goods-data",
+      "method": "GET",
+      "path": "/outgoodsmanage/wm-to-down-goods/export-down-goods-data",
+      "source": "wms-java/wms-j7-outgoodsmanage/src/main/java/com/zeroone/star/outgoodsmanage/controller/DownGoodsController.java",
+      "line": 147,
+      "typeName": "DownGoodsController",
+      "methodName": "exportDownGoodsData"
+    },
+    {
+      "key": "GET /outgoodsmanage/wm-to-down-goods/list",
+      "method": "GET",
+      "path": "/outgoodsmanage/wm-to-down-goods/list",
+      "source": "wms-java/wms-j7-outgoodsmanage/src/main/java/com/zeroone/star/outgoodsmanage/controller/DownGoodsController.java",
+      "line": 48,
+      "typeName": "DownGoodsController",
+      "methodName": "queryUnpublishList"
+    },
+    {
+      "key": "GET /ParameterType/all",
+      "method": "GET",
+      "path": "/ParameterType/all",
+      "source": "wms-java/wms-j4-baseConfig/src/main/java/com/zeroone/star/baseConfig/controller/ParameterTypeController.java",
+      "line": 139,
+      "typeName": "ParameterTypeController",
+      "methodName": "queryAll"
+    },
+    {
+      "key": "GET /ParameterType/getParameterType",
+      "method": "GET",
+      "path": "/ParameterType/getParameterType",
+      "source": "wms-java/wms-j4-baseConfig/src/main/java/com/zeroone/star/baseConfig/controller/ParameterTypeController.java",
+      "line": 88,
+      "typeName": "ParameterTypeController",
+      "methodName": "downloadParameterType"
+    },
+    {
+      "key": "GET /ParameterType/listName",
+      "method": "GET",
+      "path": "/ParameterType/listName",
+      "source": "wms-java/wms-j4-baseConfig/src/main/java/com/zeroone/star/baseConfig/controller/ParameterTypeController.java",
+      "line": 132,
+      "typeName": "ParameterTypeController",
+      "methodName": "listParameterTypeName"
+    },
+    {
+      "key": "GET /plat-io/list",
+      "method": "GET",
+      "path": "/plat-io/list",
+      "source": "wms-java/wms-apis/src/main/java/com/zeroone/star/project/j7/outbound/WmPlatIoApis.java",
+      "line": 28,
+      "typeName": "WmPlatIoApis",
+      "methodName": "listPlatIo"
+    },
+    {
+      "key": "GET /provider/export",
+      "method": "GET",
+      "path": "/provider/export",
+      "source": "wms-java/wms-j5-basezl/src/main/java/com/zeroone/star/j5/basezl/controller/ProviderController.java",
+      "line": 84,
+      "typeName": "ProviderController",
+      "methodName": "exportProvider"
+    },
+    {
+      "key": "GET /provider/get-details-provider",
+      "method": "GET",
+      "path": "/provider/get-details-provider",
+      "source": "wms-java/wms-j5-basezl/src/main/java/com/zeroone/star/j5/basezl/controller/ProviderController.java",
+      "line": 47,
+      "typeName": "ProviderController",
+      "methodName": "getDetailsProvider"
+    },
+    {
+      "key": "GET /provider/query-all",
+      "method": "GET",
+      "path": "/provider/query-all",
+      "source": "wms-java/wms-j5-basezl/src/main/java/com/zeroone/star/j5/basezl/controller/ProviderController.java",
+      "line": 40,
+      "typeName": "ProviderController",
+      "methodName": "queryAll"
+    },
+    {
+      "key": "GET /rfid/export",
+      "method": "GET",
+      "path": "/rfid/export",
+      "source": "wms-java/wms-j5-basezl/src/main/java/com/zeroone/star/j5/basezl/controller/RFIDController.java",
+      "line": 93,
+      "typeName": "RFIDController",
+      "methodName": "expoExcel"
+    },
+    {
+      "key": "GET /rfid/query-all",
+      "method": "GET",
+      "path": "/rfid/query-all",
+      "source": "wms-java/wms-j5-basezl/src/main/java/com/zeroone/star/j5/basezl/controller/RFIDController.java",
+      "line": 46,
+      "typeName": "RFIDController",
+      "methodName": "queryRFIDAll"
+    },
+    {
+      "key": "GET /rfid/query-one",
+      "method": "GET",
+      "path": "/rfid/query-one",
+      "source": "wms-java/wms-j5-basezl/src/main/java/com/zeroone/star/j5/basezl/controller/RFIDController.java",
+      "line": 53,
+      "typeName": "RFIDController",
+      "methodName": "queryRFIDDetail"
+    },
+    {
+      "key": "GET /role/export-role",
+      "method": "GET",
+      "path": "/role/export-role",
+      "source": "wms-java/wms-j1-sysmanager/src/main/java/com/zeroone/star/j1/sysmanager/controller/RoleInformationController.java",
+      "line": 133,
+      "typeName": "RoleInformationController",
+      "methodName": "exportRole"
+    },
+    {
+      "key": "GET /role/getAllFunctionTree",
+      "method": "GET",
+      "path": "/role/getAllFunctionTree",
+      "source": "wms-java/wms-j1-sysmanager/src/main/java/com/zeroone/star/j1/sysmanager/controller/RoleResourcesController.java",
+      "line": 40,
+      "typeName": "RoleResourcesController",
+      "methodName": "getRoleAllFunction"
+    },
+    {
+      "key": "GET /role/getFunctionTree/{roleCode}",
+      "method": "GET",
+      "path": "/role/getFunctionTree/{roleCode}",
+      "source": "wms-java/wms-j1-sysmanager/src/main/java/com/zeroone/star/j1/sysmanager/controller/RoleResourcesController.java",
+      "line": 54,
+      "typeName": "RoleResourcesController",
+      "methodName": "getRoleFunction"
+    },
+    {
+      "key": "GET /role/query-role",
+      "method": "GET",
+      "path": "/role/query-role",
+      "source": "wms-java/wms-j1-sysmanager/src/main/java/com/zeroone/star/j1/sysmanager/controller/RoleInformationController.java",
+      "line": 87,
+      "typeName": "RoleInformationController",
+      "methodName": "queryRoleList"
+    },
+    {
+      "key": "GET /role/query-rolename",
+      "method": "GET",
+      "path": "/role/query-rolename",
+      "source": "wms-java/wms-j1-sysmanager/src/main/java/com/zeroone/star/j1/sysmanager/controller/RoleInformationController.java",
+      "line": 78,
+      "typeName": "RoleInformationController",
+      "methodName": "queryRoleNameList"
+    },
+    {
+      "key": "GET /role/query-roleUserList",
+      "method": "GET",
+      "path": "/role/query-roleUserList",
+      "source": "wms-java/wms-j1-sysmanager/src/main/java/com/zeroone/star/j1/sysmanager/controller/RoleUserController.java",
+      "line": 50,
+      "typeName": "RoleUserController",
+      "methodName": "queryRoleUserList"
+    },
+    {
+      "key": "GET /role/query-userList",
+      "method": "GET",
+      "path": "/role/query-userList",
+      "source": "wms-java/wms-j1-sysmanager/src/main/java/com/zeroone/star/j1/sysmanager/controller/RoleUserController.java",
+      "line": 38,
+      "typeName": "RoleUserController",
+      "methodName": "queryUserList"
+    },
+    {
+      "key": "GET /role/remove-role",
+      "method": "GET",
+      "path": "/role/remove-role",
+      "source": "wms-java/wms-j1-sysmanager/src/main/java/com/zeroone/star/j1/sysmanager/controller/RoleInformationController.java",
+      "line": 115,
+      "typeName": "RoleInformationController",
+      "methodName": "removeRole"
+    },
+    {
+      "key": "GET /stock/bulk_receipt/toaccept/items",
+      "method": "GET",
+      "path": "/stock/bulk_receipt/toaccept/items",
+      "source": "wms-java/wms-j6-stockln/src/main/java/com/zeroone/star/stockln/controller/ToAcceptController.java",
+      "line": 43,
+      "typeName": "ToAcceptController",
+      "methodName": "getAcceptanceItems"
+    },
+    {
+      "key": "GET /stock/bulk_receipt/toaccept/items/{id}",
+      "method": "GET",
+      "path": "/stock/bulk_receipt/toaccept/items/{id}",
+      "source": "wms-java/wms-j6-stockln/src/main/java/com/zeroone/star/stockln/controller/ToAcceptController.java",
+      "line": 62,
+      "typeName": "ToAcceptController",
+      "methodName": "getAcceptanceItemById"
+    },
+    {
+      "key": "GET /stock/customer-stock/query-all",
+      "method": "GET",
+      "path": "/stock/customer-stock/query-all",
+      "source": "wms-java/wms-j6-stockln/src/main/java/com/zeroone/star/stockln/controller/CustomerStockController.java",
+      "line": 30,
+      "typeName": "CustomerStockController",
+      "methodName": "queryAll"
+    },
+    {
+      "key": "GET /stock/expiry-warning/query-all",
+      "method": "GET",
+      "path": "/stock/expiry-warning/query-all",
+      "source": "wms-java/wms-j6-stockln/src/main/java/com/zeroone/star/stockln/controller/ExpiryWarningController.java",
+      "line": 30,
+      "typeName": "ExpiryWarningController",
+      "methodName": "queryAll"
+    },
+    {
+      "key": "GET /stock/good-receive/{id}",
+      "method": "GET",
+      "path": "/stock/good-receive/{id}",
+      "source": "wms-java/wms-j6-stockln/src/main/java/com/zeroone/star/stockln/controller/GoodsReceiveController.java",
+      "line": 72,
+      "typeName": "GoodsReceiveController",
+      "methodName": "getShelevesByid"
+    },
+    {
+      "key": "GET /stock/good-receive/exportAllItems",
+      "method": "GET",
+      "path": "/stock/good-receive/exportAllItems",
+      "source": "wms-java/wms-j6-stockln/src/main/java/com/zeroone/star/stockln/controller/GoodsReceiveController.java",
+      "line": 155,
+      "typeName": "GoodsReceiveController",
+      "methodName": "exportAllItems"
+    },
+    {
+      "key": "GET /stock/good-receive/query-all",
+      "method": "GET",
+      "path": "/stock/good-receive/query-all",
+      "source": "wms-java/wms-j6-stockln/src/main/java/com/zeroone/star/stockln/controller/GoodsReceiveController.java",
+      "line": 59,
+      "typeName": "GoodsReceiveController",
+      "methodName": "pageToSheleves"
+    },
+    {
+      "key": "GET /stock/imNotice-detail/export",
+      "method": "GET",
+      "path": "/stock/imNotice-detail/export",
+      "source": "wms-java/wms-j6-stockln/src/main/java/com/zeroone/star/stockln/controller/ImNoticeIController.java",
+      "line": 42,
+      "typeName": "ImNoticeIController",
+      "methodName": "export"
+    },
+    {
+      "key": "GET /stock/imNotice-detail/items",
+      "method": "GET",
+      "path": "/stock/imNotice-detail/items",
+      "source": "wms-java/wms-j6-stockln/src/main/java/com/zeroone/star/stockln/controller/ImNoticeIController.java",
+      "line": 34,
+      "typeName": "ImNoticeIController",
+      "methodName": "getInNoticeItems"
+    },
+    {
+      "key": "GET /stock/imNotice-manage/detail/{imNoticeId}",
+      "method": "GET",
+      "path": "/stock/imNotice-manage/detail/{imNoticeId}",
+      "source": "wms-java/wms-j6-stockln/src/main/java/com/zeroone/star/stockln/controller/ImNoticeHController.java",
+      "line": 91,
+      "typeName": "ImNoticeHController",
+      "methodName": "getDetailsById"
+    },
+    {
+      "key": "GET /stock/imNotice-manage/export",
+      "method": "GET",
+      "path": "/stock/imNotice-manage/export",
+      "source": "wms-java/wms-j6-stockln/src/main/java/com/zeroone/star/stockln/controller/ImNoticeHController.java",
+      "line": 158,
+      "typeName": "ImNoticeHController",
+      "methodName": "export"
+    },
+    {
+      "key": "GET /stock/imNotice-manage/export/acceptance/{noticeId}",
+      "method": "GET",
+      "path": "/stock/imNotice-manage/export/acceptance/{noticeId}",
+      "source": "wms-java/wms-j6-stockln/src/main/java/com/zeroone/star/stockln/controller/ImNoticePrintController.java",
+      "line": 51,
+      "typeName": "ImNoticePrintController",
+      "methodName": "exportAcceptance"
+    },
+    {
+      "key": "GET /stock/imNotice-manage/export/goods-id/{noticeId}",
+      "method": "GET",
+      "path": "/stock/imNotice-manage/export/goods-id/{noticeId}",
+      "source": "wms-java/wms-j6-stockln/src/main/java/com/zeroone/star/stockln/controller/ImNoticePrintController.java",
+      "line": 63,
+      "typeName": "ImNoticePrintController",
+      "methodName": "exportGoodsId"
+    },
+    {
+      "key": "GET /stock/imNotice-manage/export/inbound/{noticeId}",
+      "method": "GET",
+      "path": "/stock/imNotice-manage/export/inbound/{noticeId}",
+      "source": "wms-java/wms-j6-stockln/src/main/java/com/zeroone/star/stockln/controller/ImNoticePrintController.java",
+      "line": 57,
+      "typeName": "ImNoticePrintController",
+      "methodName": "exportInbound"
+    },
+    {
+      "key": "GET /stock/imNotice-manage/export/tin-label/{noticeId}",
+      "method": "GET",
+      "path": "/stock/imNotice-manage/export/tin-label/{noticeId}",
+      "source": "wms-java/wms-j6-stockln/src/main/java/com/zeroone/star/stockln/controller/ImNoticePrintController.java",
+      "line": 69,
+      "typeName": "ImNoticePrintController",
+      "methodName": "exportTinLabel"
+    },
+    {
+      "key": "GET /stock/imNotice-manage/list",
+      "method": "GET",
+      "path": "/stock/imNotice-manage/list",
+      "source": "wms-java/wms-j6-stockln/src/main/java/com/zeroone/star/stockln/controller/ImNoticeHController.java",
+      "line": 80,
+      "typeName": "ImNoticeHController",
+      "methodName": "list"
+    },
+    {
+      "key": "GET /stock/imNotice-manage/print/goods/{noticeId}",
+      "method": "GET",
+      "path": "/stock/imNotice-manage/print/goods/{noticeId}",
+      "source": "wms-java/wms-j6-stockln/src/main/java/com/zeroone/star/stockln/controller/ImNoticePrintController.java",
+      "line": 39,
+      "typeName": "ImNoticePrintController",
+      "methodName": "printGoods"
+    },
+    {
+      "key": "GET /stock/imNotice-manage/print/inbound/{noticeId}",
+      "method": "GET",
+      "path": "/stock/imNotice-manage/print/inbound/{noticeId}",
+      "source": "wms-java/wms-j6-stockln/src/main/java/com/zeroone/star/stockln/controller/ImNoticePrintController.java",
+      "line": 45,
+      "typeName": "ImNoticePrintController",
+      "methodName": "printInbound"
+    },
+    {
+      "key": "GET /stock/imNotice-manage/print/notice/{noticeId}",
+      "method": "GET",
+      "path": "/stock/imNotice-manage/print/notice/{noticeId}",
+      "source": "wms-java/wms-j6-stockln/src/main/java/com/zeroone/star/stockln/controller/ImNoticePrintController.java",
+      "line": 33,
+      "typeName": "ImNoticePrintController",
+      "methodName": "printNotice"
+    },
+    {
+      "key": "GET /stock/inventory-query/export",
+      "method": "GET",
+      "path": "/stock/inventory-query/export",
+      "source": "wms-java/wms-j6-stockln/src/main/java/com/zeroone/star/stockln/controller/StockQueryController.java",
+      "line": 47,
+      "typeName": "StockQueryController",
+      "methodName": "exportExcel"
+    },
+    {
+      "key": "GET /stock/inventory-query/query-all",
+      "method": "GET",
+      "path": "/stock/inventory-query/query-all",
+      "source": "wms-java/wms-j6-stockln/src/main/java/com/zeroone/star/stockln/controller/StockQueryController.java",
+      "line": 39,
+      "typeName": "StockQueryController",
+      "methodName": "queryAllStock"
+    },
+    {
+      "key": "GET /stock/not-shelved/export",
+      "method": "GET",
+      "path": "/stock/not-shelved/export",
+      "source": "wms-java/wms-j6-stockln/src/main/java/com/zeroone/star/stockln/controller/ReceivedNotShelvedController.java",
+      "line": 49,
+      "typeName": "ReceivedNotShelvedController",
+      "methodName": "export"
+    },
+    {
+      "key": "GET /stock/not-shelved/query-all",
+      "method": "GET",
+      "path": "/stock/not-shelved/query-all",
+      "source": "wms-java/wms-j6-stockln/src/main/java/com/zeroone/star/stockln/controller/ReceivedNotShelvedController.java",
+      "line": 43,
+      "typeName": "ReceivedNotShelvedController",
+      "methodName": "queryAll"
+    },
+    {
+      "key": "GET /sysmanager/catagory/query-catagory-list",
+      "method": "GET",
+      "path": "/sysmanager/catagory/query-catagory-list",
+      "source": "wms-java/wms-j3-sysmanager/src/main/java/com/zeroone/star/sysmanager/controller/TSCategoryController.java",
+      "line": 31,
+      "typeName": "TSCategoryController",
+      "methodName": "queryAll"
+    },
+    {
+      "key": "GET /sysmanager/catagory/query-catagory-tree",
+      "method": "GET",
+      "path": "/sysmanager/catagory/query-catagory-tree",
+      "source": "wms-java/wms-j3-sysmanager/src/main/java/com/zeroone/star/sysmanager/controller/TSCategoryController.java",
+      "line": 38,
+      "typeName": "TSCategoryController",
+      "methodName": "queryAllTree"
+    },
+    {
+      "key": "GET /sysmanager/customer-names",
+      "method": "GET",
+      "path": "/sysmanager/customer-names",
+      "source": "wms-java/wms-j3-sysmanager/src/main/java/com/zeroone/star/sysmanager/controller/CustomerNamesController.java",
+      "line": 22,
+      "typeName": "CustomerNamesController",
+      "methodName": "queryCustomerNames"
+    },
+    {
+      "key": "GET /sysmanager/icons/{id}",
+      "method": "GET",
+      "path": "/sysmanager/icons/{id}",
+      "source": "wms-java/wms-j3-sysmanager/src/main/java/com/zeroone/star/sysmanager/controller/TSIconController.java",
+      "line": 81,
+      "typeName": "TSIconController",
+      "methodName": "queryById"
+    },
+    {
+      "key": "GET /sysmanager/icons/all",
+      "method": "GET",
+      "path": "/sysmanager/icons/all",
+      "source": "wms-java/wms-j3-sysmanager/src/main/java/com/zeroone/star/sysmanager/controller/TSIconController.java",
+      "line": 55,
+      "typeName": "TSIconController",
+      "methodName": "queryAll"
+    },
+    {
+      "key": "GET /sysmanager/icons/names",
+      "method": "GET",
+      "path": "/sysmanager/icons/names",
+      "source": "wms-java/wms-j3-sysmanager/src/main/java/com/zeroone/star/sysmanager/controller/TSIconController.java",
+      "line": 64,
+      "typeName": "TSIconController",
+      "methodName": "queryNames"
+    },
+    {
+      "key": "GET /sysmanager/lang/deletelang",
+      "method": "GET",
+      "path": "/sysmanager/lang/deletelang",
+      "source": "wms-java/wms-j3-sysmanager/src/main/java/com/zeroone/star/sysmanager/controller/MultiLangController.java",
+      "line": 97,
+      "typeName": "MultiLangController",
+      "methodName": "deleteMultiLang"
+    },
+    {
+      "key": "GET /sysmanager/lang/refresh-cache",
+      "method": "GET",
+      "path": "/sysmanager/lang/refresh-cache",
+      "source": "wms-java/wms-j3-sysmanager/src/main/java/com/zeroone/star/sysmanager/controller/MultiLangController.java",
+      "line": 109,
+      "typeName": "MultiLangController",
+      "methodName": "refreshCache"
+    },
+    {
+      "key": "GET /sysmanager/type/query",
+      "method": "GET",
+      "path": "/sysmanager/type/query",
+      "source": "wms-java/wms-j3-sysmanager/src/main/java/com/zeroone/star/sysmanager/controller/TypeController.java",
+      "line": 61,
+      "typeName": "TypeController",
+      "methodName": "queryAll"
+    },
+    {
+      "key": "GET /sysmanager/type/query-bygroupcode",
+      "method": "GET",
+      "path": "/sysmanager/type/query-bygroupcode",
+      "source": "wms-java/wms-j3-sysmanager/src/main/java/com/zeroone/star/sysmanager/controller/TypeController.java",
+      "line": 49,
+      "typeName": "TypeController",
+      "methodName": "queryByGroupCode"
+    },
+    {
+      "key": "GET /sysmanager/typegroup/query",
+      "method": "GET",
+      "path": "/sysmanager/typegroup/query",
+      "source": "wms-java/wms-j3-sysmanager/src/main/java/com/zeroone/star/sysmanager/controller/TypeGroupController.java",
+      "line": 30,
+      "typeName": "TypeGroupController",
+      "methodName": "queryAll"
+    },
+    {
+      "key": "GET /sysmgr/announcement/detail-anno",
+      "method": "GET",
+      "path": "/sysmgr/announcement/detail-anno",
+      "source": "wms-java/wms-j2-sysmgr/src/main/java/com/zeroone/star/sysmgr/controller/AnnouncementController.java",
+      "line": 44,
+      "typeName": "AnnouncementController",
+      "methodName": "getAnnouncementDetail"
+    },
+    {
+      "key": "GET /sysmgr/announcement/page-anno",
+      "method": "GET",
+      "path": "/sysmgr/announcement/page-anno",
+      "source": "wms-java/wms-j2-sysmgr/src/main/java/com/zeroone/star/sysmgr/controller/AnnouncementController.java",
+      "line": 29,
+      "typeName": "AnnouncementController",
+      "methodName": "getAnnouncementPage"
+    },
+    {
+      "key": "GET /sysmgr/export-all-organization",
+      "method": "GET",
+      "path": "/sysmgr/export-all-organization",
+      "source": "wms-java/wms-j2-sysmgr/src/main/java/com/zeroone/star/sysmgr/controller/DepartController.java",
+      "line": 85,
+      "typeName": "DepartController",
+      "methodName": "exportAll"
+    },
+    {
+      "key": "GET /sysmgr/get-organization-tree",
+      "method": "GET",
+      "path": "/sysmgr/get-organization-tree",
+      "source": "wms-java/wms-j2-sysmgr/src/main/java/com/zeroone/star/sysmgr/controller/DepartController.java",
+      "line": 48,
+      "typeName": "DepartController",
+      "methodName": "queryTree"
+    },
+    {
+      "key": "GET /sysmgr/query-by-id",
+      "method": "GET",
+      "path": "/sysmgr/query-by-id",
+      "source": "wms-java/wms-j2-sysmgr/src/main/java/com/zeroone/star/sysmgr/controller/DepartController.java",
+      "line": 116,
+      "typeName": "DepartController",
+      "methodName": "queryOrgById"
+    },
+    {
+      "key": "GET /sysmgr/role-org/query-by-org",
+      "method": "GET",
+      "path": "/sysmgr/role-org/query-by-org",
+      "source": "wms-java/wms-j2-sysmgr/src/main/java/com/zeroone/star/sysmgr/controller/RoleOrgController.java",
+      "line": 29,
+      "typeName": "RoleOrgController",
+      "methodName": "queryRoleByOrg"
+    },
+    {
+      "key": "GET /sysmgr/t-suser-org/listUser",
+      "method": "GET",
+      "path": "/sysmgr/t-suser-org/listUser",
+      "source": "wms-java/wms-j2-sysmgr/src/main/java/com/zeroone/star/sysmgr/controller/TSUserOrgController.java",
+      "line": 37,
+      "typeName": "TSUserOrgController",
+      "methodName": "listUser"
+    },
+    {
+      "key": "GET /systemparameter/export-SystemParameter",
+      "method": "GET",
+      "path": "/systemparameter/export-SystemParameter",
+      "source": "wms-java/wms-j4-baseConfig/src/main/java/com/zeroone/star/baseConfig/controller/SystemParameterController.java",
+      "line": 145,
+      "typeName": "SystemParameterController",
+      "methodName": "exportexcel"
+    },
+    {
+      "key": "GET /systemparameter/query-all",
+      "method": "GET",
+      "path": "/systemparameter/query-all",
+      "source": "wms-java/wms-j4-baseConfig/src/main/java/com/zeroone/star/baseConfig/controller/SystemParameterController.java",
+      "line": 73,
+      "typeName": "SystemParameterController",
+      "methodName": "queryAll"
+    },
+    {
+      "key": "GET /task-confirm/export",
+      "method": "GET",
+      "path": "/task-confirm/export",
+      "source": "wms-java/wms-j7-outgoodsmanage/src/main/java/com/zeroone/star/outgoodsmanage/controller/TaskConfirmController.java",
+      "line": 90,
+      "typeName": "TaskConfirmController",
+      "methodName": "expoExcel"
+    },
+    {
+      "key": "GET /task-confirm/query-all",
+      "method": "GET",
+      "path": "/task-confirm/query-all",
+      "source": "wms-java/wms-j7-outgoodsmanage/src/main/java/com/zeroone/star/outgoodsmanage/controller/TaskConfirmController.java",
+      "line": 49,
+      "typeName": "TaskConfirmController",
+      "methodName": "queryAll"
+    },
+    {
+      "key": "GET /user/export",
+      "method": "GET",
+      "path": "/user/export",
+      "source": "wms-java/wms-j1-sysmanager/src/main/java/com/zeroone/star/j1/sysmanager/controller/UserManage3Controller.java",
+      "line": 64,
+      "typeName": "UserManage3Controller",
+      "methodName": "exportUsers"
+    },
+    {
+      "key": "GET /user/get/userdetail/{userId}",
+      "method": "GET",
+      "path": "/user/get/userdetail/{userId}",
+      "source": "wms-java/wms-j1-sysmanager/src/main/java/com/zeroone/star/j1/sysmanager/controller/UserManage1Controller.java",
+      "line": 47,
+      "typeName": "UserManage1Controller",
+      "methodName": "queryUserDetail"
+    },
+    {
+      "key": "GET /user/get/username/{username}",
+      "method": "GET",
+      "path": "/user/get/username/{username}",
+      "source": "wms-java/wms-j1-sysmanager/src/main/java/com/zeroone/star/j1/sysmanager/controller/UserManage1Controller.java",
+      "line": 40,
+      "typeName": "UserManage1Controller",
+      "methodName": "qeuryUserAccount"
+    },
+    {
+      "key": "GET /user/query-department-all",
+      "method": "GET",
+      "path": "/user/query-department-all",
+      "source": "wms-java/wms-j1-sysmanager/src/main/java/com/zeroone/star/j1/sysmanager/controller/UserManage2Controller.java",
+      "line": 42,
+      "typeName": "UserManage2Controller",
+      "methodName": "queryDepartmentAll"
+    },
+    {
+      "key": "GET /yc-outbound/export-excel",
+      "method": "GET",
+      "path": "/yc-outbound/export-excel",
+      "source": "wms-java/wms-j7-outgoodsmanage/src/main/java/com/zeroone/star/outgoodsmanage/controller/YcOutBoundBoundController.java",
+      "line": 52,
+      "typeName": "YcOutBoundBoundController",
+      "methodName": "exportExcel"
+    },
+    {
+      "key": "GET /yc-outbound/query-all",
+      "method": "GET",
+      "path": "/yc-outbound/query-all",
+      "source": "wms-java/wms-j7-outgoodsmanage/src/main/java/com/zeroone/star/outgoodsmanage/controller/YcOutBoundBoundController.java",
+      "line": 44,
+      "typeName": "YcOutBoundBoundController",
+      "methodName": "queryAll"
+    },
+    {
+      "key": "GET /zc-check/query-all",
+      "method": "GET",
+      "path": "/zc-check/query-all",
+      "source": "wms-java/wms-j7-outgoodsmanage/src/main/java/com/zeroone/star/outgoodsmanage/controller/LoadCheckController.java",
+      "line": 48,
+      "typeName": "LoadCheckController",
+      "methodName": "queryAll"
+    },
+    {
+      "key": "POST /adpick/export-excel",
+      "method": "POST",
+      "path": "/adpick/export-excel",
+      "source": "wms-java/wms-j7-outgoodsmanage/src/main/java/com/zeroone/star/outgoodsmanage/controller/AdPickController.java",
+      "line": 90,
+      "typeName": "AdPickController",
+      "methodName": "exportExcel"
+    },
+    {
+      "key": "POST /adpick/modify",
+      "method": "POST",
+      "path": "/adpick/modify",
+      "source": "wms-java/wms-j7-outgoodsmanage/src/main/java/com/zeroone/star/outgoodsmanage/controller/AdPickController.java",
+      "line": 68,
+      "typeName": "AdPickController",
+      "methodName": "modify"
+    },
+    {
+      "key": "POST /adpick/modify-list",
+      "method": "POST",
+      "path": "/adpick/modify-list",
+      "source": "wms-java/wms-j7-outgoodsmanage/src/main/java/com/zeroone/star/outgoodsmanage/controller/AdPickController.java",
+      "line": 80,
+      "typeName": "AdPickController",
+      "methodName": "modifyList"
+    },
+    {
+      "key": "POST /api/ws/push",
+      "method": "POST",
+      "path": "/api/ws/push",
+      "source": "wms-java/wms-j2-ws/src/main/java/com/zeroone/star/ws/controller/WebSocketController.java",
+      "line": 26,
+      "typeName": "WebSocketController",
+      "methodName": "pushMessage"
+    },
+    {
+      "key": "POST /baseconfig/add-encodingtype",
+      "method": "POST",
+      "path": "/baseconfig/add-encodingtype",
+      "source": "wms-java/wms-j4-baseConfig/src/main/java/com/zeroone/star/baseConfig/controller/EncodingTypeController.java",
+      "line": 257,
+      "typeName": "EncodingTypeController",
+      "methodName": "addEncodingType"
+    },
+    {
+      "key": "POST /baseconfig/addunittype",
+      "method": "POST",
+      "path": "/baseconfig/addunittype",
+      "source": "wms-java/wms-j4-baseConfig/src/main/java/com/zeroone/star/baseConfig/controller/UnitTypeController.java",
+      "line": 47,
+      "typeName": "UnitTypeController",
+      "methodName": "AddUnitType"
+    },
+    {
+      "key": "POST /baseConfig/automaticEncoding/import",
+      "method": "POST",
+      "path": "/baseConfig/automaticEncoding/import",
+      "source": "wms-java/wms-j4-baseConfig/src/main/java/com/zeroone/star/baseConfig/controller/AutomaticEncodingController.java",
+      "line": 98,
+      "typeName": "AutomaticEncodingController",
+      "methodName": "importExcel"
+    },
+    {
+      "key": "POST /baseConfig/automaticEncoding/save",
+      "method": "POST",
+      "path": "/baseConfig/automaticEncoding/save",
+      "source": "wms-java/wms-j4-baseConfig/src/main/java/com/zeroone/star/baseConfig/controller/AutomaticEncodingController.java",
+      "line": 63,
+      "typeName": "AutomaticEncodingController",
+      "methodName": "save"
+    },
+    {
+      "key": "POST /baseconfig/import",
+      "method": "POST",
+      "path": "/baseconfig/import",
+      "source": "wms-java/wms-j4-baseConfig/src/main/java/com/zeroone/star/baseConfig/controller/UnitTypeController.java",
+      "line": 147,
+      "typeName": "UnitTypeController",
+      "methodName": "importExcel"
+    },
+    {
+      "key": "POST /baseconfig/import-encodingtype",
+      "method": "POST",
+      "path": "/baseconfig/import-encodingtype",
+      "source": "wms-java/wms-j4-baseConfig/src/main/java/com/zeroone/star/baseConfig/controller/EncodingTypeController.java",
+      "line": 128,
+      "typeName": "EncodingTypeController",
+      "methodName": "importExcel"
+    },
+    {
+      "key": "POST /contshape/add",
+      "method": "POST",
+      "path": "/contshape/add",
+      "source": "wms-java/wms-j8-othermana/src/main/java/com/zeroone/star/othermana/controller/ContTypeController.java",
+      "line": 46,
+      "typeName": "ContTypeController",
+      "methodName": "addBaContType"
+    },
+    {
+      "key": "POST /contshape/import",
+      "method": "POST",
+      "path": "/contshape/import",
+      "source": "wms-java/wms-j8-othermana/src/main/java/com/zeroone/star/othermana/controller/ContTypeController.java",
+      "line": 81,
+      "typeName": "ContTypeController",
+      "methodName": "importExcel"
+    },
+    {
+      "key": "POST /cus-other/add-cus",
+      "method": "POST",
+      "path": "/cus-other/add-cus",
+      "source": "wms-java/wms-j5-basezl/src/main/java/com/zeroone/star/j5/basezl/controller/CusOtherController.java",
+      "line": 52,
+      "typeName": "CusOtherController",
+      "methodName": "addCusOther"
+    },
+    {
+      "key": "POST /cus-other/modify-cus",
+      "method": "POST",
+      "path": "/cus-other/modify-cus",
+      "source": "wms-java/wms-j5-basezl/src/main/java/com/zeroone/star/j5/basezl/controller/CusOtherController.java",
+      "line": 70,
+      "typeName": "CusOtherController",
+      "methodName": "modifyCusOther"
+    },
+    {
+      "key": "POST /cus-other/upload",
+      "method": "POST",
+      "path": "/cus-other/upload",
+      "source": "wms-java/wms-j5-basezl/src/main/java/com/zeroone/star/j5/basezl/controller/CusOtherController.java",
+      "line": 77,
+      "typeName": "CusOtherController",
+      "methodName": "uploadCusOther"
+    },
+    {
+      "key": "POST /customer/add-customer",
+      "method": "POST",
+      "path": "/customer/add-customer",
+      "source": "wms-java/wms-j5-basezl/src/main/java/com/zeroone/star/j5/basezl/controller/CustomerController.java",
+      "line": 83,
+      "typeName": "CustomerController",
+      "methodName": "addCustomer"
+    },
+    {
+      "key": "POST /customer/delete-file",
+      "method": "POST",
+      "path": "/customer/delete-file",
+      "source": "wms-java/wms-j5-basezl/src/main/java/com/zeroone/star/j5/basezl/controller/CustomerController.java",
+      "line": 161,
+      "typeName": "CustomerController",
+      "methodName": "deleteFile"
+    },
+    {
+      "key": "POST /customer/download-file",
+      "method": "POST",
+      "path": "/customer/download-file",
+      "source": "wms-java/wms-j5-basezl/src/main/java/com/zeroone/star/j5/basezl/controller/CustomerController.java",
+      "line": 154,
+      "typeName": "CustomerController",
+      "methodName": "downloadFile"
+    },
+    {
+      "key": "POST /customer/upload",
+      "method": "POST",
+      "path": "/customer/upload",
+      "source": "wms-java/wms-j5-basezl/src/main/java/com/zeroone/star/j5/basezl/controller/CustomerController.java",
+      "line": 130,
+      "typeName": "CustomerController",
+      "methodName": "importCustomer"
+    },
+    {
+      "key": "POST /customer/upload-file",
+      "method": "POST",
+      "path": "/customer/upload-file",
+      "source": "wms-java/wms-j5-basezl/src/main/java/com/zeroone/star/j5/basezl/controller/CustomerController.java",
+      "line": 147,
+      "typeName": "CustomerController",
+      "methodName": "uploadFile"
+    },
+    {
+      "key": "POST /daycheck/temperature/add",
+      "method": "POST",
+      "path": "/daycheck/temperature/add",
+      "source": "wms-java/wms-j3-daycheck/src/main/java/com/zeroone/star/daycheck/controller/TemperatureController.java",
+      "line": 61,
+      "typeName": "TemperatureController",
+      "methodName": "addTemperature"
+    },
+    {
+      "key": "POST /daycheck/temperature/import",
+      "method": "POST",
+      "path": "/daycheck/temperature/import",
+      "source": "wms-java/wms-j3-daycheck/src/main/java/com/zeroone/star/daycheck/controller/TemperatureController.java",
+      "line": 135,
+      "typeName": "TemperatureController",
+      "methodName": "importTemperature"
+    },
+    {
+      "key": "POST /exportmana/inventory/export-inventory",
+      "method": "POST",
+      "path": "/exportmana/inventory/export-inventory",
+      "source": "wms-java/wms-j8-exportmana/src/main/java/com/zeroone/star/exportmana/controller/InventorySummaryController.java",
+      "line": 40,
+      "typeName": "InventorySummaryController",
+      "methodName": "exportInventoryToExcel"
+    },
+    {
+      "key": "POST /exportmana/manyreceipts/query",
+      "method": "POST",
+      "path": "/exportmana/manyreceipts/query",
+      "source": "wms-java/wms-j8-exportmana/src/main/java/com/zeroone/star/exportmana/controller/ManyReceiptsController.java",
+      "line": 25,
+      "typeName": "ManyReceiptsController",
+      "methodName": "queryManyReceiptsList"
+    },
+    {
+      "key": "POST /exportmana/receipt/add",
+      "method": "POST",
+      "path": "/exportmana/receipt/add",
+      "source": "wms-java/wms-j8-exportmana/src/main/java/com/zeroone/star/exportmana/controller/ReceiptController.java",
+      "line": 36,
+      "typeName": "ReceiptController",
+      "methodName": "addReceipt"
+    },
+    {
+      "key": "POST /exportmana/receipt/import",
+      "method": "POST",
+      "path": "/exportmana/receipt/import",
+      "source": "wms-java/wms-j8-exportmana/src/main/java/com/zeroone/star/exportmana/controller/ReceiptController.java",
+      "line": 69,
+      "typeName": "ReceiptController",
+      "methodName": "imExcel"
+    },
+    {
+      "key": "POST /goods/add-goods",
+      "method": "POST",
+      "path": "/goods/add-goods",
+      "source": "wms-java/wms-j5-basezl/src/main/java/com/zeroone/star/j5/basezl/controller/GoodsController.java",
+      "line": 52,
+      "typeName": "GoodsController",
+      "methodName": "addGoods"
+    },
+    {
+      "key": "POST /goods/upload",
+      "method": "POST",
+      "path": "/goods/upload",
+      "source": "wms-java/wms-j5-basezl/src/main/java/com/zeroone/star/j5/basezl/controller/GoodsController.java",
+      "line": 77,
+      "typeName": "GoodsController",
+      "methodName": "uploadGoods"
+    },
+    {
+      "key": "POST /login/auth-login",
+      "method": "POST",
+      "path": "/login/auth-login",
+      "source": "wms-java/wms-login/src/main/java/com/zeroone/star/login/controller/LoginController.java",
+      "line": 49,
+      "typeName": "LoginController",
+      "methodName": "authLogin"
+    },
+    {
+      "key": "POST /login/modify-password",
+      "method": "POST",
+      "path": "/login/modify-password",
+      "source": "wms-java/wms-login/src/main/java/com/zeroone/star/login/controller/LoginController.java",
+      "line": 89,
+      "typeName": "LoginController",
+      "methodName": "modifyPassword"
+    },
+    {
+      "key": "POST /login/refresh-token",
+      "method": "POST",
+      "path": "/login/refresh-token",
+      "source": "wms-java/wms-login/src/main/java/com/zeroone/star/login/controller/LoginController.java",
+      "line": 68,
+      "typeName": "LoginController",
+      "methodName": "refreshToken"
+    },
+    {
+      "key": "POST /login/service-token",
+      "method": "POST",
+      "path": "/login/service-token",
+      "source": "wms-java/wms-login/src/main/java/com/zeroone/star/login/controller/LoginController.java",
+      "line": 57,
+      "typeName": "LoginController",
+      "methodName": "serviceToken"
+    },
+    {
+      "key": "POST /measurementunit/import",
+      "method": "POST",
+      "path": "/measurementunit/import",
+      "source": "wms-java/wms-j4-baseConfig/src/main/java/com/zeroone/star/baseConfig/controller/MeasurementUnitController.java",
+      "line": 120,
+      "typeName": "MeasurementUnitController",
+      "methodName": "importMeasurementUnit"
+    },
+    {
+      "key": "POST /measurementunit/insertunit",
+      "method": "POST",
+      "path": "/measurementunit/insertunit",
+      "source": "wms-java/wms-j4-baseConfig/src/main/java/com/zeroone/star/baseConfig/controller/MeasurementUnitController.java",
+      "line": 89,
+      "typeName": "MeasurementUnitController",
+      "methodName": "insertUnit"
+    },
+    {
+      "key": "POST /menu/addmenu",
+      "method": "POST",
+      "path": "/menu/addmenu",
+      "source": "wms-java/wms-j1-sysmanager/src/main/java/com/zeroone/star/j1/sysmanager/controller/MenuManageController.java",
+      "line": 104,
+      "typeName": "MenuManageController",
+      "methodName": "addMenu"
+    },
+    {
+      "key": "POST /message/send-mail",
+      "method": "POST",
+      "path": "/message/send-mail",
+      "source": "wms-java/wms-j2-message/src/main/java/com/zeroone/star/message/controller/SendMailController.java",
+      "line": 34,
+      "typeName": "SendMailController",
+      "methodName": "sendMail"
+    },
+    {
+      "key": "POST /message/send-one-sms",
+      "method": "POST",
+      "path": "/message/send-one-sms",
+      "source": "wms-java/wms-j2-message/src/main/java/com/zeroone/star/message/controller/SendSmsController.java",
+      "line": 31,
+      "typeName": "SendSmsController",
+      "methodName": "sendSms"
+    },
+    {
+      "key": "POST /msgmw/add",
+      "method": "POST",
+      "path": "/msgmw/add",
+      "source": "wms-java/wms-j2-msgmw/src/main/java/com/zeroone/star/msgmw/controller/TSSmsTemplateSqlController.java",
+      "line": 51,
+      "typeName": "TSSmsTemplateSqlController",
+      "methodName": "add"
+    },
+    {
+      "key": "POST /msgmw/add-messageTemplate",
+      "method": "POST",
+      "path": "/msgmw/add-messageTemplate",
+      "source": "wms-java/wms-j2-msgmw/src/main/java/com/zeroone/star/msgmw/controller/MessageTemplateController.java",
+      "line": 59,
+      "typeName": "MessageTemplateController",
+      "methodName": "addMessageTemplate"
+    },
+    {
+      "key": "POST /msgmw/add-sql",
+      "method": "POST",
+      "path": "/msgmw/add-sql",
+      "source": "wms-java/wms-j2-msgmw/src/main/java/com/zeroone/star/msgmw/controller/SqlController.java",
+      "line": 58,
+      "typeName": "SqlController",
+      "methodName": "addSql"
+    },
+    {
+      "key": "POST /msgmw/query",
+      "method": "POST",
+      "path": "/msgmw/query",
+      "source": "wms-java/wms-j2-msgmw/src/main/java/com/zeroone/star/msgmw/controller/TSSmsTemplateSqlController.java",
+      "line": 72,
+      "typeName": "TSSmsTemplateSqlController",
+      "methodName": "query"
+    },
+    {
+      "key": "POST /notice/list-notice-page",
+      "method": "POST",
+      "path": "/notice/list-notice-page",
+      "source": "wms-java/wms-j2-notice/src/main/java/com/zeroone/star/notice/controller/NoticeController.java",
+      "line": 59,
+      "typeName": "NoticeController",
+      "methodName": "ListNoticePage"
+    },
+    {
+      "key": "POST /notice/list-notice-title",
+      "method": "POST",
+      "path": "/notice/list-notice-title",
+      "source": "wms-java/wms-j2-notice/src/main/java/com/zeroone/star/notice/controller/NoticeController.java",
+      "line": 46,
+      "typeName": "NoticeController",
+      "methodName": "ListNoticeTitle"
+    },
+    {
+      "key": "POST /othermana/goodsbrand/add-goodsbrand",
+      "method": "POST",
+      "path": "/othermana/goodsbrand/add-goodsbrand",
+      "source": "wms-java/wms-j8-othermana/src/main/java/com/zeroone/star/othermana/controller/GoodsBrandController.java",
+      "line": 66,
+      "typeName": "GoodsBrandController",
+      "methodName": "addGoodsBrand"
+    },
+    {
+      "key": "POST /othermana/goodsbrand/export-goodsbrand",
+      "method": "POST",
+      "path": "/othermana/goodsbrand/export-goodsbrand",
+      "source": "wms-java/wms-j8-othermana/src/main/java/com/zeroone/star/othermana/controller/GoodsBrandController.java",
+      "line": 102,
+      "typeName": "GoodsBrandController",
+      "methodName": "exportGoodsBrand"
+    },
+    {
+      "key": "POST /othermana/goodsbrand/import-goodsbrand",
+      "method": "POST",
+      "path": "/othermana/goodsbrand/import-goodsbrand",
+      "source": "wms-java/wms-j8-othermana/src/main/java/com/zeroone/star/othermana/controller/GoodsBrandController.java",
+      "line": 120,
+      "typeName": "GoodsBrandController",
+      "methodName": "importGoodsBrand"
+    },
+    {
+      "key": "POST /othermana/port/addPort",
+      "method": "POST",
+      "path": "/othermana/port/addPort",
+      "source": "wms-java/wms-j8-othermana/src/main/java/com/zeroone/star/othermana/controller/BaPortController.java",
+      "line": 49,
+      "typeName": "BaPortController",
+      "methodName": "addPort"
+    },
+    {
+      "key": "POST /othermana/port/modifyPort",
+      "method": "POST",
+      "path": "/othermana/port/modifyPort",
+      "source": "wms-java/wms-j8-othermana/src/main/java/com/zeroone/star/othermana/controller/BaPortController.java",
+      "line": 70,
+      "typeName": "BaPortController",
+      "methodName": "modifyPort"
+    },
+    {
+      "key": "POST /othermana/port/queryPort",
+      "method": "POST",
+      "path": "/othermana/port/queryPort",
+      "source": "wms-java/wms-j8-othermana/src/main/java/com/zeroone/star/othermana/controller/BaPortController.java",
+      "line": 42,
+      "typeName": "BaPortController",
+      "methodName": "queryAll"
+    },
+    {
+      "key": "POST /othermana/port/removePort",
+      "method": "POST",
+      "path": "/othermana/port/removePort",
+      "source": "wms-java/wms-j8-othermana/src/main/java/com/zeroone/star/othermana/controller/BaPortController.java",
+      "line": 56,
+      "typeName": "BaPortController",
+      "methodName": "removePort"
+    },
+    {
+      "key": "POST /othermana/port/uploadPort",
+      "method": "POST",
+      "path": "/othermana/port/uploadPort",
+      "source": "wms-java/wms-j8-othermana/src/main/java/com/zeroone/star/othermana/controller/BaPortController.java",
+      "line": 77,
+      "typeName": "BaPortController",
+      "methodName": "importPort"
+    },
+    {
+      "key": "POST /othermana/specification/add",
+      "method": "POST",
+      "path": "/othermana/specification/add",
+      "source": "wms-java/wms-j8-othermana/src/main/java/com/zeroone/star/othermana/controller/SpecificationController.java",
+      "line": 53,
+      "typeName": "SpecificationController",
+      "methodName": "addSpecification"
+    },
+    {
+      "key": "POST /othermana/specification/import",
+      "method": "POST",
+      "path": "/othermana/specification/import",
+      "source": "wms-java/wms-j8-othermana/src/main/java/com/zeroone/star/othermana/controller/SpecificationController.java",
+      "line": 91,
+      "typeName": "SpecificationController",
+      "methodName": "importSpecificationFromExcel"
+    },
+    {
+      "key": "POST /out-goods-manager/add-out-goods-notice",
+      "method": "POST",
+      "path": "/out-goods-manager/add-out-goods-notice",
+      "source": "wms-java/wms-j7-outgoodsmanage/src/main/java/com/zeroone/star/outgoodsmanage/controller/OutManageController.java",
+      "line": 156,
+      "typeName": "OutManageController",
+      "methodName": "addOutGoodsNotice"
+    },
+    {
+      "key": "POST /out-goods-manager/add-upload-fu-jan",
+      "method": "POST",
+      "path": "/out-goods-manager/add-upload-fu-jan",
+      "source": "wms-java/wms-j7-outgoodsmanage/src/main/java/com/zeroone/star/outgoodsmanage/controller/OutManageController.java",
+      "line": 120,
+      "typeName": "OutManageController",
+      "methodName": "uploadFuJan"
+    },
+    {
+      "key": "POST /out-goods-manager/remove",
+      "method": "POST",
+      "path": "/out-goods-manager/remove",
+      "source": "wms-java/wms-j7-outgoodsmanage/src/main/java/com/zeroone/star/outgoodsmanage/controller/OutManageController.java",
+      "line": 712,
+      "typeName": "OutManageController",
+      "methodName": "removeNoticeH"
+    },
+    {
+      "key": "POST /outbound/item/modify",
+      "method": "POST",
+      "path": "/outbound/item/modify",
+      "source": "wms-java/wms-j7-outgoodsmanage/src/main/java/com/zeroone/star/outgoodsmanage/controller/OutBoundController.java",
+      "line": 41,
+      "typeName": "OutBoundController",
+      "methodName": "modifyWmOmNoticeI"
+    },
+    {
+      "key": "POST /outgoodsmanage/wm-to-down-goods/batch-update-down-goods",
+      "method": "POST",
+      "path": "/outgoodsmanage/wm-to-down-goods/batch-update-down-goods",
+      "source": "wms-java/wms-j7-outgoodsmanage/src/main/java/com/zeroone/star/outgoodsmanage/controller/DownGoodsController.java",
+      "line": 97,
+      "typeName": "DownGoodsController",
+      "methodName": "batchUpdateDownGoods"
+    },
+    {
+      "key": "POST /outgoodsmanage/wm-to-down-goods/down-goods",
+      "method": "POST",
+      "path": "/outgoodsmanage/wm-to-down-goods/down-goods",
+      "source": "wms-java/wms-j7-outgoodsmanage/src/main/java/com/zeroone/star/outgoodsmanage/controller/DownGoodsController.java",
+      "line": 113,
+      "typeName": "DownGoodsController",
+      "methodName": "downGoods"
+    },
+    {
+      "key": "POST /ParameterType/add",
+      "method": "POST",
+      "path": "/ParameterType/add",
+      "source": "wms-java/wms-j4-baseConfig/src/main/java/com/zeroone/star/baseConfig/controller/ParameterTypeController.java",
+      "line": 146,
+      "typeName": "ParameterTypeController",
+      "methodName": "addParameterType"
+    },
+    {
+      "key": "POST /ParameterType/addParameterType",
+      "method": "POST",
+      "path": "/ParameterType/addParameterType",
+      "source": "wms-java/wms-j4-baseConfig/src/main/java/com/zeroone/star/baseConfig/controller/ParameterTypeController.java",
+      "line": 109,
+      "typeName": "ParameterTypeController",
+      "methodName": "uploadParameterType"
+    },
+    {
+      "key": "POST /ParameterType/modifyOne",
+      "method": "POST",
+      "path": "/ParameterType/modifyOne",
+      "source": "wms-java/wms-j4-baseConfig/src/main/java/com/zeroone/star/baseConfig/controller/ParameterTypeController.java",
+      "line": 54,
+      "typeName": "ParameterTypeController",
+      "methodName": "modifyOne"
+    },
+    {
+      "key": "POST /plat-io",
+      "method": "POST",
+      "path": "/plat-io",
+      "source": "wms-java/wms-apis/src/main/java/com/zeroone/star/project/j7/outbound/WmPlatIoApis.java",
+      "line": 37,
+      "typeName": "WmPlatIoApis",
+      "methodName": "addPlatIo"
+    },
+    {
+      "key": "POST /provider/add-provider",
+      "method": "POST",
+      "path": "/provider/add-provider",
+      "source": "wms-java/wms-j5-basezl/src/main/java/com/zeroone/star/j5/basezl/controller/ProviderController.java",
+      "line": 54,
+      "typeName": "ProviderController",
+      "methodName": "addProvider"
+    },
+    {
+      "key": "POST /provider/upload",
+      "method": "POST",
+      "path": "/provider/upload",
+      "source": "wms-java/wms-j5-basezl/src/main/java/com/zeroone/star/j5/basezl/controller/ProviderController.java",
+      "line": 78,
+      "typeName": "ProviderController",
+      "methodName": "uploadProvider"
+    },
+    {
+      "key": "POST /rfid/add-rfid",
+      "method": "POST",
+      "path": "/rfid/add-rfid",
+      "source": "wms-java/wms-j5-basezl/src/main/java/com/zeroone/star/j5/basezl/controller/RFIDController.java",
+      "line": 60,
+      "typeName": "RFIDController",
+      "methodName": "addRfid"
+    },
+    {
+      "key": "POST /rfid/upload",
+      "method": "POST",
+      "path": "/rfid/upload",
+      "source": "wms-java/wms-j5-basezl/src/main/java/com/zeroone/star/j5/basezl/controller/RFIDController.java",
+      "line": 82,
+      "typeName": "RFIDController",
+      "methodName": "uploadFile"
+    },
+    {
+      "key": "POST /role/add-role",
+      "method": "POST",
+      "path": "/role/add-role",
+      "source": "wms-java/wms-j1-sysmanager/src/main/java/com/zeroone/star/j1/sysmanager/controller/RoleInformationController.java",
+      "line": 96,
+      "typeName": "RoleInformationController",
+      "methodName": "addTSRole"
+    },
+    {
+      "key": "POST /role/add-roleUser",
+      "method": "POST",
+      "path": "/role/add-roleUser",
+      "source": "wms-java/wms-j1-sysmanager/src/main/java/com/zeroone/star/j1/sysmanager/controller/RoleUserController.java",
+      "line": 60,
+      "typeName": "RoleUserController",
+      "methodName": "addRoleUser"
+    },
+    {
+      "key": "POST /role/import-role",
+      "method": "POST",
+      "path": "/role/import-role",
+      "source": "wms-java/wms-j1-sysmanager/src/main/java/com/zeroone/star/j1/sysmanager/controller/RoleInformationController.java",
+      "line": 124,
+      "typeName": "RoleInformationController",
+      "methodName": "importRole"
+    },
+    {
+      "key": "POST /role/setFunction",
+      "method": "POST",
+      "path": "/role/setFunction",
+      "source": "wms-java/wms-j1-sysmanager/src/main/java/com/zeroone/star/j1/sysmanager/controller/RoleResourcesController.java",
+      "line": 75,
+      "typeName": "RoleResourcesController",
+      "methodName": "setRoleFunction"
+    },
+    {
+      "key": "POST /role/update-role",
+      "method": "POST",
+      "path": "/role/update-role",
+      "source": "wms-java/wms-j1-sysmanager/src/main/java/com/zeroone/star/j1/sysmanager/controller/RoleInformationController.java",
+      "line": 106,
+      "typeName": "RoleInformationController",
+      "methodName": "updateTSRole"
+    },
+    {
+      "key": "POST /stock/good-receive/addItem",
+      "method": "POST",
+      "path": "/stock/good-receive/addItem",
+      "source": "wms-java/wms-j6-stockln/src/main/java/com/zeroone/star/stockln/controller/GoodsReceiveController.java",
+      "line": 80,
+      "typeName": "GoodsReceiveController",
+      "methodName": "addItem"
+    },
+    {
+      "key": "POST /stock/good-receive/batchModifyBin",
+      "method": "POST",
+      "path": "/stock/good-receive/batchModifyBin",
+      "source": "wms-java/wms-j6-stockln/src/main/java/com/zeroone/star/stockln/controller/GoodsReceiveController.java",
+      "line": 106,
+      "typeName": "GoodsReceiveController",
+      "methodName": "batchModifyBin"
+    },
+    {
+      "key": "POST /stock/good-receive/batchModifyProductionDate",
+      "method": "POST",
+      "path": "/stock/good-receive/batchModifyProductionDate",
+      "source": "wms-java/wms-j6-stockln/src/main/java/com/zeroone/star/stockln/controller/GoodsReceiveController.java",
+      "line": 120,
+      "typeName": "GoodsReceiveController",
+      "methodName": "batchModifyProductionDate"
+    },
+    {
+      "key": "POST /stock/good-receive/batchShelf",
+      "method": "POST",
+      "path": "/stock/good-receive/batchShelf",
+      "source": "wms-java/wms-j6-stockln/src/main/java/com/zeroone/star/stockln/controller/GoodsReceiveController.java",
+      "line": 130,
+      "typeName": "GoodsReceiveController",
+      "methodName": "batchShelf"
+    },
+    {
+      "key": "POST /stock/good-receive/importItems",
+      "method": "POST",
+      "path": "/stock/good-receive/importItems",
+      "source": "wms-java/wms-j6-stockln/src/main/java/com/zeroone/star/stockln/controller/GoodsReceiveController.java",
+      "line": 141,
+      "typeName": "GoodsReceiveController",
+      "methodName": "importItems"
+    },
+    {
+      "key": "POST /stock/good-receive/modifyItem",
+      "method": "POST",
+      "path": "/stock/good-receive/modifyItem",
+      "source": "wms-java/wms-j6-stockln/src/main/java/com/zeroone/star/stockln/controller/GoodsReceiveController.java",
+      "line": 98,
+      "typeName": "GoodsReceiveController",
+      "methodName": "modifyItem"
+    },
+    {
+      "key": "POST /stock/imNotice-manage/confirm",
+      "method": "POST",
+      "path": "/stock/imNotice-manage/confirm",
+      "source": "wms-java/wms-j6-stockln/src/main/java/com/zeroone/star/stockln/controller/ImNoticeHController.java",
+      "line": 122,
+      "typeName": "ImNoticeHController",
+      "methodName": "confirmImport"
+    },
+    {
+      "key": "POST /stock/imNotice-manage/delete",
+      "method": "POST",
+      "path": "/stock/imNotice-manage/delete",
+      "source": "wms-java/wms-j6-stockln/src/main/java/com/zeroone/star/stockln/controller/ImNoticeHController.java",
+      "line": 138,
+      "typeName": "ImNoticeHController",
+      "methodName": "deleteImport"
+    },
+    {
+      "key": "POST /stock/imNotice-manage/insert",
+      "method": "POST",
+      "path": "/stock/imNotice-manage/insert",
+      "source": "wms-java/wms-j6-stockln/src/main/java/com/zeroone/star/stockln/controller/ImNoticeHController.java",
+      "line": 150,
+      "typeName": "ImNoticeHController",
+      "methodName": "insertImport"
+    },
+    {
+      "key": "POST /stock/imNotice-manage/update",
+      "method": "POST",
+      "path": "/stock/imNotice-manage/update",
+      "source": "wms-java/wms-j6-stockln/src/main/java/com/zeroone/star/stockln/controller/ImNoticeHController.java",
+      "line": 131,
+      "typeName": "ImNoticeHController",
+      "methodName": "updateImport"
+    },
+    {
+      "key": "POST /stock/imNotice-manage/upload",
+      "method": "POST",
+      "path": "/stock/imNotice-manage/upload",
+      "source": "wms-java/wms-j6-stockln/src/main/java/com/zeroone/star/stockln/controller/ImNoticeHController.java",
+      "line": 107,
+      "typeName": "ImNoticeHController",
+      "methodName": "upload"
+    },
+    {
+      "key": "POST /sysmanager/catagory/add-catagory",
+      "method": "POST",
+      "path": "/sysmanager/catagory/add-catagory",
+      "source": "wms-java/wms-j3-sysmanager/src/main/java/com/zeroone/star/sysmanager/controller/TSCategoryController.java",
+      "line": 45,
+      "typeName": "TSCategoryController",
+      "methodName": "addCatagory"
+    },
+    {
+      "key": "POST /sysmanager/icons/add",
+      "method": "POST",
+      "path": "/sysmanager/icons/add",
+      "source": "wms-java/wms-j3-sysmanager/src/main/java/com/zeroone/star/sysmanager/controller/TSIconController.java",
+      "line": 72,
+      "typeName": "TSIconController",
+      "methodName": "addIcons"
+    },
+    {
+      "key": "POST /sysmanager/icons/modify",
+      "method": "POST",
+      "path": "/sysmanager/icons/modify",
+      "source": "wms-java/wms-j3-sysmanager/src/main/java/com/zeroone/star/sysmanager/controller/TSIconController.java",
+      "line": 97,
+      "typeName": "TSIconController",
+      "methodName": "modifyIcons"
+    },
+    {
+      "key": "POST /sysmanager/lang/addlang",
+      "method": "POST",
+      "path": "/sysmanager/lang/addlang",
+      "source": "wms-java/wms-j3-sysmanager/src/main/java/com/zeroone/star/sysmanager/controller/MultiLangController.java",
+      "line": 60,
+      "typeName": "MultiLangController",
+      "methodName": "addMultiLang"
+    },
+    {
+      "key": "POST /sysmanager/lang/multilang",
+      "method": "POST",
+      "path": "/sysmanager/lang/multilang",
+      "source": "wms-java/wms-j3-sysmanager/src/main/java/com/zeroone/star/sysmanager/controller/MultiLangController.java",
+      "line": 46,
+      "typeName": "MultiLangController",
+      "methodName": "queryMultiLang"
+    },
+    {
+      "key": "POST /sysmanager/lang/updatelang",
+      "method": "POST",
+      "path": "/sysmanager/lang/updatelang",
+      "source": "wms-java/wms-j3-sysmanager/src/main/java/com/zeroone/star/sysmanager/controller/MultiLangController.java",
+      "line": 77,
+      "typeName": "MultiLangController",
+      "methodName": "modifyMultiLang"
+    },
+    {
+      "key": "POST /sysmanager/type/add",
+      "method": "POST",
+      "path": "/sysmanager/type/add",
+      "source": "wms-java/wms-j3-sysmanager/src/main/java/com/zeroone/star/sysmanager/controller/TypeController.java",
+      "line": 37,
+      "typeName": "TypeController",
+      "methodName": "addType"
+    },
+    {
+      "key": "POST /sysmanager/type/modify",
+      "method": "POST",
+      "path": "/sysmanager/type/modify",
+      "source": "wms-java/wms-j3-sysmanager/src/main/java/com/zeroone/star/sysmanager/controller/TypeController.java",
+      "line": 71,
+      "typeName": "TypeController",
+      "methodName": "modifyType"
+    },
+    {
+      "key": "POST /sysmanager/typegroup/add",
+      "method": "POST",
+      "path": "/sysmanager/typegroup/add",
+      "source": "wms-java/wms-j3-sysmanager/src/main/java/com/zeroone/star/sysmanager/controller/TypeGroupController.java",
+      "line": 39,
+      "typeName": "TypeGroupController",
+      "methodName": "addTypeGroup"
+    },
+    {
+      "key": "POST /sysmgr/add-depart",
+      "method": "POST",
+      "path": "/sysmgr/add-depart",
+      "source": "wms-java/wms-j2-sysmgr/src/main/java/com/zeroone/star/sysmgr/controller/DepartController.java",
+      "line": 127,
+      "typeName": "DepartController",
+      "methodName": "addOrg"
+    },
+    {
+      "key": "POST /sysmgr/announcement/add",
+      "method": "POST",
+      "path": "/sysmgr/announcement/add",
+      "source": "wms-java/wms-j2-sysmgr/src/main/java/com/zeroone/star/sysmgr/controller/AnnouncementController.java",
+      "line": 62,
+      "typeName": "AnnouncementController",
+      "methodName": "addNotice"
+    },
+    {
+      "key": "POST /sysmgr/announcement/deleteBatch",
+      "method": "POST",
+      "path": "/sysmgr/announcement/deleteBatch",
+      "source": "wms-java/wms-j2-sysmgr/src/main/java/com/zeroone/star/sysmgr/controller/AnnouncementController.java",
+      "line": 84,
+      "typeName": "AnnouncementController",
+      "methodName": "deleteBatchNotice"
+    },
+    {
+      "key": "POST /sysmgr/announcement/update",
+      "method": "POST",
+      "path": "/sysmgr/announcement/update",
+      "source": "wms-java/wms-j2-sysmgr/src/main/java/com/zeroone/star/sysmgr/controller/AnnouncementController.java",
+      "line": 73,
+      "typeName": "AnnouncementController",
+      "methodName": "updateNotice"
+    },
+    {
+      "key": "POST /sysmgr/delete-depart",
+      "method": "POST",
+      "path": "/sysmgr/delete-depart",
+      "source": "wms-java/wms-j2-sysmgr/src/main/java/com/zeroone/star/sysmgr/controller/DepartController.java",
+      "line": 138,
+      "typeName": "DepartController",
+      "methodName": "removeOrg"
+    },
+    {
+      "key": "POST /sysmgr/export-selected-organization",
+      "method": "POST",
+      "path": "/sysmgr/export-selected-organization",
+      "source": "wms-java/wms-j2-sysmgr/src/main/java/com/zeroone/star/sysmgr/controller/DepartController.java",
+      "line": 67,
+      "typeName": "DepartController",
+      "methodName": "exportSelected"
+    },
+    {
+      "key": "POST /sysmgr/get-organization-list",
+      "method": "POST",
+      "path": "/sysmgr/get-organization-list",
+      "source": "wms-java/wms-j2-sysmgr/src/main/java/com/zeroone/star/sysmgr/controller/DepartController.java",
+      "line": 55,
+      "typeName": "DepartController",
+      "methodName": "queryList"
+    },
+    {
+      "key": "POST /sysmgr/import-organization",
+      "method": "POST",
+      "path": "/sysmgr/import-organization",
+      "source": "wms-java/wms-j2-sysmgr/src/main/java/com/zeroone/star/sysmgr/controller/DepartController.java",
+      "line": 98,
+      "typeName": "DepartController",
+      "methodName": "importOrgData"
+    },
+    {
+      "key": "POST /sysmgr/modify-depart",
+      "method": "POST",
+      "path": "/sysmgr/modify-depart",
+      "source": "wms-java/wms-j2-sysmgr/src/main/java/com/zeroone/star/sysmgr/controller/DepartController.java",
+      "line": 172,
+      "typeName": "DepartController",
+      "methodName": "modifyOrg"
+    },
+    {
+      "key": "POST /sysmgr/modify-depart-order",
+      "method": "POST",
+      "path": "/sysmgr/modify-depart-order",
+      "source": "wms-java/wms-j2-sysmgr/src/main/java/com/zeroone/star/sysmgr/controller/DepartController.java",
+      "line": 153,
+      "typeName": "DepartController",
+      "methodName": "modifyDepartOrder"
+    },
+    {
+      "key": "POST /sysmgr/role-org/update-role-org",
+      "method": "POST",
+      "path": "/sysmgr/role-org/update-role-org",
+      "source": "wms-java/wms-j2-sysmgr/src/main/java/com/zeroone/star/sysmgr/controller/RoleOrgController.java",
+      "line": 43,
+      "typeName": "RoleOrgController",
+      "methodName": "updateRoleOrg"
+    },
+    {
+      "key": "POST /sysmgr/t-suser-org/addUser",
+      "method": "POST",
+      "path": "/sysmgr/t-suser-org/addUser",
+      "source": "wms-java/wms-j2-sysmgr/src/main/java/com/zeroone/star/sysmgr/controller/TSUserOrgController.java",
+      "line": 56,
+      "typeName": "TSUserOrgController",
+      "methodName": "addUser"
+    },
+    {
+      "key": "POST /sysmgr/t-suser-org/deleteUser",
+      "method": "POST",
+      "path": "/sysmgr/t-suser-org/deleteUser",
+      "source": "wms-java/wms-j2-sysmgr/src/main/java/com/zeroone/star/sysmgr/controller/TSUserOrgController.java",
+      "line": 45,
+      "typeName": "TSUserOrgController",
+      "methodName": "deleteUser"
+    },
+    {
+      "key": "POST /systemparameter/add",
+      "method": "POST",
+      "path": "/systemparameter/add",
+      "source": "wms-java/wms-j4-baseConfig/src/main/java/com/zeroone/star/baseConfig/controller/SystemParameterController.java",
+      "line": 80,
+      "typeName": "SystemParameterController",
+      "methodName": "addSP"
+    },
+    {
+      "key": "POST /systemparameter/import-SystemParameter",
+      "method": "POST",
+      "path": "/systemparameter/import-SystemParameter",
+      "source": "wms-java/wms-j4-baseConfig/src/main/java/com/zeroone/star/baseConfig/controller/SystemParameterController.java",
+      "line": 168,
+      "typeName": "SystemParameterController",
+      "methodName": "importExcel"
+    },
+    {
+      "key": "POST /systemparameter/modify",
+      "method": "POST",
+      "path": "/systemparameter/modify",
+      "source": "wms-java/wms-j4-baseConfig/src/main/java/com/zeroone/star/baseConfig/controller/SystemParameterController.java",
+      "line": 108,
+      "typeName": "SystemParameterController",
+      "methodName": "modifySP"
+    },
+    {
+      "key": "POST /task-confirm/batch-confirmation",
+      "method": "POST",
+      "path": "/task-confirm/batch-confirmation",
+      "source": "wms-java/wms-j7-outgoodsmanage/src/main/java/com/zeroone/star/outgoodsmanage/controller/TaskConfirmController.java",
+      "line": 60,
+      "typeName": "TaskConfirmController",
+      "methodName": "batchSetRecipients"
+    },
+    {
+      "key": "POST /task-confirm/confirm-task",
+      "method": "POST",
+      "path": "/task-confirm/confirm-task",
+      "source": "wms-java/wms-j7-outgoodsmanage/src/main/java/com/zeroone/star/outgoodsmanage/controller/TaskConfirmController.java",
+      "line": 67,
+      "typeName": "TaskConfirmController",
+      "methodName": "batchConfirmation"
+    },
+    {
+      "key": "POST /task-confirm/del",
+      "method": "POST",
+      "path": "/task-confirm/del",
+      "source": "wms-java/wms-j7-outgoodsmanage/src/main/java/com/zeroone/star/outgoodsmanage/controller/TaskConfirmController.java",
+      "line": 81,
+      "typeName": "TaskConfirmController",
+      "methodName": "rmMission"
+    },
+    {
+      "key": "POST /task-confirm/modify-task",
+      "method": "POST",
+      "path": "/task-confirm/modify-task",
+      "source": "wms-java/wms-j7-outgoodsmanage/src/main/java/com/zeroone/star/outgoodsmanage/controller/TaskConfirmController.java",
+      "line": 53,
+      "typeName": "TaskConfirmController",
+      "methodName": "modifyTask"
+    },
+    {
+      "key": "POST /task-confirm/wave",
+      "method": "POST",
+      "path": "/task-confirm/wave",
+      "source": "wms-java/wms-j7-outgoodsmanage/src/main/java/com/zeroone/star/outgoodsmanage/controller/TaskConfirmController.java",
+      "line": 74,
+      "typeName": "TaskConfirmController",
+      "methodName": "waveGene"
+    },
+    {
+      "key": "POST /user/adduser",
+      "method": "POST",
+      "path": "/user/adduser",
+      "source": "wms-java/wms-j1-sysmanager/src/main/java/com/zeroone/star/j1/sysmanager/controller/UserManage1Controller.java",
+      "line": 33,
+      "typeName": "UserManage1Controller",
+      "methodName": "addUser"
+    },
+    {
+      "key": "POST /user/import",
+      "method": "POST",
+      "path": "/user/import",
+      "source": "wms-java/wms-j1-sysmanager/src/main/java/com/zeroone/star/j1/sysmanager/controller/UserManage3Controller.java",
+      "line": 77,
+      "typeName": "UserManage3Controller",
+      "methodName": "importUsers"
+    },
+    {
+      "key": "POST /user/query-role",
+      "method": "POST",
+      "path": "/user/query-role",
+      "source": "wms-java/wms-j1-sysmanager/src/main/java/com/zeroone/star/j1/sysmanager/controller/UserManage2Controller.java",
+      "line": 50,
+      "typeName": "UserManage2Controller",
+      "methodName": "queryRoleByRoleName"
+    },
+    {
+      "key": "POST /user/query-user",
+      "method": "POST",
+      "path": "/user/query-user",
+      "source": "wms-java/wms-j1-sysmanager/src/main/java/com/zeroone/star/j1/sysmanager/controller/UserManage2Controller.java",
+      "line": 57,
+      "typeName": "UserManage2Controller",
+      "methodName": "queryRole"
+    },
+    {
+      "key": "POST /user/reset-password",
+      "method": "POST",
+      "path": "/user/reset-password",
+      "source": "wms-java/wms-j1-sysmanager/src/main/java/com/zeroone/star/j1/sysmanager/controller/UserManage3Controller.java",
+      "line": 36,
+      "typeName": "UserManage3Controller",
+      "methodName": "resetUserPassword"
+    },
+    {
+      "key": "POST /zc-check/batch-check",
+      "method": "POST",
+      "path": "/zc-check/batch-check",
+      "source": "wms-java/wms-j7-outgoodsmanage/src/main/java/com/zeroone/star/outgoodsmanage/controller/LoadCheckController.java",
+      "line": 55,
+      "typeName": "LoadCheckController",
+      "methodName": "checkModify"
+    },
+    {
+      "key": "POST /zc-check/modify-review-by-list",
+      "method": "POST",
+      "path": "/zc-check/modify-review-by-list",
+      "source": "wms-java/wms-j7-outgoodsmanage/src/main/java/com/zeroone/star/outgoodsmanage/controller/LoadCheckController.java",
+      "line": 67,
+      "typeName": "LoadCheckController",
+      "methodName": "oneClickReview"
+    },
+    {
+      "key": "PUT /baseConfig/automaticEncoding/update",
+      "method": "PUT",
+      "path": "/baseConfig/automaticEncoding/update",
+      "source": "wms-java/wms-j4-baseConfig/src/main/java/com/zeroone/star/baseConfig/controller/AutomaticEncodingController.java",
+      "line": 56,
+      "typeName": "AutomaticEncodingController",
+      "methodName": "update"
+    },
+    {
+      "key": "PUT /baseconfig/modify-encodingtype",
+      "method": "PUT",
+      "path": "/baseconfig/modify-encodingtype",
+      "source": "wms-java/wms-j4-baseConfig/src/main/java/com/zeroone/star/baseConfig/controller/EncodingTypeController.java",
+      "line": 267,
+      "typeName": "EncodingTypeController",
+      "methodName": "modifyEncodingType"
+    },
+    {
+      "key": "PUT /baseconfig/modifyunittype",
+      "method": "PUT",
+      "path": "/baseconfig/modifyunittype",
+      "source": "wms-java/wms-j4-baseConfig/src/main/java/com/zeroone/star/baseConfig/controller/UnitTypeController.java",
+      "line": 71,
+      "typeName": "UnitTypeController",
+      "methodName": "updateUnitType"
+    },
+    {
+      "key": "PUT /contshape/modify",
+      "method": "PUT",
+      "path": "/contshape/modify",
+      "source": "wms-java/wms-j8-othermana/src/main/java/com/zeroone/star/othermana/controller/ContTypeController.java",
+      "line": 54,
+      "typeName": "ContTypeController",
+      "methodName": "modifyBaContType"
+    },
+    {
+      "key": "PUT /customer/modify-customer",
+      "method": "PUT",
+      "path": "/customer/modify-customer",
+      "source": "wms-java/wms-j5-basezl/src/main/java/com/zeroone/star/j5/basezl/controller/CustomerController.java",
+      "line": 94,
+      "typeName": "CustomerController",
+      "methodName": "modifyCustomer"
+    },
+    {
+      "key": "PUT /daycheck/temperature/update",
+      "method": "PUT",
+      "path": "/daycheck/temperature/update",
+      "source": "wms-java/wms-j3-daycheck/src/main/java/com/zeroone/star/daycheck/controller/TemperatureController.java",
+      "line": 76,
+      "typeName": "TemperatureController",
+      "methodName": "updateTemperature"
+    },
+    {
+      "key": "PUT /exportmana/manyreceipts/put",
+      "method": "PUT",
+      "path": "/exportmana/manyreceipts/put",
+      "source": "wms-java/wms-j8-exportmana/src/main/java/com/zeroone/star/exportmana/controller/ManyReceiptsController.java",
+      "line": 32,
+      "typeName": "ManyReceiptsController",
+      "methodName": "putManyReceipts"
+    },
+    {
+      "key": "PUT /exportmana/receipt/put",
+      "method": "PUT",
+      "path": "/exportmana/receipt/put",
+      "source": "wms-java/wms-j8-exportmana/src/main/java/com/zeroone/star/exportmana/controller/ReceiptController.java",
+      "line": 47,
+      "typeName": "ReceiptController",
+      "methodName": "putReceipt"
+    },
+    {
+      "key": "PUT /goods/update-goods",
+      "method": "PUT",
+      "path": "/goods/update-goods",
+      "source": "wms-java/wms-j5-basezl/src/main/java/com/zeroone/star/j5/basezl/controller/GoodsController.java",
+      "line": 60,
+      "typeName": "GoodsController",
+      "methodName": "updateGoods"
+    },
+    {
+      "key": "PUT /measurementunit/updateunit",
+      "method": "PUT",
+      "path": "/measurementunit/updateunit",
+      "source": "wms-java/wms-j4-baseConfig/src/main/java/com/zeroone/star/baseConfig/controller/MeasurementUnitController.java",
+      "line": 98,
+      "typeName": "MeasurementUnitController",
+      "methodName": "updateUnit"
+    },
+    {
+      "key": "PUT /menu/modify",
+      "method": "PUT",
+      "path": "/menu/modify",
+      "source": "wms-java/wms-j1-sysmanager/src/main/java/com/zeroone/star/j1/sysmanager/controller/MenuManageController.java",
+      "line": 34,
+      "typeName": "MenuManageController",
+      "methodName": "modify"
+    },
+    {
+      "key": "PUT /msgmw/messages/{id}",
+      "method": "PUT",
+      "path": "/msgmw/messages/{id}",
+      "source": "wms-java/wms-j2-msgmw/src/main/java/com/zeroone/star/msgmw/controller/TSSmsController.java",
+      "line": 57,
+      "typeName": "TSSmsController",
+      "methodName": "updateMessage"
+    },
+    {
+      "key": "PUT /msgmw/modify-sql",
+      "method": "PUT",
+      "path": "/msgmw/modify-sql",
+      "source": "wms-java/wms-j2-msgmw/src/main/java/com/zeroone/star/msgmw/controller/SqlController.java",
+      "line": 75,
+      "typeName": "SqlController",
+      "methodName": "modifySql"
+    },
+    {
+      "key": "PUT /msgmw/update",
+      "method": "PUT",
+      "path": "/msgmw/update",
+      "source": "wms-java/wms-j2-msgmw/src/main/java/com/zeroone/star/msgmw/controller/TSSmsTemplateSqlController.java",
+      "line": 136,
+      "typeName": "TSSmsTemplateSqlController",
+      "methodName": "update"
+    },
+    {
+      "key": "PUT /msgmw/update-messageTemplate",
+      "method": "PUT",
+      "path": "/msgmw/update-messageTemplate",
+      "source": "wms-java/wms-j2-msgmw/src/main/java/com/zeroone/star/msgmw/controller/MessageTemplateController.java",
+      "line": 74,
+      "typeName": "MessageTemplateController",
+      "methodName": "updateMessageTemplate"
+    },
+    {
+      "key": "PUT /notice/update-notice-status",
+      "method": "PUT",
+      "path": "/notice/update-notice-status",
+      "source": "wms-java/wms-j2-notice/src/main/java/com/zeroone/star/notice/controller/NoticeController.java",
+      "line": 151,
+      "typeName": "NoticeController",
+      "methodName": "updateNoticeStatus"
+    },
+    {
+      "key": "PUT /open/resources/cache/reload",
+      "method": "PUT",
+      "path": "/open/resources/cache/reload",
+      "source": "wms-java/wms-oauth2/src/main/java/com/zeroone/star/oauth2/controller/ResourcesCacheController.java",
+      "line": 26,
+      "typeName": "ResourcesCacheController",
+      "methodName": "reloadCache"
+    },
+    {
+      "key": "PUT /othermana/goodsbrand/modify-goodsbrand",
+      "method": "PUT",
+      "path": "/othermana/goodsbrand/modify-goodsbrand",
+      "source": "wms-java/wms-j8-othermana/src/main/java/com/zeroone/star/othermana/controller/GoodsBrandController.java",
+      "line": 85,
+      "typeName": "GoodsBrandController",
+      "methodName": "updateGoodsBrand"
+    },
+    {
+      "key": "PUT /othermana/specification/modify",
+      "method": "PUT",
+      "path": "/othermana/specification/modify",
+      "source": "wms-java/wms-j8-othermana/src/main/java/com/zeroone/star/othermana/controller/SpecificationController.java",
+      "line": 65,
+      "typeName": "SpecificationController",
+      "methodName": "putSpecification"
+    },
+    {
+      "key": "PUT /out-goods-manager/modify-query",
+      "method": "PUT",
+      "path": "/out-goods-manager/modify-query",
+      "source": "wms-java/wms-j7-outgoodsmanage/src/main/java/com/zeroone/star/outgoodsmanage/controller/OutManageController.java",
+      "line": 707,
+      "typeName": "OutManageController",
+      "methodName": "modifyWonh"
+    },
+    {
+      "key": "PUT /outgoodsmanage/wm-to-down-goods/modify",
+      "method": "PUT",
+      "path": "/outgoodsmanage/wm-to-down-goods/modify",
+      "source": "wms-java/wms-j7-outgoodsmanage/src/main/java/com/zeroone/star/outgoodsmanage/controller/DownGoodsController.java",
+      "line": 83,
+      "typeName": "DownGoodsController",
+      "methodName": "modifyUnpublish"
+    },
+    {
+      "key": "PUT /plat-io",
+      "method": "PUT",
+      "path": "/plat-io",
+      "source": "wms-java/wms-apis/src/main/java/com/zeroone/star/project/j7/outbound/WmPlatIoApis.java",
+      "line": 46,
+      "typeName": "WmPlatIoApis",
+      "methodName": "updatePlatIo"
+    },
+    {
+      "key": "PUT /provider/change-provider",
+      "method": "PUT",
+      "path": "/provider/change-provider",
+      "source": "wms-java/wms-j5-basezl/src/main/java/com/zeroone/star/j5/basezl/controller/ProviderController.java",
+      "line": 61,
+      "typeName": "ProviderController",
+      "methodName": "changeProvider"
+    },
+    {
+      "key": "PUT /rfid/modify-rfid",
+      "method": "PUT",
+      "path": "/rfid/modify-rfid",
+      "source": "wms-java/wms-j5-basezl/src/main/java/com/zeroone/star/j5/basezl/controller/RFIDController.java",
+      "line": 67,
+      "typeName": "RFIDController",
+      "methodName": "modifyRfid"
+    },
+    {
+      "key": "PUT /stock/bulk_receipt/acceptance/items/{id}/accept",
+      "method": "PUT",
+      "path": "/stock/bulk_receipt/acceptance/items/{id}/accept",
+      "source": "wms-java/wms-j6-stockln/src/main/java/com/zeroone/star/stockln/controller/AcceptController.java",
+      "line": 34,
+      "typeName": "AcceptController",
+      "methodName": "acceptItem"
+    },
+    {
+      "key": "PUT /stock/bulk_receipt/acceptance/items/batch",
+      "method": "PUT",
+      "path": "/stock/bulk_receipt/acceptance/items/batch",
+      "source": "wms-java/wms-j6-stockln/src/main/java/com/zeroone/star/stockln/controller/AcceptController.java",
+      "line": 47,
+      "typeName": "AcceptController",
+      "methodName": "acceptBatch"
+    },
+    {
+      "key": "PUT /stock/tolist/update",
+      "method": "PUT",
+      "path": "/stock/tolist/update",
+      "source": "wms-java/wms-j6-stockln/src/main/java/com/zeroone/star/stockln/controller/ToListController.java",
+      "line": 33,
+      "typeName": "ToListController",
+      "methodName": "updateToList"
+    },
+    {
+      "key": "PUT /stockln/wm-stt-in-goods/batch-update-bin",
+      "method": "PUT",
+      "path": "/stockln/wm-stt-in-goods/batch-update-bin",
+      "source": "wms-java/wms-j6-stockln/src/main/java/com/zeroone/star/stockln/controller/StockBatchController.java",
+      "line": 26,
+      "typeName": "StockBatchController",
+      "methodName": "batchUpdateBin"
+    },
+    {
+      "key": "PUT /stockln/wm-stt-in-goods/batch-update-production-date",
+      "method": "PUT",
+      "path": "/stockln/wm-stt-in-goods/batch-update-production-date",
+      "source": "wms-java/wms-j6-stockln/src/main/java/com/zeroone/star/stockln/controller/StockBatchController.java",
+      "line": 38,
+      "typeName": "StockBatchController",
+      "methodName": "batchUpdateProductionDate"
+    },
+    {
+      "key": "PUT /stockln/wm-stt-in-goods/batch-update-shelf",
+      "method": "PUT",
+      "path": "/stockln/wm-stt-in-goods/batch-update-shelf",
+      "source": "wms-java/wms-j6-stockln/src/main/java/com/zeroone/star/stockln/controller/StockBatchController.java",
+      "line": 51,
+      "typeName": "StockBatchController",
+      "methodName": "batchUpdateShelf"
+    },
+    {
+      "key": "PUT /sysmanager/catagory/modify-catagory",
+      "method": "PUT",
+      "path": "/sysmanager/catagory/modify-catagory",
+      "source": "wms-java/wms-j3-sysmanager/src/main/java/com/zeroone/star/sysmanager/controller/TSCategoryController.java",
+      "line": 69,
+      "typeName": "TSCategoryController",
+      "methodName": "modifyCatagory"
+    },
+    {
+      "key": "PUT /sysmanager/typegroup/modify",
+      "method": "PUT",
+      "path": "/sysmanager/typegroup/modify",
+      "source": "wms-java/wms-j3-sysmanager/src/main/java/com/zeroone/star/sysmanager/controller/TypeGroupController.java",
+      "line": 47,
+      "typeName": "TypeGroupController",
+      "methodName": "modifyTypeGroup"
+    },
+    {
+      "key": "PUT /user/modify/modifyuserstatus-to-active",
+      "method": "PUT",
+      "path": "/user/modify/modifyuserstatus-to-active",
+      "source": "wms-java/wms-j1-sysmanager/src/main/java/com/zeroone/star/j1/sysmanager/controller/UserManage1Controller.java",
+      "line": 65,
+      "typeName": "UserManage1Controller",
+      "methodName": "modifyUserStatus_to_Active"
+    },
+    {
+      "key": "PUT /user/modify/modifyuserstatus-to-ban",
+      "method": "PUT",
+      "path": "/user/modify/modifyuserstatus-to-ban",
+      "source": "wms-java/wms-j1-sysmanager/src/main/java/com/zeroone/star/j1/sysmanager/controller/UserManage1Controller.java",
+      "line": 59,
+      "typeName": "UserManage1Controller",
+      "methodName": "modifyUserStatus_to_Ban"
+    },
+    {
+      "key": "PUT /user/modify/userdetail",
+      "method": "PUT",
+      "path": "/user/modify/userdetail",
+      "source": "wms-java/wms-j1-sysmanager/src/main/java/com/zeroone/star/j1/sysmanager/controller/UserManage1Controller.java",
+      "line": 53,
+      "typeName": "UserManage1Controller",
+      "methodName": "modifyUser"
+    }
+  ]
+}

@@ -1,0 +1,6 @@
+{
+  "recovered": 1,
+  "status_after_recovery": "queued",
+  "attempt_after_recovery": 1,
+  "e2e3_pass": true
+}
