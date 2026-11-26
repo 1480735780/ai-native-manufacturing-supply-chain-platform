@@ -8,6 +8,8 @@ import { useUserStore } from "stores/user";
 
 import { isConditionsSome } from "@ruan-cat/utils/conditions";
 
+import { collectMenuPaths, isPathPermitted } from "composables/menu-access";
+
 /**
  * 菜单类型
  * @description
@@ -80,22 +82,27 @@ declare module "vue-router" {
  * 这里预设的都是静态路由
  */
 const originRoutes = [
-	// 警告 这些路由配置已经重新配置了 被分散配置到各个单独的页面组件内使用了。
-	// {
-	// 	path: "/:pathMatch(.*)*",
-	// 	name: "NotFound",
-	// 	component: () => import("../views/status/404.vue"),
-	// },
-	// {
-	// 	path: "/forbidden",
-	// 	name: "Forbidden",
-	// 	component: () => import("../views/status/403.vue"),
-	// },
-	// {
-	// 	path: "/error",
-	// 	name: "Error",
-	// 	component: () => import("../views/status/500.vue"),
-	// },
+	// 警告 这三个状态页放在 src/components/status/ 下，而自动路由只扫描 src/views（且排除 src/views/status/**、**/components），
+	// 因此 definePage 里的 name/path 根本不会注册。必须显式登记，否则守卫 next({ name: "Forbidden" }) 找不到目标，
+	// 表现为停留在原 URL 且页面空白（2026-11-26 生产构建浏览器回归实测到的缺陷）。
+	{
+		path: "/:pathMatch(.*)*",
+		name: "NotFound",
+		component: () => import("../components/status/404.vue"),
+		meta: { menuType: "ignore", text: "404", icon: "" },
+	},
+	{
+		path: "/forbidden",
+		name: "Forbidden",
+		component: () => import("../components/status/403.vue"),
+		meta: { menuType: "ignore", text: "403", icon: "" },
+	},
+	{
+		path: "/error",
+		name: "Error",
+		component: () => import("../components/status/500.vue"),
+		meta: { menuType: "ignore", text: "500", icon: "" },
+	},
 ];
 
 // 警告 不再需要读取主模块路由了 用自动路由的方式实现完毕
@@ -120,7 +127,8 @@ if (import.meta.env.DEV) {
 // 定义一个路由对象
 const router = createRouter({
 	history: createWebHistory(import.meta.env.BASE_URL),
-	routes: setupLayouts(routes),
+	// 静态状态页路由（403/404/500）必须在这里合并，见 originRoutes 上的说明。
+	routes: setupLayouts([...originRoutes, ...routes]),
 });
 
 /**
@@ -165,16 +173,37 @@ router.beforeEach(async function (to, from, next) {
 
 	// 如果有token
 	if (token) {
-		// 判断是否已经加载数据
-		const isLoaded = _isLoaded.value;
-		// 如果没有加载
-		if (!isLoaded) {
-			// 加载用户信息
-			await store.loadUser();
-			// 加载菜单资源
-			await store.loadMenus();
-			// 设置加载完毕
-			store.setLoaded(true);
+		try {
+			// 判断是否已经加载数据
+			const isLoaded = _isLoaded.value;
+			// 如果没有加载
+			if (!isLoaded) {
+				// 加载用户信息
+				await store.loadUser();
+				// 加载菜单资源
+				await store.loadMenus();
+				// 设置加载完毕
+				store.setLoaded(true);
+			}
+		} catch (error) {
+			console.error("会话初始化失败", error instanceof Error ? error.message : "unknown");
+			// 身份或菜单加载失败时清除旧授权，回登录页重新建立会话。
+			store.resetSaveData();
+			next({ name: "Login" });
+			return;
+		}
+
+		// current-user 为空表示令牌无法映射到有效用户，失败关闭。
+		if (!store.getUser) {
+			next({ name: "Forbidden" });
+			return;
+		}
+
+		// 加载完毕之后再判断敏感页面是否有菜单授权（见 composables/menu-access.ts）
+		const allowedPaths = collectMenuPaths(store.getMenus);
+		if (!isPathPermitted(to.path, allowedPaths)) {
+			next({ name: "Forbidden" });
+			return;
 		}
 		next();
 	}

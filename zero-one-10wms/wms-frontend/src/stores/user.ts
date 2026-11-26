@@ -91,10 +91,8 @@ export const useUserStore = defineStore("user", () => {
 
 		// 发送获取菜单请求
 		const data = await Request.requestForm(Request.GET, "/login/get-menus", null);
-		// 后端菜单表为空时保留内置菜单，避免左侧导航空白
-		if (Array.isArray(data.data) && data.data.length > 0) {
-			menus.value = data.data;
-		}
+		// 空菜单是有效授权结果，必须清掉上一账号或上一次加载的菜单。
+		menus.value = Array.isArray(data.data) ? data.data : [];
 	}
 
 	/** 加载刷新凭证 */
@@ -128,6 +126,9 @@ export const useUserStore = defineStore("user", () => {
 	function setToken(data: { token: string; refreshToken: string }) {
 		token.value = data.token;
 		refreshToken.value = data.refreshToken;
+		loaded.value = false;
+		user.value = null;
+		menus.value = [];
 		localStorage.setItem("token", data.token);
 		localStorage.setItem("refreshToken", data.refreshToken);
 	}
@@ -136,6 +137,7 @@ export const useUserStore = defineStore("user", () => {
 	function resetSaveData() {
 		loaded.value = false;
 		user.value = null;
+		menus.value = [];
 		token.value = null;
 		refreshToken.value = null;
 		localStorage.removeItem("token");

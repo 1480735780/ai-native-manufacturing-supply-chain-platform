@@ -68,8 +68,19 @@ function adaptRouterMenus(items: any[]): any[] {
 	}));
 }
 
-/** 菜单数据：后端菜单为空时（如本地未导入菜单数据）回退到根据前端路由自动生成 */
-const menus = computed(() => (getMenus.value.length > 0 ? getMenus.value : adaptRouterMenus(menuFromRouter.value)));
+/**
+ * 菜单数据：后端返回非空时用后端结果。
+ *
+ * 复核缺陷（2026-11-26）：已登录用户的后端菜单为空表示「没有任何可见菜单」（例如 cs/KH 这类
+ * 没有「异常巡检」授权的角色），此时**不能**回退成全量静态路由——否则无权角色会在侧边栏
+ * 看到「异常巡检」入口（数据面虽然被后端挡住，菜单/路由权限仍然泄露）。
+ * 只有未登录（游客）时才回退到前端路由生成；有令牌但身份/菜单未就绪时返回空菜单。
+ */
+const menus = computed(() => {
+	if (getMenus.value.length > 0) return getMenus.value;
+	// 有令牌但身份/菜单尚未加载时也失败关闭，不能回退全量静态菜单。
+	return userStore.getToken ? [] : adaptRouterMenus(menuFromRouter.value);
+});
 
 const isCollapse = ref(false);
 

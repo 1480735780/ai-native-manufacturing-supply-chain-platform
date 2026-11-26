@@ -1,10 +1,6 @@
 <!-- 500 页面 -->
-<script lang="ts" setup>
-definePage({
-	name: "Error",
-	path: "/error",
-});
-</script>
+<!-- 路由登记在 src/routers/index.ts 的 originRoutes（/error）。本文件不在自动路由扫描目录 src/views 下，
+     原先的 definePage() 不会被 unplugin-vue-router 转换，运行时抛 ReferenceError: definePage is not defined。 -->
 
 <template>
 	<div class="contain">
