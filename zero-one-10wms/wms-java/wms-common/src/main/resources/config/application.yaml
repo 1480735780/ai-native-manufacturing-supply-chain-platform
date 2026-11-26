@@ -1,4 +1,4 @@
-﻿# 应用版本描述
+# 应用版本描述
 application:
   title: 零壹WMS
   version: 1.0.0-SNAPSHOT
@@ -40,11 +40,13 @@ spring:
       # 单个文件的最大值
       max-file-size: 10MB
 management:
-  # 端点检查
+  # 端点检查：ADR-021 复核（2026-11-26）——只暴露健康与信息端点。
+  # 原为 include: "*"，会让 /actuator/env、/actuator/heapdump、/actuator/loggers 等敏感端点
+  # 在服务端口上直接可读（heapdump 可导出整个堆），属生产阻断，必须收敛。
   endpoints:
     web:
       exposure:
-        include: "*"
+        include: health,info
   # 健康检查
   endpoint:
     health:

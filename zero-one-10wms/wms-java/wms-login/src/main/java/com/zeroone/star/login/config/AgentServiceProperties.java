@@ -66,4 +66,7 @@ public class AgentServiceProperties {
 
     /** 服务令牌用途标识，写入 JWT claim，用于与普通用户令牌区分。 */
     private String tokenUse = "agent_service";
+
+    /** 服务令牌签发者，写入 JWT iss；网关对服务令牌强制校验。 */
+    private String issuer = "";
 }

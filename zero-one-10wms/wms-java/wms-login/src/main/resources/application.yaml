@@ -38,8 +38,9 @@ agent:
     # 服务令牌自签用的密钥库（与 wms-oauth2 的 jwt.jks 同一把钥匙）；留空则拒绝签发
     private-key-path: ${AGENT_SERVICE_PRIVATE_KEY_PATH:}
     jks-path: ${AGENT_SERVICE_JKS_PATH:}
-    jks-password: ${AGENT_SERVICE_JKS_PASSWORD:123456}
+    jks-password: ${AGENT_SERVICE_JKS_PASSWORD:}
     key-alias: ${AGENT_SERVICE_KEY_ALIAS:01star}
-    key-password: ${AGENT_SERVICE_KEY_PASSWORD:123456}
+    key-password: ${AGENT_SERVICE_KEY_PASSWORD:}
     token-use: ${AGENT_SERVICE_TOKEN_USE:agent_service}
+    issuer: ${AGENT_SERVICE_TOKEN_ISSUER:wms-login-agent}
     ip-whitelist: ${AGENT_SERVICE_IP_WHITELIST:127.0.0.1,192.168.101.91}

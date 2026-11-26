@@ -64,6 +64,9 @@ public class AgentTokenSigner {
         payload.set("authorities", authorities);
         payload.set("token_use", properties.getTokenUse());
         payload.set("warehouse_scope", warehouseScope);
+        if (properties.getIssuer() != null && !properties.getIssuer().trim().isEmpty()) {
+            payload.set("iss", properties.getIssuer().trim());
+        }
 
         JWSHeader header = new JWSHeader.Builder(JWSAlgorithm.RS256)
                 .type(JOSEObjectType.JWT)

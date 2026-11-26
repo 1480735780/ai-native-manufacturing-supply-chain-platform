@@ -378,10 +378,10 @@ public class UserServiceImpl extends ServiceImpl<TSUserMapper, TSUser> implement
         String token = userHolder.getCurrentToken();
         String username = userHolder.getCurrentUser().getUsername();
         if (token != null){
-            // TODO:登出逻辑，需要配合登录逻辑实现
             Boolean delete = redisTemplate.delete(username + ":" + LOGIN_TOKEN);
-            Boolean delete1 = redisTemplate.delete(username + ":" + LOGIN_REFRESHTOKEN);
-            return Boolean.TRUE.equals(delete) && Boolean.TRUE.equals(delete1) ?
+            redisTemplate.delete(username + ":" + LOGIN_REFRESHTOKEN);
+            // Agent 服务令牌没有 refreshToken；只要当前访问令牌删除成功即视为注销成功。
+            return Boolean.TRUE.equals(delete) ?
                     JsonVO.success("退出成功") : JsonVO.fail("服务器错误，请稍后重试");
         }
         return JsonVO.fail("获取凭证失败，退出失败");

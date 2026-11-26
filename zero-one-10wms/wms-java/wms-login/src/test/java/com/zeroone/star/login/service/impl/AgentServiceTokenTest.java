@@ -10,6 +10,8 @@ import com.zeroone.star.login.mapper.TSBaseUserMapper;
 import com.zeroone.star.login.service.AgentTokenSigner;
 import com.zeroone.star.login.service.OauthService;
 import com.zeroone.star.login.vo.ServiceTokenVO;
+import com.zeroone.star.project.components.user.UserDTO;
+import com.zeroone.star.project.components.user.UserHolder;
 import com.zeroone.star.project.vo.JsonVO;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -53,6 +55,7 @@ class AgentServiceTokenTest {
     private AgentTokenSigner signer;
     private TSBaseUserMapper baseUserMapper;
     private OauthService oAuthService;
+    private RedisTemplate<String, Object> redisTemplate;
     private ValueOperations<String, Object> valueOperations;
     private KeyPair keyPair;
 
@@ -67,6 +70,7 @@ class AgentServiceTokenTest {
         properties.setUsername("agent-inspector");
         properties.setPassword("pwd");
         properties.setTokenTtlSeconds(1800);
+        properties.setIssuer("wms-login-agent");
         properties.setWarehouses(Collections.singletonList("W01"));
         properties.setIpWhitelist(Collections.singletonList("127.0.0.1"));
 
@@ -93,7 +97,7 @@ class AgentServiceTokenTest {
         oAuthService = mock(OauthService.class);
         ReflectionTestUtils.setField(service, "oAuthService", oAuthService);
 
-        RedisTemplate<String, Object> redisTemplate = mock(RedisTemplate.class);
+        redisTemplate = mock(RedisTemplate.class);
         valueOperations = mock(ValueOperations.class);
         when(redisTemplate.opsForValue()).thenReturn(valueOperations);
         ReflectionTestUtils.setField(service, "redisTemplate", redisTemplate);
@@ -222,6 +226,22 @@ class AgentServiceTokenTest {
     }
 
     @Test
+    void service_logout_succeeds_without_refresh_token() throws Exception {
+        UserHolder holder = mock(UserHolder.class);
+        when(holder.getCurrentToken()).thenReturn("service-token");
+        when(holder.getCurrentUser()).thenReturn(UserDTO.builder().username("agent-inspector").build());
+        ReflectionTestUtils.setField(service, "userHolder", holder);
+        when(redisTemplate.delete("agent-inspector:token")).thenReturn(true);
+        when(redisTemplate.delete("agent-inspector:refreshToken")).thenReturn(false);
+
+        JsonVO<String> result = service.logout();
+
+        assertEquals(10000, result.getCode());
+        verify(redisTemplate).delete("agent-inspector:token");
+        verify(redisTemplate).delete("agent-inspector:refreshToken");
+    }
+
+    @Test
     void success_issues_short_lived_scoped_token() throws Exception {
         stubOAuthSuccess();
         when(baseUserMapper.selectBaseUserByUsername("agent-inspector")).thenReturn(activeUser());
@@ -246,6 +266,7 @@ class AgentServiceTokenTest {
                 new TypeReference<Map<String, Object>>() {
                 });
         assertEquals("agent_service", claims.get("token_use"));
+        assertEquals("wms-login-agent", claims.get("iss"));
         assertEquals("agent-inspector", claims.get("user_name"));
         assertEquals(1800L,
                 ((Number) claims.get("exp")).longValue()
