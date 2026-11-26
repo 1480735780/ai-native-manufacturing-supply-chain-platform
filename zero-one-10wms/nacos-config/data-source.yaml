@@ -2,14 +2,19 @@
 # Nacos 共享配置: data-source.yaml
 # data-id: data-source.yaml  group: DEFAULT_GROUP
 # namespace: 4833404f-4b82-462e-889a-3c508160c6b4
+#
+# !! 凭据一律通过环境变量注入，本文件不再保存明文口令（2026-11-26 起）。
+#    占位符由各服务进程的环境变量解析，因此发布到 Nacos 前必须确认
+#    目标机器上的每个 Java 服务都注入了下列变量；否则服务会在启动时
+#    因空口令连接失败。变量清单与轮换步骤见 nacos-config/README-credentials.md
 # ============================================================
 
 spring:
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
-    url: jdbc:mysql://192.168.89.128:3306/zo_wms?useUnicode=true&useSSL=false&characterEncoding=utf-8&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
-    username: root
-    password: 123456
+    url: "jdbc:mysql://${WMS_DB_HOST:192.168.89.128}:${WMS_DB_PORT:3306}/zo_wms?useUnicode=true&useSSL=false&characterEncoding=utf-8&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true"
+    username: "${WMS_DB_USERNAME}"
+    password: "${WMS_DB_PASSWORD}"
     type: com.alibaba.druid.pool.DruidDataSource
     druid:
       initial-size: 5
@@ -19,9 +24,9 @@ spring:
       validation-query: SELECT 1
       test-while-idle: true
   redis:
-    host: 192.168.89.128
-    port: 6379
-    password: 01star
+    host: "${WMS_REDIS_HOST:192.168.89.128}"
+    port: "${WMS_REDIS_PORT:6379}"
+    password: "${WMS_REDIS_PASSWORD}"
   data:
     mongodb:
-      uri: mongodb://awei:123456@192.168.89.128:27017/firstDb
+      uri: "mongodb://${WMS_MONGO_USERNAME}:${WMS_MONGO_PASSWORD}@${WMS_MONGO_HOST:192.168.89.128}:${WMS_MONGO_PORT:27017}/firstDb"

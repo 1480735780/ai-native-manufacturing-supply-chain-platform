@@ -20,7 +20,8 @@ fastdfs:
   charset: UTF-8
   connect-timeout: 5
   network-timeout: 30
-  http-secret-key: FastDFS1234567890
+  # ADR-021 复核（2026-11-26）：密钥不再入库，由环境变量注入；未注入时为空，anti-steal token 校验会失败。
+  http-secret-key: ${FASTDFS_HTTP_SECRET_KEY:}
   http-anti-steal-token: true
   connection-pool-max-idle: 20
   connection-pool-max-total: 20

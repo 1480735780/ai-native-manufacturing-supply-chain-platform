@@ -23,7 +23,7 @@ usage() {
 	cat <<'EOF'
 用法: ./init.sh [选项]
 
-默认: --quick 环境/状态/基线/关键文件检查
+默认: --quick 环境/状态/基线/关键文件/Java 接口权限声明检查
 
   --quick            快速检查（默认）
   --verify           完整静态验证：Java 编译 + 前端构建 + C++ 静态检查
@@ -46,6 +46,7 @@ usage() {
 说明:
   - 本机无 C++ 编译器时只做静态检查，不把结果写成“通过”。
   - --verify 会跑较慢的编译/构建；失败时按输出修复，不要跳过。
+  - --quick 固定运行 Java 接口权限静态门禁及自测；baseline 只豁免存量，不会自动更新。
   - --agent 需要 uv；依赖缓存写在 wms-agent/.uv/cache，不污染用户目录。
 EOF
 }
@@ -168,6 +169,9 @@ check_key_files() {
 		"$ROOT/feature_list.json"
 		"$ROOT/PROGRESS.md"
 		"$ROOT/wms-java/pom.xml"
+		"$ROOT/wms-java/wms-common/src/main/java/com/zeroone/star/project/security/ResourcePermission.java"
+		"$ROOT/.dsh-scratch/check-resource-permissions.mjs"
+		"$ROOT/.dsh-scratch/resource-permission-baseline.json"
 		"$ROOT/wms-frontend/package.json"
 		"$ROOT/wms-cpp/CMakeLists.txt"
 	)
@@ -179,6 +183,48 @@ check_key_files() {
 			fail "缺少关键文件: ${f#"$PARENT_ROOT/"}"
 		fi
 	done
+}
+
+check_credentials() {
+	say "检查配置文件里的明文凭据"
+
+	local targets=() file hits hit valued trimmed suspected=0
+	local lineno keyname
+	targets+=("$ROOT"/nacos-config/*.yaml)
+	targets+=("$ROOT/wms-java/wms-login/src/main/resources/application.yaml")
+
+	for file in "${targets[@]}"; do
+		[ -f "$file" ] || continue
+		# 口令类键：password / passwd / pwd / *-password / *-secret / secret-key / api-key / access-key / private-key
+		hits="$(grep -nEi '^[[:space:]]*([a-z0-9_.-]*(password|passwd|pwd|secret|secret-key|api-key|access-key|private-key))[[:space:]]*:' "$file" || true)"
+		while IFS= read -r hit; do
+			[ -n "$hit" ] || continue
+			lineno="$(printf '%s' "$hit" | cut -d: -f1)"
+			keyname="$(printf '%s' "$hit" | sed -E 's/^[0-9]+:[[:space:]]*([A-Za-z0-9_.-]+)[[:space:]]*:.*/\1/')"
+			valued="$(printf '%s' "$hit" | sed -E 's/^[0-9]+:[[:space:]]*[A-Za-z0-9_.-]+[[:space:]]*:[[:space:]]*//')"
+			# 去掉行尾注释后再判断，避免注释里的 ${...} 让明文蒙混过关
+			valued="${valued%%#*}"
+			trimmed="$(printf '%s' "$valued" | tr -d '[:space:]')"
+			# 去掉包裹的引号：YAML 里 "${ENV}" 与 "" 都是常见写法
+			trimmed="${trimmed%\'}"; trimmed="${trimmed#\'}"
+			trimmed="${trimmed%\"}"; trimmed="${trimmed#\"}"
+			# 显式留空(password: / password: "" / password: '')不算明文
+			case "$trimmed" in
+				"" | '""' | "''") continue ;;
+			esac
+			# 整个值必须就是一个 ${ENV} 或 ${ENV:default} 占位符
+			if printf '%s' "$trimmed" | grep -Eq '^\$\{[A-Za-z0-9_.:-]+\}$'; then
+				continue
+			fi
+			# 只打印文件与键名，绝不回显疑似口令本身
+			fail "疑似明文凭据 ${file#"$ROOT"/}:${lineno} 键 ${keyname}（值已隐藏）"
+			suspected=$((suspected + 1))
+		done <<<"$hits"
+	done
+
+	if [ "$suspected" -eq 0 ]; then
+		ok "无明文口令：password/secret/api-key 类键均为 \${ENV} 占位、留空或文件不存在"
+	fi
 }
 
 check_json() {
@@ -320,13 +366,21 @@ check_java_test() {
 		return
 	fi
 
-	local modules="wms-login,wms-j3-daycheck,wms-oauth2,wms-j1-dashboard"
+	local modules="wms-login,wms-j3-daycheck,wms-oauth2,wms-j1-dashboard,wms-gateway"
 	# 只跑新增的巡检前置测试类：
 	# - 既有 test.java / test2.java 是 @SpringBootTest 手工联调用例，依赖 Nacos/MySQL，不属于 harness 门禁；
 	# - wms-oauth2 仅编译其在 reactor 中的产物，不在本门禁内启动上下文；
 	# - wms-j1-dashboard 的 PendSnapshot*Test 覆盖阶段3 一致快照端点（契约 + 资源角色种子）。
-	local test_filter="AgentServiceTokenTest,DaycheckSortContractTest,NoUpMapperXmlTest,NoUpPageContractTest,NoUpPageServiceTest,NoUpPageResourceRoleSeedTest,DelayServiceSortTest,DelayControllerSortTest,PendSnapshotContractTest,PendSnapshotResourceRoleSeedTest"
-	if (cd "$ROOT/wms-java" && mvn -o -pl "$modules" -am test -DskipTests=false \
+	local test_filter="AgentServiceTokenTest,DaycheckSortContractTest,NoUpMapperXmlTest,NoUpPageContractTest,NoUpPageServiceTest,NoUpPageResourceRoleSeedTest,YichangDownMapperXmlTest,YichangDownPageContractTest,YichangDownPageServiceTest,YichangDownDownloadIsolationTest,TemperatureMapperXmlTest,F016InspectionResourceRoleSeedTest,AgentSharedSourceResourceRoleSeedTest,DelayServiceSortTest,DelayControllerSortTest,PendSnapshotContractTest,PendSnapshotResourceRoleSeedTest,GatewayAccessFilterTest"
+
+	# F-016 v0.2.1: 运行前清除上次残留的 Surefire XML，防止本次被过滤掉的测试类
+	# 借用旧报告制造「假通过」。只触及 wms-java 下 target/surefire-reports/*.xml。
+	find "$ROOT/wms-java" -path '*/target/surefire-reports/*.xml' -type f -delete
+	# 记录本次运行起始标记：报告必须比它更新，才算本次真正生成。
+	local marker="/tmp/f016-java-test-marker.$$"
+	touch "$marker"
+
+	if (cd "$ROOT/wms-java" && MAVEN_OPTS="-Xmx1g" mvn -o -pl "$modules" -am test -DskipTests=false \
 		-Dtest="$test_filter" -Dsurefire.failIfNoSpecifiedTests=false); then
 		ok "巡检前置 Java 测试执行完成"
 	else
@@ -347,8 +401,16 @@ check_java_test() {
 		"$ROOT/wms-java/wms-j3-daycheck/target/surefire-reports/"*NoUpPageContractTest.txt \
 		"$ROOT/wms-java/wms-j3-daycheck/target/surefire-reports/"*NoUpPageServiceTest.txt \
 		"$ROOT/wms-java/wms-j3-daycheck/target/surefire-reports/"*NoUpPageResourceRoleSeedTest.txt \
+		"$ROOT/wms-java/wms-j3-daycheck/target/surefire-reports/"*YichangDownMapperXmlTest.txt \
+		"$ROOT/wms-java/wms-j3-daycheck/target/surefire-reports/"*YichangDownPageContractTest.txt \
+		"$ROOT/wms-java/wms-j3-daycheck/target/surefire-reports/"*YichangDownPageServiceTest.txt \
+		"$ROOT/wms-java/wms-j3-daycheck/target/surefire-reports/"*YichangDownDownloadIsolationTest.txt \
+		"$ROOT/wms-java/wms-j3-daycheck/target/surefire-reports/"*TemperatureMapperXmlTest.txt \
+		"$ROOT/wms-java/wms-j3-daycheck/target/surefire-reports/"*F016InspectionResourceRoleSeedTest.txt \
+		"$ROOT/wms-java/wms-j3-daycheck/target/surefire-reports/"*AgentSharedSourceResourceRoleSeedTest.txt \
 		"$ROOT/wms-java/wms-j1-dashboard/target/surefire-reports/"*PendSnapshotContractTest.txt \
-		"$ROOT/wms-java/wms-j1-dashboard/target/surefire-reports/"*PendSnapshotResourceRoleSeedTest.txt; do
+		"$ROOT/wms-java/wms-j1-dashboard/target/surefire-reports/"*PendSnapshotResourceRoleSeedTest.txt \
+		"$ROOT/wms-java/wms-gateway/target/surefire-reports/"*GatewayAccessFilterTest.txt; do
 		# shellcheck disable=SC2086
 		found=$(ls $report 2>/dev/null | head -n 1)
 		if [ -z "$found" ]; then
@@ -359,12 +421,25 @@ check_java_test() {
 		if ! grep -Eq "Tests run: [1-9][0-9]*" "$found"; then
 			warn "surefire 报告为 0 tests: $found"
 			missing=1
+			continue
+		fi
+		# 被跳过的测试不算执行证据：整类 @Disabled / assumeTrue 跳过时报告依然新鲜，
+		# 若只校验 Tests run 就会出现“全部跳过也 PASS”的假通过（审计 m01655）。
+		if ! grep -Eq "Skipped: 0[,)]" "$found"; then
+			warn "surefire 报告存在被跳过的测试（Skipped > 0），不能作为执行证据: $found"
+			missing=1
+		fi
+		# 报告必须是本次运行生成的（mtime 晚于起始标记），否则视为旧报告假通过。
+		if [ "$found" -ot "$marker" ]; then
+			warn "surefire 报告不是本次运行生成: $found"
+			missing=1
 		fi
 	done
+	rm -f "$marker"
 	if [ "$missing" = 0 ]; then
-		ok "已确认巡检前置 10 个 Java 测试类全部实际执行（surefire 报告非 0 tests）"
+		ok "已确认巡检前置 18 个 Java 测试类全部实际执行（surefire 报告非 0 tests 且 Skipped=0）"
 	else
-		fail "巡检前置 Java 测试执行记录不完整（surefire 报告缺失或 0 tests）"
+		fail "巡检前置 Java 测试执行记录不完整（surefire 报告缺失、0 tests 或被跳过）"
 	fi
 }
 
@@ -421,6 +496,35 @@ PY
 
 	if ! have cmake; then
 		warn "本机无 cmake；C++ 结果只能记 static_pass + runtime_unverified"
+	fi
+}
+
+check_resource_permissions() {
+	say "检查 Java 接口权限声明（ADR-022）"
+
+	if ! have node; then
+		fail "缺少 node，无法运行 Java 接口权限静态门禁"
+		return
+	fi
+
+	local checker="$ROOT/.dsh-scratch/check-resource-permissions.mjs"
+	local baseline="$ROOT/.dsh-scratch/resource-permission-baseline.json"
+	if [ ! -f "$checker" ] || [ ! -f "$baseline" ]; then
+		fail "接口权限检查器或 baseline 不存在"
+		return
+	fi
+
+	if node "$checker" --self-test; then
+		ok "接口权限静态检查器自测通过"
+	else
+		fail "接口权限静态检查器自测失败"
+		return
+	fi
+
+	if node "$checker" --check --root "$ROOT" --baseline "$baseline"; then
+		ok "Java 新增端点权限声明门禁通过"
+	else
+		fail "Java 新增端点缺少权限声明或扫描失败"
 	fi
 }
 
@@ -543,8 +647,10 @@ write_snapshot() {
 say "root: $ROOT"
 check_tools
 check_key_files
+check_credentials
 check_json
 check_git
+check_resource_permissions
 
 if [ "$DO_CPP" = 1 ]; then
 	check_cpp

@@ -2,6 +2,9 @@
 # Nacos 共享配置: key-config.yaml
 # data-id: key-config.yaml  group: DEFAULT_GROUP
 # namespace: 4833404f-4b82-462e-889a-3c508160c6b4
+#
+# !! 凭据一律通过环境变量注入，本文件不再保存明文口令（2026-11-26 起）。
+#    变量清单与轮换步骤见 nacos-config/README-credentials.md
 # ============================================================
 
 # zo-cloud-oauth2 starter 客户端凭证（wms-login 登录时引用）
@@ -9,5 +12,5 @@ zo:
   cloud:
     starter:
       oauth2:
-        mgr-id: admin
-        mgr-password: 123456
+        mgr-id: "${WMS_OAUTH2_MGR_ID:admin}"
+        mgr-password: "${WMS_OAUTH2_MGR_PASSWORD}"
