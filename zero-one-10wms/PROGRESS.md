@@ -4,7 +4,8 @@
 
 ## 当前已验证状态
 
-- 日期：2026-11-26
+- 日期：2026-11-27
+- S1 每日巡检与异常自愈 Agent 设计定稿与归档（2026-11-27，仅设计文档归档，未改业务代码、未登记新 feature 条目、`feature_list.json` 不变）：已将 PRD v1.0 评审版与交互原型 v3.1 归档至 `wms-agent/docs/业务分析/`，代码实施设计文档 `v2.3-rc1` 归档至 `wms-agent/docs/implement/`；定稿范围明确为 **M0 / M1a / M1b（仅 dev 影子）开发基线定稿**，**M2 库存账本架构（附录 F）待独立冻结**，**M3 live 未放行**；属静态设计与源码核查，无新增运行时/浏览器/测试证据。
 - F-015 阶段7.7（2026-11-25，扫描记录与证据归档 + 通知归档 + 指标日聚合 2 年，ADR-020 修订）：Python 全量 pytest 带独立 PG 测试库 **531 passed / 11 skipped / 1 warning**、不带 PG **474 passed / 68 skipped**；Java `./init.sh --java-test` PASS（41 tests）；真实环境 e2e **21/21**（日聚合 180 仓库·日、合成过期扫描整批归档、通知归档、读回落、长窗口指标）；新测试抓到并修复 3 个日聚合真实缺陷；F-015 按用户 m09157 决定置为 **passing / e2e_pass**；生产上线仍被 ADR-021 阻塞；改动未提交。
 - F-015 真实模型摘要质量评估 + 端到端（2026-11-25，用户 m08991 指定本轮只做这两项；未改产品代码、未提交）：`.env` 配置的外部模型对本机不可用（OpenRouter 对全部免费模型与配置模型的 `POST /chat/completions` 返回 400 `Request path cannot be relayed`，属服务端问题，未改 `.env`）。质量评估：真实巡检输入 5 组 + 按真实形状构造的注入输入 3 组 → 真实模型 glm-5.4（cc-switch-zhipu-glm，经 DSH 子代理通道；**不是生产配置的模型，也不是直连端点**）的 8 条回复全部走产品真实的解析/清洗链路 **8/8 通过**（数量与级别一致、纯文本无 Markdown/链接、动作码 ⊆ allowedActions 且文案对题、incomplete 有说明；3 组注入未改变级别与输出结构并主动提示字段含可疑指令），人工阅读结论「可用，偏啰嗦」。端到端：回放链路 `scan-8a7e9ea19c8f494b`（经网关真实 JWT 触发，summariesLlm 5 / template 0，PG 文本即模型原文；浏览器详情抽屉显示「模型摘要 / 模型：glm-5.4(replay)」、纯文本、3 条建议动作）；直连真实端点 `scan-50bb337adc9c4489`（llmCalls 5 / llmFailures 5 / 全部降级模板，`fallback_detail` 含 `llm returned http status 400: Request path cannot be relayed`，整次扫描约 4.7 秒）。证据：`.runtime_tmp/stage8_real_model_summary_quality.json`、`stage8_real_model_replay_e2e.json`、`stage8_direct_endpoint_degradation.json`、`stage8_real_model_summary.png`。**限制**：生产配置模型的摘要质量仍未评估；回放链路的 token 用量是端点固定值；接入其它模型前须按同一组 8 条输入复评。agent 已以默认配置重启（`llm.enabled=false`）。
 - F-015 阶段7（2026-11-25，retry 审计归属 + 指标 + 保留与归档 + 前端摘要展示 + 生产安全门 + v0.2.0 总验收，ADR-020/ADR-021）：Python 全量 pytest 带独立 PG 测试库 **512 passed / 10 skipped / 1 warning**、不带 PG **459 passed / 63 skipped / 1 warning**；Java `./init.sh --java-test` **PASS**（41 tests，阶段7 无 Java 改动）；前端 Vitest 15 passed、生产构建通过；真实环境总验收 e2e（真实 JWT 经网关）**STAGE7_E2E_OK 29/29**（retry 归属四列、调度槽位唯一入队、指标接口权限与取数耗时、保留任务删除/归档/摘要回落）。落地：V010 retry 审计归属（`trigger=retry` + `retry_of_scan_id` + `origin_*`）；`GET /agent/scan/metrics`（仅管理员）；V011 归档表 + `POST /agent/scan/retention/run` + 每日保留任务（默认关闭）；告警详情抽屉展示巡检摘要（模型/模板标识、降级原因、纯文本）。本轮修复：摘要可见性跟随告警可见性、`GET /agent/alerts/{id}` 内嵌完整扫描记录的越权缺口（改为摘要）、抽屉关闭动画期间重开竞态、PG 通知忽略 `createdAt`。**生产上线阻塞（ADR-021）**：实测网关无 token 任意方法均放行、资源角色不生效，范围是全部 Java 服务；巡检端点由 agent 自验并有路由级回归。待决：扫描记录与证据保留期、通知与 trace 是否归档、「聚合统计 2 年」未落地、生产配置模型的摘要质量未评估（glm-5.4 的评估见上一条）。改动未提交；F-015 状态待用户确认验收后更新（v0.2.1 在阶段8 登记）。
@@ -30,6 +31,19 @@
 - 当前 blocker：dev 验收无阻断；生产上线仍有独立待办——业务确认 prod 温度词表/阈值/间隔、518 接口角色矩阵落库后开 deny-unregistered、prod 独立凭据初始化与轮换、定时巡检/失败恢复/监控/保留观察。
 
 ## 本轮记录
+
+### 追加：S1 每日巡检与异常自愈 Agent 设计定稿与归档（2026-11-27）
+
+- **目标**：完成 S1（每日巡检与异常自愈 Agent）业务 PRD、离线交互原型及代码实施设计的多轮深度评审与源码对齐，并将定稿文档归档至 `wms-agent/docs/`（纯方案与文档归档，不改业务代码、不改 `feature_list.json`、不提交）。
+- **已归档交付物**（SHA-256 校验通过，未覆盖既有文件）：
+  - `wms-agent/docs/业务分析/S1_每日巡检与异常自愈Agent_PRD_v1.0.md`（业务与交互冻结版；运行态 TBD-1~4 挂起待库表改造）
+  - `wms-agent/docs/业务分析/s1_prototype_minimal_slice.html`（v3.1 零 CDN 离线交互原型，形态 B 右侧抽屉 + 五角色隔离）
+  - `wms-agent/docs/implement/S1_每日巡检与异常自愈Agent_代码实施设计文档_v2.3-rc1.md`（经 5 轮源码级复核收敛，含附录 A~F 六份刚性工程契约）
+- **定稿边界与未定稿项**：
+  - **已定稿开发基线**：M0（Day 0 流水/快照 + j7/j8 事务与 `SAVEPOINT` + `ops-start` 最小 `@S1HardAuthorize` 运行时 AOP）、M1a（三槽多实例令牌 + 网关三路分流 + 专用 `S1ExecGrantVerifier` + 23 边 CAS 状态机与接管重置规则 + `psycopg-pool` + 形态 B 抽屉，保留问数悬浮球）、M1b（轴四 dev 影子，禁硬锁/禁自动切线、`DEV_FIXTURE` 禁作生产证据）。
+  - **未定稿/阻断**：M2 权威库存账本（附录 F：库位 `ku_wei_bian_ma`/托盘 `bin_id` 双键、`ALLOCATE/RELEASE/TRANSFER_OUT/TRANSFER_IN/TRANSFER_REVERT/DEDUCT` 与三方对账覆盖 C++ `AdjustlistDAO` 只改 `goods_qua` 旁路）须单独架构冻结；M3 live 强依赖 M2 冻结、7 项真实协议测试全绿及逐动作安全评审。
+- **未验证与未改动**：本轮仅做静态设计与源码核查（原型 JS 经 `node` 语法校验，文档归档经 SHA-256 核对），**未改动任何业务源码/SQL/配置、未运行业务自动化测试或真实服务 e2e**；`feature_list.json` 与既有 `M zero-one-10wms/documents/07、AI-Agent化/技术选型ADR.md` 均未触碰。
+- **下一步**：① 确认实施文档 §7 的 5 处口径微调是同步回 PRD/原型还是登记为 Accepted Deviations；② 按需在 `feature_list.json` 登记 S1 M0 功能条目并按 `v2.3-rc1` 启动 M0 代码实施；③ 不要动既有 `app/scan/`（588 passed）、`/agent/query` 及问数悬浮球组件。
 
 ### 追加：异常巡检 Agent dev 验收收口（2026-11-26）
 

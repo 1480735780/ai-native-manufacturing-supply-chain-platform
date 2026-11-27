@@ -1,0 +1,1333 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>零壹 WMS · S1 交互原型 v3（纯离线单文件 · 形态 B × 五角色 RBAC）</title>
+  <style>
+    /* 离线兜底样式：不覆盖宿主 :root 变量，每处 var() 自带离线回退色，确保断网双击与宿主深浅主题双兼容 */
+    *, *::before, *::after { box-sizing: border-box; }
+    body {
+      margin: 0; padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+      font-size: 14px; line-height: 1.5;
+      background: var(--background, #f1f5f9);
+      color: var(--foreground, #0f172a);
+      -webkit-font-smoothing: antialiased;
+    }
+    body.offline-dark {
+      background: #0b1120; color: #e2e8f0;
+    }
+    .app-shell {
+      --bg: var(--background, #f1f5f9);
+      --sb: var(--sidebar, #ffffff);
+      --cd: var(--card, #ffffff);
+      --bd: var(--border, #dbe3ee);
+      --fg: var(--foreground, #0f172a);
+      --mf: var(--muted-foreground, #64748b);
+      --pr: var(--primary, #2563eb);
+      --pf: var(--primary-foreground, #ffffff);
+      --ac: var(--accent, #eff6ff);
+      --lk: var(--link, #2563eb);
+      --ok: var(--success, #15803d);
+      --wn: var(--warning, #b45309);
+      --er: var(--error, #dc2626);
+      background: var(--bg); color: var(--fg); min-height: 100vh;
+    }
+    body.offline-dark .app-shell {
+      --bg: #0b1120; --sb: #111827; --cd: #162033; --bd: #2a3952;
+      --fg: #f1f5f9; --mf: #94a3b8; --pr: #3b82f6; --pf: #ffffff;
+      --ac: #1e293b; --lk: #60a5fa; --ok: #22c55e; --wn: #f59e0b; --er: #f87171;
+    }
+
+    /* 通用布局与组件 */
+    .container { max-width: 1440px; margin: 0 auto; }
+    .topbar {
+      position: sticky; top: 0; z-index: 30;
+      background: var(--sb); border-bottom: 1px solid var(--bd);
+      padding: 10px 16px;
+    }
+    .row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+    .between { justify-content: space-between; }
+    .col { display: flex; flex-direction: column; gap: 10px; }
+    .grid-shell { display: grid; grid-template-columns: 220px 1fr 480px; min-height: calc(100vh - 96px); }
+    .grid-shell.drawer-closed { grid-template-columns: 220px 1fr; }
+    @media (max-width: 1120px) {
+      .grid-shell, .grid-shell.drawer-closed { grid-template-columns: 1fr; }
+      .sidebar-left { border-right: none !important; border-bottom: 1px solid var(--bd); }
+      .drawer-right { border-left: none !important; border-top: 1px solid var(--bd); }
+    }
+    .sidebar-left {
+      background: var(--sb); border-right: 1px solid var(--bd);
+      padding: 12px; display: flex; flex-direction: column; justify-content: space-between; gap: 14px;
+    }
+    .main-area { padding: 16px; display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+    .drawer-right {
+      background: var(--sb); border-left: 1px solid var(--bd);
+      padding: 14px; display: flex; flex-direction: column; gap: 12px;
+    }
+    .hidden { display: none !important; }
+
+    /* 文本与数字 */
+    .xs { font-size: 12px; }
+    .sm { font-size: 13px; }
+    .base { font-size: 14px; }
+    .lg { font-size: 18px; }
+    .bold { font-weight: 600; }
+    .bolder { font-weight: 700; }
+    .muted { color: var(--mf); }
+    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-variant-numeric: tabular-nums; }
+    .num { font-variant-numeric: tabular-nums; }
+    .c-err { color: var(--er); }
+    .c-ok { color: var(--ok); }
+    .c-warn { color: var(--wn); }
+    .c-pri { color: var(--pr); }
+
+    /* 卡片与边框 */
+    .card { background: var(--cd); border: 1px solid var(--bd); border-radius: 10px; overflow: hidden; }
+    .card-p { padding: 14px; }
+    .card-hd { padding: 10px 14px; border-bottom: 1px solid var(--bd); display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 6px; }
+    .card-ft { padding: 10px 14px; border-top: 1px solid var(--bd); background: var(--bg); display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; }
+    .subbox { background: var(--bg); border: 1px solid var(--bd); border-radius: 8px; padding: 10px; }
+    .tint-err { background: color-mix(in srgb, var(--er) 9%, var(--cd)); border: 1px solid color-mix(in srgb, var(--er) 42%, var(--bd)); border-radius: 8px; padding: 10px; }
+    .tint-warn { background: color-mix(in srgb, var(--wn) 9%, var(--cd)); border: 1px solid color-mix(in srgb, var(--wn) 42%, var(--bd)); border-radius: 8px; padding: 10px; }
+    .tint-ok { background: color-mix(in srgb, var(--ok) 9%, var(--cd)); border: 1px solid color-mix(in srgb, var(--ok) 42%, var(--bd)); border-radius: 8px; padding: 10px; }
+    .tint-pri { background: color-mix(in srgb, var(--pr) 9%, var(--cd)); border: 1px solid color-mix(in srgb, var(--pr) 50%, var(--bd)); }
+
+    /* 徽章 */
+    .badge { display: inline-flex; align-items: center; padding: 2px 7px; border-radius: 5px; font-size: 12px; font-weight: 600; line-height: 1.3; }
+    .b-p0 { background: color-mix(in srgb, var(--er) 15%, transparent); color: var(--er); border: 1px solid color-mix(in srgb, var(--er) 35%, transparent); }
+    .b-p1 { background: color-mix(in srgb, var(--wn) 15%, transparent); color: var(--wn); border: 1px solid color-mix(in srgb, var(--wn) 35%, transparent); }
+    .b-r1 { background: color-mix(in srgb, var(--ok) 15%, transparent); color: var(--ok); border: 1px solid color-mix(in srgb, var(--ok) 35%, transparent); }
+    .b-r2 { background: color-mix(in srgb, var(--wn) 15%, transparent); color: var(--wn); border: 1px solid color-mix(in srgb, var(--wn) 35%, transparent); }
+    .b-r3 { background: color-mix(in srgb, var(--pr) 15%, transparent); color: var(--pr); border: 1px solid color-mix(in srgb, var(--pr) 35%, transparent); }
+    .b-mut { background: color-mix(in srgb, var(--mf) 12%, transparent); color: var(--mf); border: 1px solid var(--bd); font-weight: 500; }
+
+    /* 按钮与表单 */
+    .btn {
+      display: inline-flex; align-items: center; justify-content: center; gap: 4px;
+      padding: 6px 11px; border-radius: 6px; font-size: 12px; font-weight: 500;
+      border: 1px solid var(--bd); background: var(--cd); color: var(--fg);
+      cursor: pointer; transition: background 0.12s, opacity 0.12s;
+    }
+    .btn:hover:not(:disabled) { background: var(--ac); }
+    .btn-pri { background: var(--pr); color: var(--pf); border-color: var(--pr); }
+    .btn-pri:hover:not(:disabled) { opacity: 0.9; background: var(--pr); }
+    .btn:disabled { opacity: 0.42; cursor: not-allowed; }
+    .sel {
+      padding: 5px 8px; border-radius: 6px; font-size: 12px;
+      border: 1px solid var(--bd); background: var(--cd); color: var(--fg); cursor: pointer;
+    }
+    .inp {
+      width: 100%; padding: 7px 10px; border-radius: 6px; font-size: 12px;
+      border: 1px solid var(--bd); background: var(--bg); color: var(--fg);
+    }
+    .doc-link {
+      background: none; border: none; padding: 0; font: inherit;
+      color: var(--lk); text-decoration: underline; cursor: pointer;
+    }
+
+    /* 菜单项 */
+    .menu-item {
+      width: 100%; text-align: left; padding: 7px 10px; border-radius: 6px;
+      border: none; background: transparent; color: var(--mf); font-size: 12px;
+      cursor: pointer; display: flex; align-items: center; justify-content: space-between; gap: 6px;
+    }
+    .menu-item:hover { background: var(--ac); color: var(--fg); }
+    .menu-item.active {
+      background: color-mix(in srgb, var(--pr) 13%, transparent);
+      color: var(--pr); font-weight: 600;
+    }
+
+    /* 网格与表格 */
+    .grid-2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+    .grid-3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+    @media (max-width: 720px) { .grid-2, .grid-3 { grid-template-columns: 1fr; } }
+    table { width: 100%; border-collapse: collapse; font-size: 12px; text-align: left; }
+    th, td { padding: 8px 11px; border-bottom: 1px solid var(--bd); }
+    th { background: var(--bg); color: var(--mf); font-weight: 600; }
+    tr:last-child td { border-bottom: none; }
+    .bar-track { width: 100%; height: 6px; border-radius: 99px; background: var(--bd); overflow: hidden; margin-top: 6px; }
+    .bar-fill { height: 100%; border-radius: 99px; }
+
+    /* 方案单选卡与算式溯源 */
+    .plan-opt {
+      display: block; border-radius: 8px; border: 1px solid var(--bd);
+      background: var(--bg); padding: 10px 11px; cursor: pointer;
+    }
+    .plan-opt:hover { background: var(--ac); }
+    .plan-opt.selected { background: color-mix(in srgb, var(--pr) 9%, var(--cd)); border-color: color-mix(in srgb, var(--pr) 55%, var(--bd)); }
+    details.formula-box {
+      border: 1px dashed var(--bd); border-radius: 8px; background: var(--bg); padding: 8px 10px;
+    }
+    details.formula-box summary {
+      cursor: pointer; font-size: 12px; font-weight: 600; color: var(--lk); list-style: none;
+    }
+    details.formula-box summary::-webkit-details-marker { display: none; }
+
+    /* Modal */
+    .modal-mask {
+      position: fixed; inset: 0; z-index: 60; background: rgba(15, 23, 42, 0.52);
+      display: flex; align-items: center; justify-content: center; padding: 16px;
+    }
+    .modal-box {
+      background: var(--cd); border: 1px solid var(--bd); border-radius: 12px;
+      max-width: 520px; width: 100%; padding: 16px; box-shadow: 0 20px 40px rgba(0,0,0,0.25);
+    }
+    .divider { border-top: 1px solid var(--bd); margin: 8px 0; }
+  </style>
+</head>
+<body>
+<div class="app-shell">
+  <!-- 顶部原型控制栏 -->
+  <header class="topbar">
+    <div class="container col" style="gap:8px;">
+      <div class="row between">
+        <div class="row">
+          <span class="badge b-r3">形态 B · 全局右侧 AI 抽屉</span>
+          <span class="base bold">零壹 WMS · S1 原型 v3.1</span>
+          <button id="coldStartBadgeBtn" class="badge b-p1" style="cursor:pointer;" title="点击查看冷启动切换日进度">🟡 冷启动 D+12 / D+28 · 未达切换条件 ▾</button>
+          <span class="badge b-mut">纯离线单文件</span>
+        </div>
+        <div class="row" id="roleSwitcher">
+          <span class="xs muted">切换登录账号（全栈 RBAC 隔离）：</span>
+          <button data-role="supervisor" class="btn btn-pri">调度主管</button>
+          <button data-role="ops" class="btn">店铺运营/商务</button>
+          <button data-role="leader" class="btn">班组长/仓管</button>
+          <button data-role="cs" class="btn">财务/客服</button>
+          <button data-role="exec" class="btn">管理层/仓经理</button>
+          <button id="themeToggleBtn" class="btn" title="离线打开时手动切换浅/深色">🌓 浅/深</button>
+        </div>
+      </div>
+
+      <div class="row between xs" style="padding-top:8px; border-top:1px solid var(--bd);">
+        <div class="row muted" style="gap:6px;">
+          <span>当前登录：<strong style="color:var(--fg)" id="loginIdentity"></strong></span>
+          <span>·</span>
+          <span id="rbacScopeHint"></span>
+        </div>
+        <div class="row" id="stressControls"></div>
+      </div>
+    </div>
+  </header>
+
+  <!-- 主应用三栏壳 -->
+  <div id="gridShell" class="container grid-shell">
+    <!-- 左侧角色专属菜单 -->
+    <aside class="sidebar-left">
+      <div class="col" style="gap:10px;">
+        <div class="subbox">
+          <div class="xs bold">零壹仓储管理 WMS</div>
+          <div class="xs muted" id="sidebarPortalLabel" style="margin-top:2px;"></div>
+        </div>
+        <div>
+          <div class="xs muted" style="padding:0 6px; margin-bottom:6px;">已授权菜单（点击可切换）</div>
+          <nav id="roleMenu" class="col" style="gap:3px;"></nav>
+        </div>
+      </div>
+      <div class="subbox xs muted" style="line-height:1.55;">
+        <div class="bold" style="color:var(--fg); margin-bottom:3px;">实时节拍时钟（真实走秒）</div>
+        <div class="mono">当前：<span id="liveClock">--:--:--</span></div>
+        <div class="mono">本拍快照：<span id="snapClock">--:--:00</span></div>
+        <div class="mono">下拍倒计：<span id="nextSnapCountdown">04:59</span></div>
+      </div>
+    </aside>
+
+    <!-- 中间专属主业务区 -->
+    <main id="mainCanvas" class="main-area"></main>
+
+    <!-- 右侧 AI 巡检抽屉 -->
+    <aside id="aiDrawer" class="drawer-right"></aside>
+  </div>
+</div>
+
+<!-- 运行模式 / 冷启动切换条件进度 Modal -->
+<div id="coldStartModal" class="modal-mask hidden">
+  <div class="modal-box col">
+    <div class="row between" style="border-bottom:1px solid var(--bd); padding-bottom:8px;">
+      <div class="row">
+        <span class="badge b-p1">🟡 冷启动降级模式 · D+12 / D+28</span>
+        <span class="sm bold">S1 运行态切换日进度</span>
+      </div>
+      <button id="closeColdStartModal" class="btn">关闭</button>
+    </div>
+    <p class="xs muted" style="margin:0;">以下 4 项切换退出条件全部达标后，系统将从「冷启动降级态」自动切入完整正式运行态：</p>
+    <div class="col xs" style="gap:7px;">
+      <div class="subbox row between"><span>① 3段 WIP 实测工时样本 (需 ≥14 天且误差 &lt;20%)</span><strong class="c-warn mono">12 / 14 天</strong></div>
+      <div class="subbox row between"><span>② 轻量排班技能表上线 (替换均质活跃人效)</span><strong class="c-err">待建表</strong></div>
+      <div class="subbox row between"><span>③ 出库单有效 channel_code 覆盖率 (需 ≥95% 切硬预留)</span><strong class="c-warn mono">81.4% (影子模式)</strong></div>
+      <div class="subbox row between"><span>④ 底座 A 效期高可信覆盖率 (T+60 ≥80% · 货值加权)</span><strong class="c-warn mono">62.0% (存量滚动抽检)</strong></div>
+    </div>
+    <div class="xs muted" style="border-top:1px solid var(--bd); padding-top:8px;">
+      降级说明：当前关闭自动切线与历史 ASN 三段 P95，所有 R3 决策卡均透明标注冷启动口径并强制人工拍板。
+    </div>
+  </div>
+</div>
+
+<!-- 原始单据溯源 Modal -->
+<div id="evidenceModal" class="modal-mask hidden">
+  <div class="modal-box col">
+    <div class="row between" style="border-bottom:1px solid var(--bd); padding-bottom:8px;">
+      <div class="row">
+        <span class="badge b-mut mono" id="evDocId">DOC</span>
+        <span class="sm bold" id="evTitle">原始单据</span>
+      </div>
+      <button id="closeEvModal" class="btn">关闭</button>
+    </div>
+    <div id="evBody" class="xs"></div>
+    <div class="row between xs muted" style="border-top:1px solid var(--bd); padding-top:8px;">
+      <span>零壹 WMS 权限校验只读快照</span>
+      <span style="color:var(--lk);">原始数据可溯源</span>
+    </div>
+  </div>
+</div>
+
+<!-- 四选一结构化驳回 Modal -->
+<div id="rejectModal" class="modal-mask hidden">
+  <div class="modal-box col">
+    <div class="row between" style="border-bottom:1px solid var(--bd); padding-bottom:8px;">
+      <span class="sm bold">驳回该决策卡（必选结构化原因）</span>
+      <button id="closeRejectModal" class="btn">取消</button>
+    </div>
+    <p class="xs muted" style="margin:0;">驳回原因写入校准日志，并立即触发同批次 30 分钟冷却静默。</p>
+    <div class="grid-2">
+      <button data-reason="数据错" class="btn reject-opt" style="flex-direction:column; align-items:flex-start; padding:10px; text-align:left;">
+        <span class="bold">1. 数据错</span>
+        <span class="muted">库存/效期/流水不准</span>
+      </button>
+      <button data-reason="规则错" class="btn reject-opt" style="flex-direction:column; align-items:flex-start; padding:10px; text-align:left;">
+        <span class="bold">2. 规则错</span>
+        <span class="muted">罚则/拆单/允收口径已变</span>
+      </button>
+      <button data-reason="现场特殊" class="btn reject-opt" style="flex-direction:column; align-items:flex-start; padding:10px; text-align:left;">
+        <span class="bold">3. 现场特殊</span>
+        <span class="muted">客户口头特批/现场已处理</span>
+      </button>
+      <button data-reason="模型错" class="btn reject-opt" style="flex-direction:column; align-items:flex-start; padding:10px; text-align:left;">
+        <span class="bold">4. 模型错</span>
+        <span class="muted">排序或估时明显不合理</span>
+      </button>
+    </div>
+    <input id="rejectNote" class="inp" type="text" placeholder="可选补充备注" />
+    <div class="row" style="justify-content:flex-end;">
+      <button id="confirmRejectBtn" disabled class="btn btn-pri">确认驳回并进入冷却</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  const state = {
+    role: 'supervisor',         // supervisor | ops | leader | cs | exec
+    activeMenu: {},             // 按角色记住当前点击的菜单 id
+    drawerOpen: true,
+    econState: 'normal',        // normal | missing_evidence | timeout_fallback
+    stallMode: 'person',        // person | zone
+    selectedPlanSup: 'B',       // 修正后：方案 B 总成本 ¥1,956 < 方案 A ¥6,260，默认推荐 B！
+    selectedPlanOps: 'A',
+    supExecStatus: 'idle',      // idle | done | partial_fail | rejected
+    supVerifyState: 'pending',  // pending | passed | failed
+    supRejectInfo: null,
+    supReassignDone: false,     // 调度主管专属动作：调岗支援(R2)
+    opsExecStatus: 'idle',      // idle | done | rejected
+    opsRejectInfo: null,
+    ttlLocked: false,           // R2 资源锁定
+    stallStatus: 'pending',     // pending | claimed | resolved
+    stallVerifyState: 'pending',// pending | passed | failed
+    stallSelectedCauses: [],    // 中性多选根因
+    stallResolvedText: '',
+    csSent: false,
+    execTakeoverDone: false,
+    pendingRejectReason: null,
+    rejectTarget: 'sup',
+    // 动态走秒时钟（彻底消灭静态时间戳穿帮）
+    slaRemainSec: 582,          // 09:42
+    stallElapsedSec: 960,       // 16:00
+    nextSnapSec: 299            // 04:59
+  };
+
+  const ROLES = {
+    supervisor: {
+      identity: '陈明 · 仓库调度主管（华东1号仓）',
+      portal: '仓内运营端 · 调度视图',
+      scope: '可见：全仓作业 WIP、产能调岗、截单切线经济账；不抢班组长现场排查动作',
+      defaultMenu: 'sup_recheck',
+      menus: [
+        { id: 'sup_home', name: '系统首页', tag: 'S5' },
+        { id: 'sup_daycheck', name: '每日检查', tag: 'S1' },
+        { id: 'sup_recheck', name: '出货管理 · 装车复核', tag: 'S1主视图' },
+        { id: 'sup_wave', name: '出货管理 · 任务确认/波次', tag: 'S3' },
+        { id: 'sup_in', name: '进货管理 · 收货未上架', tag: 'S2' },
+        { id: 'sup_move', name: '库内管理 · 转移/理货', tag: 'S4' },
+        { id: 'sup_plat', name: '月台管理 · 月台计划', tag: 'S2' }
+      ]
+    },
+    ops: {
+      identity: '林悦 · 店铺运营/商务（德亚乳业品牌组）',
+      portal: '货主/运营协同门户（非全仓WMS）',
+      scope: '仅见：归属自己品牌的效期池、TTL 配置与允收灰区；完全不可见仓内菜单与 WIP',
+      defaultMenu: 'ops_pool',
+      menus: [
+        { id: 'ops_batch', name: '我的货品 · 效期与批次', tag: 'S1' },
+        { id: 'ops_pool', name: '渠道预留池与 TTL 配置', tag: 'S1主视图' },
+        { id: 'ops_policy', name: '平台允收规则版本 (底座B)', tag: 'S0' },
+        { id: 'ops_gray', name: '履约灰区与临期协同', tag: 'S1' }
+      ]
+    },
+    leader: {
+      identity: '周强 · 常温复核组班组长',
+      portal: '现场作业端 · 班组执行视图',
+      scope: '仅见：本班组执行任务与停摆排查；完全屏蔽所有罚金、货值、外包单价与商务信息',
+      defaultMenu: 'ldr_recheck',
+      menus: [
+        { id: 'ldr_in', name: '收货登记 / 待上架', tag: 'S2' },
+        { id: 'ldr_pick', name: '下架与按单拣货', tag: 'S3' },
+        { id: 'ldr_recheck', name: '装车复核（本组）', tag: 'S1主视图' },
+        { id: 'ldr_move', name: '库内转移 / 理货', tag: 'S4' },
+        { id: 'ldr_check', name: '动碰盘点 / 效期抽检', tag: 'S4' }
+      ]
+    },
+    cs: {
+      identity: '吴敏 · 客户服务与结算专员',
+      portal: '客服与计费协同视图',
+      scope: '仅见：归属客户的异常延误通知队列与账单；不可见库内调岗、停摆与预留池内部策略',
+      defaultMenu: 'cs_exc',
+      menus: [
+        { id: 'cs_exc', name: '异常出库客户影响表', tag: 'S1主视图' },
+        { id: 'cs_msg', name: '消息中心 · 客户通知队列', tag: 'S0' },
+        { id: 'cs_bill', name: '计费管理 · 客户账单', tag: 'S5' },
+        { id: 'cs_fee', name: '计费管理 · 费用明细', tag: 'S5' }
+      ]
+    },
+    exec: {
+      identity: '王总 · 仓储运营总监 / 仓经理',
+      portal: '管理驾驶舱 · 治理与熔断视图',
+      scope: '默认仅看：验收 KPI 成对指标与驳回校准；仅在 P0/R3 超时终态熔断时收到抽屉接管卡',
+      defaultMenu: 'exec_kpi',
+      menus: [
+        { id: 'exec_home', name: '系统首页 · 经营总览', tag: 'S5' },
+        { id: 'exec_kpi', name: 'S1 巡检治理与验收 KPI', tag: 'S1主视图' },
+        { id: 'exec_cost', name: '计费管理 · 费用合计', tag: 'S5' },
+        { id: 'exec_cap', name: '全局策略与预算上限', tag: 'S0' }
+      ]
+    }
+  };
+
+  const DOC_EVIDENCE = {
+    'WAVE-20261127-04': {
+      title: '出库波次明细（wm_om_qm_i / wm_to_down_goods）',
+      rows: [
+        ['波次号', 'WAVE-20261127-04（16:00 快递主截单）'],
+        ['本日全店总单量', '2,000 单（全店延迟率分母基准）'],
+        ['本波次 3 段 WIP', '523 单 = 待下架 142 + 待复核 286 + 待回单 95'],
+        ['活跃复核人 (fh_user)', '4 人（1 人停摆中，近 30min 实测消耗 148 单/时）']
+      ]
+    },
+    'POLICY-JD-V2': {
+      title: '版本化策略规则（底座 B · 拆单与罚则）',
+      rows: [
+        ['策略版本', 'JD-B2B-2026Q4-v2（生效：2026-10-01）'],
+        ['拆单硬闸门', '❌ 强禁止拆单（京东自营入仓要求整单齐套）'],
+        ['单单延迟罚金', '¥12 / 单'],
+        ['全店延迟率阶梯', '全店延迟率 > 3%（本日 > 60 单）触发阶梯附加罚金 ¥5,000'],
+        ['外包装车/复核单价', '¥140 / 人·小时（联动计费管理·外包装车费）']
+      ]
+    },
+    'B20260725': {
+      title: '货主批次效期只读快照（仅限德亚乳业授权）',
+      rows: [
+        ['商品 / 数量', 'SKU-8802 德亚进口全脂牛奶 1L×12 · 240 箱'],
+        ['生产日期 / 保质期', '2026-07-25 / 180 天（今日剩余 68.8%）'],
+        ['数据可信度 (底座A)', '⚠️ 存量未核验（Legacy Unverified）'],
+        ['在途缓冲口径', '冷启动人工保守缓冲 5 天（暂缺历史 ASN 三段 P95）'],
+        ['清货折损口径', '转抖音/C店折让 ¥14/箱 × 240 箱 = ¥3,360']
+      ]
+    },
+    'FH-ZHANGSAN': {
+      title: '本组复核作业流水（wm_om_delv_h · 现场脱敏视图）',
+      rows: [
+        ['作业人员', '张三（fh_user: zhangsan · 常温复核组）'],
+        ['最后复核记录', '单号 CK202611270798（正在持续断流计时中）'],
+        ['名下待复核积压', '46 单（已下架至交接位）'],
+        ['同组对照组', '李四(19单) · 王五(22单) · 赵六(17单) 均正常']
+      ]
+    }
+  };
+
+  function fmtMMSS(sec) {
+    const s = Math.max(0, sec);
+    const m = String(Math.floor(s / 60)).padStart(2, '0');
+    const r = String(s % 60).padStart(2, '0');
+    return `${m}:${r}`;
+  }
+
+  function updateClocksUI() {
+    const now = new Date();
+    const pad = n => String(n).padStart(2, '0');
+    const clockStr = `${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
+    const snapMin = Math.floor(now.getMinutes() / 5) * 5;
+    const snapStr = `${pad(now.getHours())}:${pad(snapMin)}:00`;
+
+    const cEl = document.getElementById('liveClock');
+    const sEl = document.getElementById('snapClock');
+    const nEl = document.getElementById('nextSnapCountdown');
+    if (cEl) cEl.textContent = clockStr;
+    if (sEl) sEl.textContent = snapStr;
+    if (nEl) nEl.textContent = fmtMMSS(state.nextSnapSec);
+
+    document.querySelectorAll('.live-sla').forEach(el => {
+      el.textContent = state.econState === 'timeout_fallback' ? '已超时升级' : `SLA 剩 ${fmtMMSS(state.slaRemainSec)}`;
+    });
+    document.querySelectorAll('.live-stall-dur').forEach(el => {
+      const m = Math.floor(state.stallElapsedSec / 60);
+      const s = state.stallElapsedSec % 60;
+      el.textContent = `${m}分${pad(s)}秒`;
+    });
+    document.querySelectorAll('.live-snap-inline').forEach(el => {
+      el.textContent = snapStr;
+    });
+  }
+
+  // 每秒真实走秒（SLA 归零自动触发 R3 超时终态，杜绝超时静默！）
+  setInterval(() => {
+    if (state.econState === 'normal' && state.supExecStatus === 'idle' && state.opsExecStatus === 'idle' && state.slaRemainSec > 0) {
+      state.slaRemainSec -= 1;
+      if (state.slaRemainSec === 0) {
+        state.econState = 'timeout_fallback';
+        render();
+        return;
+      }
+    }
+    if (state.stallStatus !== 'resolved') {
+      state.stallElapsedSec += 1;
+    }
+    state.nextSnapSec = state.nextSnapSec > 0 ? state.nextSnapSec - 1 : 299;
+    updateClocksUI();
+  }, 1000);
+
+  function openEvidence(docId) {
+    const info = DOC_EVIDENCE[docId];
+    if (!info) return;
+    document.getElementById('evDocId').textContent = docId;
+    document.getElementById('evTitle').textContent = info.title;
+    document.getElementById('evBody').innerHTML = info.rows.map(([k, v]) => `
+      <div style="display:grid; grid-template-columns:130px 1fr; gap:8px; padding:6px 0; border-bottom:1px solid var(--bd);">
+        <span class="muted">${k}</span>
+        <span class="bold">${v}</span>
+      </div>
+    `).join('');
+    document.getElementById('evidenceModal').classList.remove('hidden');
+  }
+
+  function openRejectModal(target) {
+    state.rejectTarget = target;
+    state.pendingRejectReason = null;
+    document.getElementById('rejectNote').value = '';
+    document.querySelectorAll('.reject-opt').forEach(b => b.classList.remove('tint-pri'));
+    document.getElementById('confirmRejectBtn').disabled = true;
+    document.getElementById('rejectModal').classList.remove('hidden');
+  }
+
+  function getCurrentMenuId() {
+    return state.activeMenu[state.role] || ROLES[state.role].defaultMenu;
+  }
+
+  // ============ 中间主业务区 ============
+  function renderMainContent() {
+    const r = state.role;
+    const cfg = ROLES[r];
+    const curMenuId = getCurrentMenuId();
+    const curMenuObj = cfg.menus.find(m => m.id === curMenuId) || cfg.menus[0];
+
+    const drawerBar = (title, badgeCnt) => `
+      <div class="card" style="padding:9px 13px;">
+        <div class="row between xs">
+          <div class="row">
+            <span class="bold">${title}</span>
+            <span class="muted">· 快照 <span class="mono live-snap-inline">--:--:00</span></span>
+          </div>
+          <button id="toggleDrawerBtn" class="btn btn-pri">
+            ${state.drawerOpen ? '收起右侧 AI 抽屉' : `展开右侧 AI 抽屉 (${badgeCnt})`}
+          </button>
+        </div>
+      </div>
+    `;
+
+    // 非主演示菜单 -> 显示清晰的原型边界占位页（消灭点不动卡死）
+    if (curMenuId !== cfg.defaultMenu) {
+      return `
+        ${drawerBar(`${curMenuObj.name} [${curMenuObj.tag}]`, r === 'exec' ? (state.econState === 'timeout_fallback' ? 1 : 0) : 1)}
+        <div class="card card-p col" style="padding:28px 20px; align-items:flex-start;">
+          <span class="badge b-mut">所属场景：${curMenuObj.tag} · 不在本最小原型切片内</span>
+          <h2 class="base bold" style="margin:4px 0;">「${curMenuObj.name}」页面暂未展开</h2>
+          <p class="xs muted" style="margin:0; max-width:540px;">
+            本原型切片严格聚焦 <strong>S1（每日巡检与异常自愈）</strong> 核心双卡交互与五角色权限边界验证。
+            真实上线后，您切换到本菜单时，右侧 AI 抽屉仍保持常驻协同。
+          </p>
+          <button id="backDefaultMenuBtn" class="btn btn-pri" style="margin-top:6px;">返回当前角色 S1 主演示视图</button>
+        </div>
+      `;
+    }
+
+    if (r === 'supervisor') {
+      return `
+        ${drawerBar('出货管理 / 装车复核与波次监控', 2)}
+        <div class="card card-p col" style="gap:10px;">
+          <div class="row between xs">
+            <div class="row">
+              <span class="bold">16:00 主截单 · 3 段粗粒度 WIP（本日全店总单量 2,000 单）</span>
+              <span class="badge b-mut">冷启动：活跃实测人效</span>
+            </div>
+            <span class="c-err bold">单向流：轴三扣 -1 人效 → 轴二判复核为瓶口 → 轴一切线</span>
+          </div>
+          <div class="grid-3 xs">
+            <div class="subbox">
+              <div class="row between"><span class="muted">① 待下架 (qm_i)</span><strong class="mono">142 单</strong></div>
+              <div class="bar-track"><div class="bar-fill" style="width:38%; background:var(--ok);"></div></div>
+              <div class="muted" style="margin-top:5px;">正常 · 活跃拣货 6 人</div>
+            </div>
+            <div class="tint-err">
+              <div class="row between"><span class="c-err bold">② 待复核 (down→delv)</span><strong class="mono c-err">286 单</strong></div>
+              <div class="bar-track"><div class="bar-fill" style="width:88%; background:var(--er);"></div></div>
+              <div class="c-err" style="margin-top:5px;">瓶口告急 · 活跃 4 人(1 停摆)</div>
+            </div>
+            <div class="subbox">
+              <div class="row between"><span class="muted">③ 待回单 (delv_h)</span><strong class="mono">95 单</strong></div>
+              <div class="bar-track"><div class="bar-fill" style="width:28%; background:var(--pr);"></div></div>
+              <div class="muted" style="margin-top:5px;">顺畅 · 2 号月台就绪</div>
+            </div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-hd xs"><span class="bold">在途复核队列（wm_om_delv_h / wm_om_qm_i）</span><span class="muted">142+286+95 = 523 单</span></div>
+          <table>
+            <thead><tr><th>出库单号</th><th>波次</th><th>渠道/三方</th><th>复核人</th><th>状态</th></tr></thead>
+            <tbody>
+              <tr><td class="mono">CK202611270812</td><td class="mono">WAVE-04</td><td>京东华北(JD-HB)</td><td class="c-err bold">zhangsan (<span class="live-stall-dur">16分00秒</span>未动)</td><td><span class="badge b-p0">待复核</span></td></tr>
+              <tr><td class="mono">CK202611270815</td><td class="mono">WAVE-04</td><td>天猫旗舰店</td><td>lisi</td><td><span class="badge b-r1">复核中</span></td></tr>
+              <tr><td class="mono">CK202611270819</td><td class="mono">WAVE-04</td><td>抖音自播间</td><td>wangwu</td><td><span class="badge b-r1">复核中</span></td></tr>
+              <tr><td class="mono">CK202611270824</td><td class="mono">WAVE-04</td><td>京东华北(JD-HB)</td><td class="c-err bold">zhangsan (<span class="live-stall-dur">16分00秒</span>未动)</td><td><span class="badge b-p0">待复核</span></td></tr>
+            </tbody>
+          </table>
+        </div>
+      `;
+    }
+
+    if (r === 'ops') {
+      return `
+        ${drawerBar('德亚乳业 · 渠道预留池与效期协同门户', 2)}
+        <div class="card card-p col" style="gap:10px;">
+          <div class="row between xs">
+            <span class="bold">我负责品牌的渠道效期池（仅限德亚乳业 · 完全隔离仓内作业）</span>
+            <span class="badge b-mut">渠道门槛降序预留 &gt; 同池内 FEFO</span>
+          </div>
+          <div class="grid-3 xs">
+            <div class="subbox">
+              <div class="bold">京东自营 / 猫超池（&gt; 2/3）</div>
+              <div class="lg bolder num" style="margin:4px 0;">1,420 箱</div>
+              <div class="muted">TTL 7天 · 命中率 86% · 缺供率 1.6%</div>
+            </div>
+            <div class="subbox">
+              <div class="bold">普通 C 店 / 天猫池（&gt; 1/2）</div>
+              <div class="lg bolder num" style="margin:4px 0;">960 箱</div>
+              <div class="muted">承接京东降级释放批次</div>
+            </div>
+            <div class="subbox">
+              <div class="bold">抖音 / 特卖清货池（&gt; 1/3）</div>
+              <div class="lg bolder num" style="margin:4px 0;">310 箱</div>
+              <div class="muted">主推曝光清货（禁移偏远角落）</div>
+            </div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-hd xs"><span class="bold">德亚乳业 · 重点监控批次</span><span class="muted">cus_code = DEYA_01</span></div>
+          <table>
+            <thead><tr><th>批次号</th><th>商品</th><th>剩余效期</th><th>锁定池</th><th>TTL / 风险态</th></tr></thead>
+            <tbody>
+              <tr><td class="mono">B20260725</td><td>全脂牛奶 1L×12 (240箱)</td><td class="mono">68.8% (到仓估66.1%)</td><td>京东华北池</td><td><span class="badge b-p1">灰区 P=42% 待拍板</span></td></tr>
+              <tr><td class="mono">B20260910</td><td>脱脂牛奶 1L×12 (380箱)</td><td class="mono">82.4%</td><td>京东预留池</td><td><span class="badge ${state.ttlLocked ? 'b-r2' : 'b-mut'}">${state.ttlLocked ? 'R2 大促锁定豁免(72h)' : 'TTL 剩 1 天将自动降级'}</span></td></tr>
+              <tr><td class="mono">B20260602</td><td>全脂牛奶 1L×12 (150箱)</td><td class="mono">48.1%</td><td>抖音清货池</td><td><span class="badge b-r1">清货曝光消化中</span></td></tr>
+            </tbody>
+          </table>
+        </div>
+      `;
+    }
+
+    if (r === 'leader') {
+      return `
+        ${drawerBar('现场作业 · 常温复核组任务列表（本组视角）', 1)}
+        <div class="card">
+          <div class="card-hd xs"><span class="bold">常温复核组 · 当前人员作业状态（零金额/零商务字段）</span><span class="muted">本组 4 人</span></div>
+          <table>
+            <thead><tr><th>复核员 (fh_user)</th><th>所属波次</th><th>近15min完成</th><th>名下待复核</th><th>流水心跳</th></tr></thead>
+            <tbody>
+              <tr><td class="bold">张三 (zhangsan)</td><td class="mono">WAVE-20261127-04</td><td class="mono c-err bolder">0 单</td><td class="mono">46 单</td><td><span class="badge b-p0">已断流 <span class="live-stall-dur">16分00秒</span></span></td></tr>
+              <tr><td>李四 (lisi)</td><td class="mono">WAVE-20261127-04</td><td class="mono">19 单</td><td class="mono">38 单</td><td><span class="badge b-r1">正常产出</span></td></tr>
+              <tr><td>王五 (wangwu)</td><td class="mono">WAVE-20261127-04</td><td class="mono">22 单</td><td class="mono">41 单</td><td><span class="badge b-r1">正常产出</span></td></tr>
+              <tr><td>赵六 (zhaoliu)</td><td class="mono">WAVE-20261127-04</td><td class="mono">17 单</td><td class="mono">35 单</td><td><span class="badge b-r1">正常产出</span></td></tr>
+            </tbody>
+          </table>
+        </div>
+      `;
+    }
+
+    if (r === 'cs') {
+      // 动态与调度主管当前所选方案（B=23单 / A=105单）严格联动自洽！
+      const isPlanB = state.selectedPlanSup === 'B';
+      const rows = isPlanB
+        ? [
+            { shop: '联合快消天猫店', qty: 15, fee: 180 },
+            { shop: '日化专营抖音店', qty: 8, fee: 96 }
+          ]
+        : [
+            { shop: '联合快消天猫店', qty: 68, fee: 816 },
+            { shop: '日化专营抖音店', qty: 37, fee: 444 }
+          ];
+      const totalQty = rows.reduce((a, b) => a + b.qty, 0);
+      const totalFee = rows.reduce((a, b) => a + b.fee, 0);
+      return `
+        ${drawerBar('客服与结算 · 异常出库客户影响表', 1)}
+        <div class="card">
+          <div class="card-hd xs">
+            <span class="bold">待沟通延迟履约客户清单（联动调度方案 ${state.selectedPlanSup}：共 ${totalQty} 单 · 单单罚金 ¥${totalFee.toLocaleString()}）</span>
+            <span class="muted">仅归属客户</span>
+          </div>
+          <table>
+            <thead><tr><th>客户/店铺</th><th>受影响单量</th><th>顺延波次</th><th>单单罚金 (¥12/单)</th><th>通知状态</th></tr></thead>
+            <tbody>
+              ${rows.map(x => `
+                <tr>
+                  <td class="bold">${x.shop}</td>
+                  <td class="mono">${x.qty} 单</td>
+                  <td>今日 20:00 专车波次</td>
+                  <td class="mono">¥${x.fee}</td>
+                  <td><span class="badge ${state.csSent ? 'b-r1' : 'b-p1'}">${state.csSent ? '已发出' : '待客服确认外发'}</span></td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </div>
+      `;
+    }
+
+    // exec 管理层大盘（严格对齐最新 T+60≥80% / T+120≥90% 货值加权口径！）
+    return `
+      ${drawerBar('S1 巡检治理与验收 KPI 大盘', state.econState === 'timeout_fallback' ? 1 : 0)}
+      <div class="grid-2 xs">
+        <div class="card card-p col" style="gap:6px;">
+          <span class="muted">预留池成对指标（防缩池作弊）</span>
+          <div class="row" style="align-items:baseline;">
+            <span class="lg bolder c-ok num">命中率 86.4%</span>
+            <span class="muted">健康区间 80% ~ 92%</span>
+          </div>
+          <div>对偶指标 · 高门槛缺供率：<strong class="c-ok">1.8%</strong>（红线 &lt; 3%）</div>
+        </div>
+        <div class="card card-p col" style="gap:6px;">
+          <span class="muted">净自愈率（扣除未干预对照组自然恢复）</span>
+          <div class="row" style="align-items:baseline;">
+            <span class="lg bolder c-pri num">+41.2%</span>
+            <span class="muted">干预恢复 74.5% − 自然恢复 33.3%</span>
+          </div>
+          <div>软心跳假阳性率：<strong>6.8%</strong>（本月样本 n=44 ≥ 30）</div>
+        </div>
+        <div class="card card-p col" style="gap:6px;">
+          <span class="muted">万单罚金率（与单量解耦）</span>
+          <div class="row" style="align-items:baseline;">
+            <span class="lg bolder c-ok num">¥184 / 万单</span>
+            <span class="c-ok">较基线下降 34.2%</span>
+          </div>
+          <div>单周期改判占比峰值：<strong>8.2%</strong>（全局 ≤10% / 局部 ≤15%）</div>
+        </div>
+        <div class="card card-p col" style="gap:6px;">
+          <span class="muted">底座 A · 效期高可信覆盖率（货值加权） & 驳回校准</span>
+          <div class="row" style="align-items:baseline;">
+            <span class="lg bolder num">62.0%</span>
+            <span class="muted">目标：T+60 ≥ 80% · T+120 ≥ 90%</span>
+          </div>
+          <div>本周驳回归因：数据错 45% · 规则错 25% · 现场特殊 20% · 模型错 10%</div>
+        </div>
+      </div>
+    `;
+  }
+
+  // ============ 右侧抽屉卡片 ============
+  function renderSupervisorEconCard() {
+    const isMissing = state.econState === 'missing_evidence';
+    const isTimeout = state.econState === 'timeout_fallback';
+    const checklist = [
+      { name: '3段WIP (qm_i/down/delv)', ok: true },
+      { name: '上一拍在途任务锁定核验', ok: true },
+      { name: '底座B 拆单与阶梯罚则版本', ok: !isMissing },
+      { name: '外包装车费单价 (¥140/人时)', ok: true }
+    ];
+
+    // 100% 心算自洽：全店 2,000 单（假设其余 1,477 单零延误），阶梯线 3%(60单) -> +¥5,000；雪崩基准 523×12+5000 = ¥11,276
+    const plans = [
+      {
+        id: 'B', tag: '推荐 · 含阶梯总成本最低', isRec: true,
+        name: '方案 B：呼叫外包 4 人支援 3h（理论复核上限 444 单，受 15:30 装车截止约束本波次最多抢回 82 单，余力顺接 20:00 晚班）',
+        rate: '仅延误 23 单 → 全店延迟率 1.15%（≤3%，不触发阶梯 ¥0）· 提示：次级瓶颈已转移至 15:30 装车截止',
+        cost: '含阶梯总成本 ¥1,956（外包 ¥1,680 + 罚金 ¥276）',
+        delta: '较雪崩基准 ¥11,276 少亏 ¥9,320 · 较方案 A 省 ¥4,304'
+      },
+      {
+        id: 'A', tag: '将触发 ¥5,000 阶梯罚金', isRec: false,
+        name: '方案 A：不加外包，直接切线顺延 105 单至 20:00 波次',
+        rate: '延误 105 单 → 全店延迟率 5.25%（>3%，触发阶梯 +¥5,000）',
+        cost: '含阶梯总成本 ¥6,260（单单罚金 ¥1,260 + 阶梯 ¥5,000）',
+        delta: '较雪崩基准 ¥11,276 少亏 ¥5,016（比方案 B 多亏 ¥4,304）'
+      }
+    ];
+
+    let banner = '';
+    if (isMissing) {
+      banner = `<div class="tint-err xs"><strong class="c-err">⛔ 缺证熔断：</strong>底座 B 阶梯罚则查询超时，已物理禁用审批按钮。</div>`;
+    } else if (isTimeout) {
+      banner = `<div class="tint-err xs col" style="gap:4px;"><strong class="c-err">🔴 已触发 R3 超时终态（看板标红 · 已强推仓经理接管）</strong><span>保守终态生效：不拆单、草案不外发、冻结待仓经理介入。</span></div>`;
+    } else if (state.supExecStatus === 'done') {
+      let verifyHtml = '';
+      if (state.supVerifyState === 'pending') {
+        verifyHtml = `
+          <div class="row between" style="padding-top:4px; border-top:1px dashed var(--bd);">
+            <span class="muted">⏱ 已排程 20min 效果回检（验证 WIP 是否拐头）</span>
+            <div class="row" style="gap:5px;">
+              <button id="supVerifyPassBtn" class="btn" style="padding:2px 7px;">模拟回检达标 ✅</button>
+              <button id="supVerifyFailBtn" class="btn" style="padding:2px 7px;">模拟未达标 ⚠️</button>
+            </div>
+          </div>`;
+      } else if (state.supVerifyState === 'passed') {
+        verifyHtml = `<div class="c-ok bold" style="padding-top:4px; border-top:1px dashed var(--bd);">✅ 20min 回检达标 · 已自愈结案（待复核 WIP 降至 164 单，已计入净自愈率分子）</div>`;
+      } else {
+        verifyHtml = `<div class="c-err bold" style="padding-top:4px; border-top:1px dashed var(--bd);">⚠️ 20min 回检未达标（WIP 仍为 278 单未拐头）→ 标记「处置无效/复发」，已强升级仓经理介入！</div>`;
+      }
+      banner = `<div class="${state.supVerifyState === 'failed' ? 'tint-err' : 'tint-ok'} xs col" style="gap:6px;"><div class="row between"><strong class="c-ok">✅ 确定性工作流执行完毕（EXEC-091）</strong><button id="simSagaFailBtn" class="doc-link c-warn">模拟中途失败(Saga)</button></div><span class="muted">Step1 锁单✅ → Step2 下发波次/外包✅ → Step3 异步进消息中间件✅</span>${verifyHtml}</div>`;
+    } else if (state.supExecStatus === 'partial_fail') {
+      banner = `<div class="tint-warn xs col" style="gap:6px;"><strong class="c-warn">⚠️ PARTIAL_FAILED · 断点恢复台（EXEC-091）</strong><div>Step1 锁单✅ → <strong class="c-err">Step2 下发改派❌超时</strong> → Step3 异步通知⏸已冻结</div><div class="row"><button id="retryStepBtn" class="btn btn-pri">幂等续跑 Step2</button><button id="compensateBtn" class="btn">Saga 补偿回滚 Step1</button></div></div>`;
+    } else if (state.supExecStatus === 'rejected') {
+      banner = `<div class="subbox xs">已驳回 · 归因：<span class="badge b-p1">${state.supRejectInfo.reason}</span> · 🔇 冷却静默 30min</div>`;
+    }
+
+    const disableApprove = isMissing || isTimeout || state.supExecStatus === 'done' || state.supExecStatus === 'rejected';
+    return `
+      <section class="card xs">
+        <div class="card-hd">
+          <div class="row" style="gap:5px;">
+            <span class="badge b-p0">P0</span>
+            <span class="badge b-r3">R3 强拍板</span>
+            <span class="badge b-mut">轴一 · 截单切线</span>
+          </div>
+          <span class="mono ${isTimeout ? 'c-err bold' : 'muted'} live-sla">SLA 剩 ${fmtMMSS(state.slaRemainSec)}</span>
+        </div>
+        <div class="card-p col" style="gap:10px;">
+          <div class="sm bold">16:00 截单复核缺口：建议方案 B 呼叫外包避免触发 ¥5,000 阶梯罚金</div>
+          <p style="margin:0;">
+            波次 <button data-doc="WAVE-20261127-04" class="doc-link mono">WAVE-20261127-04</button>（523 单 / 本日全店 2,000 单）已扣减 1 名停摆产能；硬闸门拦截：<button data-doc="POLICY-JD-V2" class="doc-link">京东B2B禁拆单</button>。
+          </p>
+
+          <!-- 可折叠算式溯源（补第 0 行缺口推导 + 假设声明，每一格皆可倒推！） -->
+          <details class="formula-box">
+            <summary>🧮 展开「算式溯源」（含第 0 行缺口推导 · 当场可心算）▾</summary>
+            <div class="mono muted col" style="gap:4px; margin-top:7px;">
+              <div>⓪ 缺口测算：待复核 286 − 在岗3人×1.75h×37单/人时(194) = 92单，叠加待回单/下架尾单溢出 13单 → <strong style="color:var(--fg);">缺口 105 单</strong></div>
+              <div>　 前提假设：本日全店总单量 2,000 单（<strong>假设其余 1,477 单零延误</strong>）；阶梯线 &gt;3%（60单）罚 ¥5,000</div>
+              <div>① 雪崩基准(523单全延)：523/2000=26.15%(&gt;3%) → 523×¥12 + 阶梯¥5,000 = <strong style="color:var(--fg);">¥11,276</strong></div>
+              <div>② 方案B(外包4人×3h，受15:30装车截止最多多救82单→延23单)：23/2000=1.15%(≤3%) → ¥1,680 + 23×¥12 + ¥0 = <strong class="c-ok">¥1,956</strong></div>
+              <div>③ 方案A(纯切线延105单)：105/2000=5.25%(&gt;3%) → 105×¥12 + 阶梯¥5,000 = <strong class="c-err">¥6,260</strong></div>
+            </div>
+          </details>
+
+          <div class="grid-2 subbox" style="gap:5px;">
+            ${checklist.map(c => `<div class="${c.ok ? '' : 'c-err bold'}">${c.ok ? '✅' : '❌'} ${c.name}</div>`).join('')}
+          </div>
+
+          <div class="col" style="gap:7px;">
+            ${plans.map(p => `
+              <label data-plan="${p.id}" data-owner="sup" class="plan-opt ${state.selectedPlanSup === p.id ? 'selected' : ''}">
+                <div class="row between" style="align-items:flex-start;">
+                  <span class="bold"><input type="radio" ${state.selectedPlanSup === p.id ? 'checked' : ''} style="margin-right:6px;" />${p.name}</span>
+                  <span class="badge ${p.isRec ? 'b-r1' : 'b-p0'}">${p.tag}</span>
+                </div>
+                <div style="padding-left:20px; margin-top:4px;" class="col" style="gap:2px;">
+                  <span class="muted">${p.rate}</span>
+                  <span class="bold num">${p.cost}</span>
+                  <span class="${p.isRec ? 'c-ok' : 'c-warn'} num">${p.delta}</span>
+                </div>
+              </label>
+            `).join('')}
+          </div>
+          ${banner}
+        </div>
+        <div class="card-ft">
+          <span class="muted">单周期改判 8.2% ≤ 10%</span>
+          <div class="row">
+            <button id="rejectSupBtn" ${state.supExecStatus === 'rejected' ? 'disabled' : ''} class="btn">驳回(四选一)</button>
+            <button id="approveSupBtn" ${disableApprove ? 'disabled' : ''} class="btn btn-pri">${isMissing ? '缺证已熔断' : `批准方案 ${state.selectedPlanSup}`}</button>
+          </div>
+        </div>
+      </section>
+    `;
+  }
+
+  function renderOpsEconCard() {
+    const isMissing = state.econState === 'missing_evidence';
+    const isTimeout = state.econState === 'timeout_fallback';
+    const plans = [
+      { id: 'A', isRec: true, tag: '推荐 · 预期损失更低', name: '方案 A：留痕特批发出京东（赌 58% 正常签收；若被拒退回按方案 B 清货）', cost: '被拒预期损失 ¥2,041', delta: '较直接转清货 ¥3,360 预期少亏 ¥1,319' },
+      { id: 'B', isRec: false, tag: '零拒收风险', name: '方案 B：拦截不出，转抖音/C店主推曝光清货', cost: '确定降价折损 ¥3,360', delta: '0 往返运费与平台拒收风险' }
+    ];
+    let banner = '';
+    if (isMissing) banner = `<div class="tint-err xs"><strong class="c-err">⛔ 缺证熔断：</strong>清货日速区间缺失，已禁用审批按钮。</div>`;
+    else if (isTimeout) banner = `<div class="tint-err xs"><strong class="c-err">🔴 超时终态已激活：</strong>已保守挂起发运防被拒，并强推运营总监。</div>`;
+    else if (state.opsExecStatus === 'done') banner = `<div class="tint-ok xs"><strong class="c-ok">✅ 已留痕生效：</strong>已下发仓库执行方案 ${state.selectedPlanOps}。</div>`;
+    else if (state.opsExecStatus === 'rejected') banner = `<div class="subbox xs">已驳回 · 归因：<span class="badge b-p1">${state.opsRejectInfo.reason}</span> · 🔇 冷却 30min</div>`;
+
+    const disableApprove = isMissing || isTimeout || state.opsExecStatus === 'done' || state.opsExecStatus === 'rejected';
+    return `
+      <section class="card xs">
+        <div class="card-hd">
+          <div class="row" style="gap:5px;">
+            <span class="badge b-p1">P1</span>
+            <span class="badge b-r3">R3 强拍板</span>
+            <span class="badge b-mut">轴四 · 允收灰区</span>
+          </div>
+          <span class="mono muted live-sla">SLA 剩 ${fmtMMSS(state.slaRemainSec)}</span>
+        </div>
+        <div class="card-p col" style="gap:10px;">
+          <div class="sm bold">京东华北仓发运落入允收灰区（P被拒 = 42%）</div>
+          <p style="margin:0;">批次 <button data-doc="B20260725" class="doc-link mono">B20260725</button>（240 箱）今日剩 <strong>68.8%</strong>，扣 <strong>5 天人工保守缓冲</strong>（冷启动暂缺 ASN P95）后到仓估 <strong>66.1%</strong>。</p>
+          <details class="formula-box">
+            <summary>🧮 展开「算式溯源」（闭合回仓清货口径 · 当场可心算）▾</summary>
+            <div class="mono muted col" style="gap:4px; margin-top:7px;">
+              <div>① 方案A(赌发预期)：42% × (往返运费 ¥1,500 + 回仓转清货折损 ¥3,360) = <strong class="c-ok">¥2,041</strong></div>
+              <div>② 方案B(直接转清货)：240 箱 × 折让 ¥14/箱 = <strong style="color:var(--fg);">¥3,360</strong></div>
+              <div>③ 经济账差额：¥3,360 − ¥2,041 = <strong class="c-ok">方案A预期少亏 ¥1,319</strong></div>
+            </div>
+          </details>
+          <div class="col" style="gap:7px;">
+            ${plans.map(p => `
+              <label data-plan="${p.id}" data-owner="ops" class="plan-opt ${state.selectedPlanOps === p.id ? 'selected' : ''}">
+                <div class="row between"><span class="bold"><input type="radio" ${state.selectedPlanOps === p.id ? 'checked' : ''} style="margin-right:6px;" />${p.name}</span><span class="badge ${p.isRec ? 'b-r1' : 'b-mut'}">${p.tag}</span></div>
+                <div style="padding-left:20px; margin-top:4px;" class="row"><strong class="num">${p.cost}</strong><span class="${p.isRec ? 'c-ok' : 'muted'} num">${p.delta}</span></div>
+              </label>
+            `).join('')}
+          </div>
+          ${banner}
+        </div>
+        <div class="card-ft">
+          <span class="muted">超时终态：保守挂起防被拒</span>
+          <div class="row">
+            <button id="rejectOpsBtn" ${state.opsExecStatus === 'rejected' ? 'disabled' : ''} class="btn">驳回(四选一)</button>
+            <button id="approveOpsBtn" ${disableApprove ? 'disabled' : ''} class="btn btn-pri">${isMissing ? '缺证已熔断' : `拍板方案 ${state.selectedPlanOps}`}</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- 修正：通知为 R1 留痕，但“设置大促锁定期豁免 TTL”升格为 R2 资源锁定！ -->
+      <section class="card card-p col xs" style="gap:8px;">
+        <div class="row between">
+          <div class="row" style="gap:5px;">
+            <span class="badge b-r1">R1 留痕通知</span>
+            <span class="badge b-r2">豁免锁定属 R2</span>
+            <span class="bold">预留池 TTL 将到期释放</span>
+          </div>
+          <span class="muted">防静默抢货</span>
+        </div>
+        <p class="muted" style="margin:0;">批次 <span class="mono" style="color:var(--fg);">B20260910</span>（380 箱）在京东预留池满 6/7 天无需求，明日 08:00 自动降级释放至 C 店池。</p>
+        <div class="row between">
+          <span class="muted">锁定资源须带明确起止时间</span>
+          <button id="lockTtlBtn" class="btn ${state.ttlLocked ? '' : 'btn-pri'}">
+            ${state.ttlLocked ? '✅ 已生效 R2 大促锁定 (72h 自动解锁)' : '发起 R2 大促锁定豁免 (72h)'}
+          </button>
+        </div>
+      </section>
+    `;
+  }
+
+  // 修正角色边界：调度主管看到“产能影响 + 调岗支援(R2)”，绝不抢班组长的“认领现场排查”！
+  function renderStallCardForSupervisor() {
+    const isPerson = state.stallMode === 'person';
+    const leaderStateText = state.stallStatus === 'pending'
+      ? '已派发常温复核班组长（周强）· 待现场认领'
+      : (state.stallStatus === 'claimed' ? '班组长（周强）已认领，正在现场核查' : `班组长已上报：${state.stallResolvedText}`);
+    return `
+      <section class="card xs">
+        <div class="card-hd">
+          <div class="row" style="gap:5px;">
+            <span class="badge b-p0">P0</span>
+            <span class="badge b-r2">R2 产能联动</span>
+            <span class="badge b-mut">轴三 → 轴二（调度只读排查）</span>
+          </div>
+          <span class="c-err mono">扣减 ${isPerson ? '-1 人效' : '-4 人效(全段)'}</span>
+        </div>
+        <div class="card-p col" style="gap:8px;">
+          <div class="sm bold">${isPerson ? '复核产能减员预警：张三 (fh_user) 断流中' : '常温复核段全员 4 人齐停（高危瓶颈塌陷）'}</div>
+          <div class="subbox col" style="gap:4px;">
+            <div><strong>现场排查进度（主责：班组长）：</strong>${leaderStateText}</div>
+            <div><strong>已持续断流：</strong><span class="mono c-err live-stall-dur">16分00秒</span> · 名下/本段积压 <strong>${isPerson ? '46' : '286'} 单</strong></div>
+            <div class="muted">调度主管不介入现场认领，仅决策是否触发 R2 内部调岗支援。</div>
+          </div>
+          ${state.supReassignDone ? `<div class="tint-ok c-ok bold">✅ 已下发 R2 调岗支援：从拣货组抽调 1 人支援复核（抽幅 1/6=16.7% ≤ 20% 幅度锁 · 锁定 20min 观察窗防震荡）</div>` : ''}
+        </div>
+        <div class="card-ft">
+          <span class="muted">稳定性锁：单次 ≤20% · 20min 禁回抽</span>
+          <button id="supReassignBtn" ${state.supReassignDone ? 'disabled' : ''} class="btn btn-pri">${state.supReassignDone ? '已调岗支援(观察窗中)' : '抽调 1 人支援复核 (R2)'}</button>
+        </div>
+      </section>
+    `;
+  }
+
+  // 班组长专属：现场认领 + 中性多选根因上报（去掉“人员离岗放第一”的引导暗示）
+  function renderStallCardForLeader() {
+    const isPerson = state.stallMode === 'person';
+    const neutralCauses = [
+      '物理堵线 / 上游交接慢',
+      '扫码枪 / 打印机等外设异常',
+      'WMS 接口或网络卡顿',
+      '人员临时离岗 / 支援换岗',
+      '其他 / 误报核销（计入假阳性）'
+    ];
+
+    let footerHtml = '';
+    if (state.stallStatus === 'pending') {
+      footerHtml = `
+        <div class="row between" style="width:100%;">
+          <span class="muted">10min 未认领将自动抄送升级调度主管</span>
+          <button id="claimStallBtn" class="btn btn-pri">认领现场排查</button>
+        </div>`;
+    } else if (state.stallStatus === 'claimed') {
+      footerHtml = `
+        <div class="col" style="width:100%; gap:8px;">
+          <div class="bold c-pri">已认领 · 请按现场实况勾选真实根因（中性多选，系统不做预设引导）：</div>
+          <div class="col" style="gap:5px;">
+            ${neutralCauses.map(c => {
+              const checked = state.stallSelectedCauses.includes(c);
+              return `<label class="row xs" style="cursor:pointer;"><input type="checkbox" class="cause-chk" value="${c}" ${checked ? 'checked' : ''} /><span>${c}</span></label>`;
+            }).join('')}
+          </div>
+          <div class="row" style="justify-content:flex-end;">
+            <button id="submitCauseBtn" ${state.stallSelectedCauses.length === 0 ? 'disabled' : ''} class="btn btn-pri">提交现场根因并启动 20min 回检</button>
+          </div>
+        </div>`;
+    } else {
+      let vBox = '';
+      if (state.stallVerifyState === 'pending') {
+        vBox = `
+          <div class="row between" style="margin-top:6px; padding-top:6px; border-top:1px dashed var(--bd);">
+            <span class="muted">⏱ 20min 自动流水回检排队中</span>
+            <div class="row" style="gap:5px;">
+              <button id="stallVerifyPassBtn" class="btn" style="padding:2px 7px;">模拟回检达标 ✅</button>
+              <button id="stallVerifyFailBtn" class="btn" style="padding:2px 7px;">模拟未达标 ⚠️</button>
+            </div>
+          </div>`;
+      } else if (state.stallVerifyState === 'passed') {
+        vBox = `<div class="c-ok bold" style="margin-top:6px; padding-top:6px; border-top:1px dashed var(--bd);">✅ 20min 回检达标 · 已自愈结案（流水恢复 39 单/时，轴二已恢复 +1 人效）</div>`;
+      } else {
+        vBox = `<div class="c-err bold" style="margin-top:6px; padding-top:6px; border-top:1px dashed var(--bd);">⚠️ 20min 回检未达标（流水仍停摆）→ 标记「异常复发」，已强升级调度主管介入！</div>`;
+      }
+      footerHtml = `<div class="${state.stallVerifyState === 'failed' ? 'tint-err' : 'tint-ok'} xs col" style="width:100%; gap:2px;"><strong class="c-ok">✅ 现场已上报：${state.stallResolvedText}</strong>${vBox}</div>`;
+    }
+
+    return `
+      <section class="card xs">
+        <div class="card-hd">
+          <div class="row" style="gap:5px;">
+            <span class="badge b-p0">P0</span>
+            <span class="badge b-r1">R1 自动告警</span>
+            <span class="badge b-mut">轴三 · ${isPerson ? '作业人级' : '全段齐停'}</span>
+          </div>
+          <span class="c-warn mono">${state.stallStatus === 'pending' ? '待认领 · 10min 升级' : '已响应'}</span>
+        </div>
+        <div class="card-p col" style="gap:9px;">
+          <div class="sm bold">${isPerson ? '⚠️ 节点作业异常停摆，请现场排查（复核人：张三）' : '⚠️ 常温复核段全员 4 人齐停，请紧急排查'}</div>
+          <p style="margin:0;">
+            ${isPerson
+              ? `复核员 <button data-doc="FH-ZHANGSAN" class="doc-link mono">fh_user: zhangsan</button> 已连续 <strong class="c-err live-stall-dur">16分00秒</strong> 无复核流水，名下积压 <strong>46 单</strong>。`
+              : `常温复核段 4 名复核员已连续 <strong class="c-err live-stall-dur">16分00秒</strong> 齐停，待复核 WIP 激增至 <strong>286 单</strong>。`}
+          </p>
+          <div class="subbox col" style="gap:4px;">
+            <div class="bold muted">三项前置排除法取证（只报事实，不瞎猜故障）：</div>
+            <div>✅ 排除 1：当前非饭点 / 交接班静默窗口</div>
+            <div>✅ 排除 2：上游近 15min 正常下架推入 68 单</div>
+            <div>${isPerson ? '✅ 排除 3：同组李四/王五产出正常 → 已排除 WMS 全局故障' : '🚨 排除 3：全段齐停 → 已自动抄送 IT 排查接口/网络'}</div>
+          </div>
+        </div>
+        <div class="card-ft">${footerHtml}</div>
+      </section>
+    `;
+  }
+
+  function renderDrawerContent() {
+    const r = state.role;
+    let title = '', cards = '';
+    if (r === 'supervisor') {
+      title = '调度主管 · AI 抽屉（2 待办）';
+      cards = renderStallCardForSupervisor() + renderSupervisorEconCard();
+    } else if (r === 'ops') {
+      title = '德亚乳业运营 · AI 抽屉（2 待办）';
+      cards = renderOpsEconCard();
+    } else if (r === 'leader') {
+      title = '常温复核班组 · 现场排查抽屉（1 待办）';
+      cards = renderStallCardForLeader();
+    } else if (r === 'cs') {
+      const qty = state.selectedPlanSup === 'B' ? 23 : 105;
+      title = '客服协同 · 对外通知抽屉（1 待办）';
+      cards = `
+        <section class="card xs">
+          <div class="card-hd">
+            <div class="row" style="gap:5px;"><span class="badge b-p0">P0</span><span class="badge b-r3">R3 对外拍板</span></div>
+            <span class="muted">联动调度方案 ${state.selectedPlanSup}</span>
+          </div>
+          <div class="card-p col" style="gap:8px;">
+            <div class="sm bold">待确认外发：2 家店铺共 ${qty} 单延迟报备与安抚通知</div>
+            <div class="subbox muted">按零壹消息模板预生成：“尊敬的合作伙伴，贵司 ${qty} 单已优先锁定转入今日 20:00 专车波次，明早准时揽收，明细见附件…”</div>
+            ${state.csSent ? `<div class="tint-ok c-ok bold">✅ 已通过消息中间件异步发出，并同步客诉台账。</div>` : ''}
+          </div>
+          <div class="card-ft">
+            <span class="muted">走零壹消息服务</span>
+            <button id="sendCsNoticeBtn" ${state.csSent ? 'disabled' : ''} class="btn btn-pri">${state.csSent ? '已发出' : '确认经消息服务发出'}</button>
+          </div>
+        </section>
+      `;
+    } else {
+      title = '管理层 · 异常熔断抽屉';
+      if (state.econState === 'timeout_fallback') {
+        cards = `
+          <section class="card xs" style="border-color:color-mix(in srgb, var(--er) 45%, var(--bd));">
+            <div class="card-hd" style="background:color-mix(in srgb, var(--er) 9%, var(--cd));">
+              <span class="c-err bold">🔴 P0 超时升级熔断接管</span>
+              <span class="c-err mono">已超时 15:00</span>
+            </div>
+            <div class="card-p col" style="gap:8px;">
+              <div class="sm bold">调度主管未在 SLA 内拍板：16:00 截单切线已触发保守终态</div>
+              <p style="margin:0;">系统已自动挂起防乱发，并保留延误报备草案未外发。请仓经理紧急介入接管。</p>
+              ${state.execTakeoverDone ? `<div class="tint-ok c-ok bold">✅ 仓经理已接管并放行方案 ${state.selectedPlanSup}。</div>` : ''}
+            </div>
+            <div class="card-ft">
+              <span class="muted">熔断升级链路</span>
+              <button id="execTakeoverBtn" ${state.execTakeoverDone ? 'disabled' : ''} class="btn btn-pri">${state.execTakeoverDone ? '已接管' : '仓经理紧急接管拍板'}</button>
+            </div>
+          </section>
+        `;
+      } else if (state.econState === 'missing_evidence') {
+        cards = `
+          <div class="card card-p col xs" style="gap:6px; border-color:color-mix(in srgb, var(--wn) 45%, var(--bd));">
+            <strong class="c-warn">⚠️ 基层 R3 卡片处于缺证熔断（无需仓经理审批）</strong>
+            <span class="muted">当前有 1 项基层决策卡因底座数据超时触发自动熔断（已物理禁批），系统已自动告警数据/IT 排查，未发生超时越级事件。</span>
+          </div>
+        `;
+      } else {
+        cards = `
+          <div class="card card-p col xs muted" style="gap:6px;">
+            <strong style="color:var(--fg);">✅ 当前无 P0 超时熔断事件</strong>
+            <span>管理层默认静默，避免基层琐碎告警干扰。可在上方将全局 R3 状态切换为「超时终态」预览 P0 熔断接管。</span>
+          </div>
+        `;
+      }
+    }
+
+    return `
+      <div class="row between xs" style="padding-bottom:8px; border-bottom:1px solid var(--bd);">
+        <span class="bold">${title}</span>
+        <span class="badge b-p1" style="font-size:11px; padding:1px 6px;">冷启动 D+12</span>
+      </div>
+      <div class="col" style="gap:12px;">${cards}</div>
+    `;
+  }
+
+  function renderStressControls() {
+    const box = document.getElementById('stressControls');
+    const r = state.role;
+    let html = `<span class="muted">压测开关：</span>`;
+    if (r === 'supervisor' || r === 'ops' || r === 'exec') {
+      // 全角色严格同步全局 state.econState，绝不出现切换角色状态脱节！
+      html += `
+        <select id="econStateSel" class="sel">
+          <option value="normal" ${state.econState==='normal'?'selected':''}>全局R3：正常待拍板</option>
+          <option value="missing_evidence" ${state.econState==='missing_evidence'?'selected':''}>全局R3：缺证熔断(禁批)</option>
+          <option value="timeout_fallback" ${state.econState==='timeout_fallback'?'selected':''}>全局R3：超时终态(升级仓经理)</option>
+        </select>`;
+      if (state.econState === 'normal' && r !== 'exec') {
+        html += `<button id="fastForwardSlaBtn" class="btn" title="把 SLA 倒计时快进至 00:05，5 秒后看自动归零触发超时终态">⏩ SLA快进至 00:05</button>`;
+      }
+    }
+    if (r === 'supervisor' || r === 'leader') {
+      html += `
+        <select id="stallModeSel" class="sel">
+          <option value="person" ${state.stallMode==='person'?'selected':''}>停摆粒度：作业人级(fh_user)</option>
+          <option value="zone" ${state.stallMode==='zone'?'selected':''}>停摆粒度：库区/全段齐停</option>
+        </select>`;
+    }
+    html += `<button id="resetDemoBtn" class="btn">重置</button>`;
+    box.innerHTML = html;
+
+    const es = document.getElementById('econStateSel');
+    if (es) es.onchange = (e) => {
+      state.econState = e.target.value;
+      if (state.econState === 'normal' && state.slaRemainSec === 0) state.slaRemainSec = 582;
+      state.supExecStatus = 'idle'; state.opsExecStatus = 'idle'; state.execTakeoverDone = false;
+      state.supVerifyState = 'pending';
+      render();
+    };
+    const ffBtn = document.getElementById('fastForwardSlaBtn');
+    if (ffBtn) ffBtn.onclick = () => {
+      state.slaRemainSec = 5;
+      updateClocksUI();
+    };
+    const sm = document.getElementById('stallModeSel');
+    if (sm) sm.onchange = (e) => { state.stallMode = e.target.value; state.stallStatus = 'pending'; state.stallVerifyState = 'pending'; render(); };
+    document.getElementById('resetDemoBtn').onclick = () => {
+      state.econState = 'normal'; state.supExecStatus = 'idle'; state.opsExecStatus = 'idle';
+      state.supVerifyState = 'pending'; state.stallVerifyState = 'pending';
+      state.stallStatus = 'pending'; state.stallSelectedCauses = []; state.supReassignDone = false;
+      state.csSent = false; state.ttlLocked = false; state.execTakeoverDone = false;
+      state.slaRemainSec = 582; state.stallElapsedSec = 960;
+      render();
+    };
+  }
+
+  function render() {
+    const cfg = ROLES[state.role];
+    const curMenuId = getCurrentMenuId();
+    document.getElementById('loginIdentity').textContent = cfg.identity;
+    document.getElementById('rbacScopeHint').textContent = cfg.scope;
+    document.getElementById('sidebarPortalLabel').textContent = cfg.portal;
+
+    document.querySelectorAll('#roleSwitcher button[data-role]').forEach(b => {
+      b.className = b.dataset.role === state.role ? 'btn btn-pri' : 'btn';
+    });
+
+    document.getElementById('roleMenu').innerHTML = cfg.menus.map(m => `
+      <button data-menu="${m.id}" class="menu-item ${m.id === curMenuId ? 'active' : ''}">
+        <span>${m.name}</span>
+        <span class="badge b-mut" style="font-size:10px; padding:1px 5px;">${m.tag}</span>
+      </button>
+    `).join('');
+
+    renderStressControls();
+
+    const shell = document.getElementById('gridShell');
+    const drawerEl = document.getElementById('aiDrawer');
+    shell.classList.toggle('drawer-closed', !state.drawerOpen);
+    drawerEl.classList.toggle('hidden', !state.drawerOpen);
+
+    document.getElementById('mainCanvas').innerHTML = renderMainContent();
+    if (state.drawerOpen) drawerEl.innerHTML = renderDrawerContent();
+
+    bindEvents();
+    updateClocksUI();
+  }
+
+  function bindEvents() {
+    document.querySelectorAll('#roleMenu button[data-menu]').forEach(b => {
+      b.onclick = () => { state.activeMenu[state.role] = b.dataset.menu; render(); };
+    });
+    const backBtn = document.getElementById('backDefaultMenuBtn');
+    if (backBtn) backBtn.onclick = () => { state.activeMenu[state.role] = ROLES[state.role].defaultMenu; render(); };
+
+    const tgl = document.getElementById('toggleDrawerBtn');
+    if (tgl) tgl.onclick = () => { state.drawerOpen = !state.drawerOpen; render(); };
+
+    document.querySelectorAll('.doc-link').forEach(el => {
+      el.onclick = (e) => { e.preventDefault(); e.stopPropagation(); openEvidence(el.dataset.doc); };
+    });
+
+    document.querySelectorAll('.plan-opt').forEach(el => {
+      el.onclick = () => {
+        if (el.dataset.owner === 'sup') state.selectedPlanSup = el.dataset.plan;
+        if (el.dataset.owner === 'ops') state.selectedPlanOps = el.dataset.plan;
+        render();
+      };
+    });
+
+    const aSup = document.getElementById('approveSupBtn');
+    if (aSup) aSup.onclick = () => { state.supExecStatus = 'done'; state.supVerifyState = 'pending'; render(); };
+    const supVp = document.getElementById('supVerifyPassBtn');
+    if (supVp) supVp.onclick = () => { state.supVerifyState = 'passed'; render(); };
+    const supVf = document.getElementById('supVerifyFailBtn');
+    if (supVf) supVf.onclick = () => { state.supVerifyState = 'failed'; render(); };
+    const rSup = document.getElementById('rejectSupBtn');
+    if (rSup) rSup.onclick = () => openRejectModal('sup');
+    const sSaga = document.getElementById('simSagaFailBtn');
+    if (sSaga) sSaga.onclick = () => { state.supExecStatus = 'partial_fail'; render(); };
+    const retry = document.getElementById('retryStepBtn');
+    if (retry) retry.onclick = () => { state.supExecStatus = 'done'; state.supVerifyState = 'pending'; render(); };
+    const comp = document.getElementById('compensateBtn');
+    if (comp) comp.onclick = () => { state.supExecStatus = 'idle'; state.supVerifyState = 'pending'; render(); };
+    const supRe = document.getElementById('supReassignBtn');
+    if (supRe) supRe.onclick = () => { state.supReassignDone = true; render(); };
+
+    const aOps = document.getElementById('approveOpsBtn');
+    if (aOps) aOps.onclick = () => { state.opsExecStatus = 'done'; render(); };
+    const rOps = document.getElementById('rejectOpsBtn');
+    if (rOps) rOps.onclick = () => openRejectModal('ops');
+    const lTtl = document.getElementById('lockTtlBtn');
+    if (lTtl) lTtl.onclick = () => { state.ttlLocked = !state.ttlLocked; render(); };
+
+    const claim = document.getElementById('claimStallBtn');
+    if (claim) claim.onclick = () => { state.stallStatus = 'claimed'; render(); };
+    document.querySelectorAll('.cause-chk').forEach(chk => {
+      chk.onchange = () => {
+        const val = chk.value;
+        if (chk.checked) { if (!state.stallSelectedCauses.includes(val)) state.stallSelectedCauses.push(val); }
+        else { state.stallSelectedCauses = state.stallSelectedCauses.filter(x => x !== val); }
+        const sub = document.getElementById('submitCauseBtn');
+        if (sub) sub.disabled = state.stallSelectedCauses.length === 0;
+      };
+    });
+    const subCause = document.getElementById('submitCauseBtn');
+    if (subCause) subCause.onclick = () => {
+      state.stallResolvedText = state.stallSelectedCauses.join(' + ');
+      state.stallStatus = 'resolved';
+      state.stallVerifyState = 'pending';
+      render();
+    };
+    const stVp = document.getElementById('stallVerifyPassBtn');
+    if (stVp) stVp.onclick = () => { state.stallVerifyState = 'passed'; render(); };
+    const stVf = document.getElementById('stallVerifyFailBtn');
+    if (stVf) stVf.onclick = () => { state.stallVerifyState = 'failed'; render(); };
+
+    const csBtn = document.getElementById('sendCsNoticeBtn');
+    if (csBtn) csBtn.onclick = () => { state.csSent = true; render(); };
+    const exBtn = document.getElementById('execTakeoverBtn');
+    if (exBtn) exBtn.onclick = () => { state.execTakeoverDone = true; render(); };
+  }
+
+  document.getElementById('coldStartBadgeBtn').onclick = () => {
+    document.getElementById('coldStartModal').classList.remove('hidden');
+  };
+  document.getElementById('closeColdStartModal').onclick = () => {
+    document.getElementById('coldStartModal').classList.add('hidden');
+  };
+
+  document.querySelectorAll('#roleSwitcher button[data-role]').forEach(btn => {
+    btn.onclick = () => { state.role = btn.dataset.role; render(); };
+  });
+  document.getElementById('themeToggleBtn').onclick = () => {
+    document.body.classList.toggle('offline-dark');
+  };
+  document.getElementById('closeEvModal').onclick = () => {
+    document.getElementById('evidenceModal').classList.add('hidden');
+  };
+  document.getElementById('closeRejectModal').onclick = () => {
+    document.getElementById('rejectModal').classList.add('hidden');
+  };
+  document.querySelectorAll('.reject-opt').forEach(btn => {
+    btn.onclick = () => {
+      state.pendingRejectReason = btn.dataset.reason;
+      document.querySelectorAll('.reject-opt').forEach(b => b.classList.remove('tint-pri'));
+      btn.classList.add('tint-pri');
+      document.getElementById('confirmRejectBtn').disabled = false;
+    };
+  });
+  document.getElementById('confirmRejectBtn').onclick = () => {
+    if (!state.pendingRejectReason) return;
+    const info = { reason: state.pendingRejectReason, note: document.getElementById('rejectNote').value.trim() };
+    if (state.rejectTarget === 'sup') { state.supExecStatus = 'rejected'; state.supRejectInfo = info; }
+    else { state.opsExecStatus = 'rejected'; state.opsRejectInfo = info; }
+    document.getElementById('rejectModal').classList.add('hidden');
+    render();
+  };
+
+  render();
+</script>
+</body>
+</html>

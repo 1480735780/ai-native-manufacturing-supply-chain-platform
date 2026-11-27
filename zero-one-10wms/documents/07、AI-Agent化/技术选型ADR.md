@@ -6,7 +6,7 @@
 > 决策范围：传统 WMS（Java/C++/Vue3 三栈）之上新增 AI Agent 微服务的技术选型与架构边界
 > 相关文档：`工具清单.md`（490 端点分级清单）、`zero-one-10wms/architecture.md`（三栈骨架）
 
----
+***
 
 ## 0. 背景与目标
 
@@ -19,36 +19,36 @@
 - 本项目遵循 harnessengineering 约束：所有决策需有证据、可回放验证、状态可审计。
 - Mneme-rag 项目（纯 Python FastAPI + agentscope）已在父仓库，后期作为 RAG 基座接入。
 
----
+***
 
 ## 1. 决策索引（一览表）
 
-| 编号 | 主题 | 决策 |
-|---|---|---|
-| ADR-001 | 代码组织 | `zero-one-10wms/wms-agent/` 目录，独立 Python 微服务 |
-| ADR-002 | 主框架 | AgentScope（单 Agent + ReAct 循环），多 Agent 编排后期再做 |
-| ADR-003 | 架构拓扑 | Gateway 做唯一枢纽，三栈星型互联，不两两直连 |
-| ADR-004 | 通信协议 | HTTP REST（不引入 gRPC） |
-| ADR-005 | 数据访问 | Python 只走 Gateway REST，不直读 MySQL |
-| ADR-006 | 服务发现 | 不注册 Nacos，Java Feign 静态 `url="${agent.url}"` 调 Python |
-| ADR-007 | 认证授权 | JWT 透传 + API Key 双层；高风险工具双签 |
-| ADR-008 | 事件总线 | 首版不接 RocketMQ，代码留扩展点 |
-| ADR-009 | 首版场景 | 问数 Agent（L0 感知层），6 个只读工具 |
-| ADR-010 | LLM 选型 | agnes-3.0-flash（开发/测试），必须包一层 `LLMProvider` |
-| ADR-011 | 状态存储 | PostgreSQL 独立 schema `wms_agent`（不用 pgvector） |
-| ADR-012 | 前端集成 | 全局悬浮 AI 对话框 |
-| ADR-013 | 依赖管理 | uv + `pyproject.toml` + `uv.lock`，Python 3.14.7 |
-| ADR-014 | 配置管理 | 混合：非密走 Nacos 配置中心（只读），密钥走 env/`.env` |
-| ADR-015 | API 契约 | `/agent/**` 路由 + `10000` 成功码 + `toolCalls` 必填字段 |
-| ADR-016 | Mneme-rag | HTTP 服务间调用，后期接入，不改 Mneme-rag 一行代码 |
-| ADR-017 | 写操作策略 | W 级（增删改/状态变更）也走人工确认，X 级双签 |
-| ADR-018 | 巡检规则配置 | 版本化 YAML + 入队 canonical 快照 + worker 快照回放 |
-| ADR-019 | 巡检 LLM 摘要 | 只摘要不判定；输入白名单；默认关闭、快照决定；失败降级模板 |
-| ADR-020 | 巡检数据保留与归档 | 告警/事件/通知/摘要/扫描记录及证据在线 180 天、归档 1 年；trace 90 天删除；指标按仓库·日聚合保留 2 年；限批、可重入、外键顺序安全、默认关闭、先聚合后归档 |
-| ADR-021 | 网关认证与鉴权缺口 | 实测网关无 token 全放行、资源角色不生效；巡检端点由 agent 自验并加路由级回归；平台缺口阻塞生产上线 |
-| ADR-022 | 接口权限声明规范 | 新增 @ResourcePermission + Java 端点 baseline 静态门禁；新增接口先声明，存量分组治理、未落库、deny-unregistered 保持 false |
+| 编号      | 主题        | 决策                                                                                           |
+| ------- | --------- | -------------------------------------------------------------------------------------------- |
+| ADR-001 | 代码组织      | `zero-one-10wms/wms-agent/` 目录，独立 Python 微服务                                                 |
+| ADR-002 | 主框架       | AgentScope（单 Agent + ReAct 循环），多 Agent 编排后期再做                                                |
+| ADR-003 | 架构拓扑      | Gateway 做唯一枢纽，三栈星型互联，不两两直连                                                                   |
+| ADR-004 | 通信协议      | HTTP REST（不引入 gRPC）                                                                          |
+| ADR-005 | 数据访问      | Python 只走 Gateway REST，不直读 MySQL                                                             |
+| ADR-006 | 服务发现      | 不注册 Nacos，Java Feign 静态 `url="${agent.url}"` 调 Python                                        |
+| ADR-007 | 认证授权      | JWT 透传 + API Key 双层；高风险工具双签                                                                  |
+| ADR-008 | 事件总线      | 首版不接 RocketMQ，代码留扩展点                                                                         |
+| ADR-009 | 首版场景      | 问数 Agent（L0 感知层），6 个只读工具                                                                     |
+| ADR-010 | LLM 选型    | agnes-3.0-flash（开发/测试），必须包一层 `LLMProvider`                                                   |
+| ADR-011 | 状态存储      | PostgreSQL 独立 schema `wms_agent`（不用 pgvector）                                                |
+| ADR-012 | 前端集成      | 全局悬浮 AI 对话框                                                                                  |
+| ADR-013 | 依赖管理      | uv + `pyproject.toml` + `uv.lock`，Python 3.14.7                                              |
+| ADR-014 | 配置管理      | 混合：非密走 Nacos 配置中心（只读），密钥走 env/`.env`                                                         |
+| ADR-015 | API 契约    | `/agent/**` 路由 + `10000` 成功码 + `toolCalls` 必填字段                                              |
+| ADR-016 | Mneme-rag | HTTP 服务间调用，后期接入，不改 Mneme-rag 一行代码                                                            |
+| ADR-017 | 写操作策略     | W 级（增删改/状态变更）也走人工确认，X 级双签                                                                    |
+| ADR-018 | 巡检规则配置    | 版本化 YAML + 入队 canonical 快照 + worker 快照回放                                                     |
+| ADR-019 | 巡检 LLM 摘要 | 只摘要不判定；输入白名单；默认关闭、快照决定；失败降级模板                                                                |
+| ADR-020 | 巡检数据保留与归档 | 告警/事件/通知/摘要/扫描记录及证据在线 180 天、归档 1 年；trace 90 天删除；指标按仓库·日聚合保留 2 年；限批、可重入、外键顺序安全、默认关闭、先聚合后归档    |
+| ADR-021 | 网关认证与鉴权缺口 | 实测网关无 token 全放行、资源角色不生效；巡检端点由 agent 自验并加路由级回归；平台缺口阻塞生产上线                                     |
+| ADR-022 | 接口权限声明规范  | 新增 @ResourcePermission + Java 端点 baseline 静态门禁；新增接口先声明，存量分组治理、未落库、deny-unregistered 保持 false |
 
----
+***
 
 ## 2. 架构图
 
@@ -81,7 +81,7 @@
 - **MySQL 管业务事实**：业务数据的唯一真相源在 MySQL，Python 不写。
 - **Python 只管智能和自己的状态**：编排、推理、生成 + 自己的 PostgreSQL schema。
 
----
+***
 
 ## 3. 详细决策
 
@@ -135,11 +135,11 @@
 
 **决策**：两层叠加认证——**用户身份用现有 JWT，服务身份用 API Key**，两者不互相替代。
 
-| 链路 | 凭证 | 代表谁 |
-|---|---|---|
-| 前端 → 网关 → `/agent/**` | **复用现有 JWT**（`/login/auth-login` 那套） | 用户本人 |
-| Java → Python（内部调用） | **API Key / service token** | 调用方服务 |
-| Python → 网关 → 工具（Java/C++） | **透传用户 JWT** | 仍是用户本人 |
+| 链路                         | 凭证                                   | 代表谁    |
+| -------------------------- | ------------------------------------ | ------ |
+| 前端 → 网关 → `/agent/**`      | **复用现有 JWT**（`/login/auth-login` 那套） | 用户本人   |
+| Java → Python（内部调用）        | **API Key / service token**          | 调用方服务  |
+| Python → 网关 → 工具（Java/C++） | **透传用户 JWT**                         | 仍是用户本人 |
 
 **为什么工具调用必须透传用户 JWT**：
 
@@ -154,12 +154,15 @@
 - 复用网关已有的 `inner-paths` 机制。
 
 **🔴 高风险工具双签**：过账、PLC、批量计费这类操作，审计记录同时要有：
+
 ```
 发起用户 JWT（谁要求的）+ 审批用户 JWT（谁批准的）+ service key（哪个服务执行的）
 ```
+
 审批关卡不能只记"Agent 自己同意了"。
 
 **落地要点**：
+
 - **不另起 OAuth 服务**：沿用网关的 `public.pem` + 现有 token，Agent 只是校验方，不是签发方。
 - **API Key 放配置**（`nacos-config/key-config.yaml` 或环境变量），不进代码、不进 `MEMORY.md`、不进快照哈希。
 - **Python 侧自己也验 JWT（2026-11-23 Round 3 修正）**：
@@ -188,16 +191,17 @@
 
 **决策**：首场景是 **L0 感知层的问数 Agent**（自然语言查库存/效期/看板/未上架/延时），接入 6 个只读工具：
 
-| 优先级 | 工具 ID | 名称 | Java 端点 | 说明 |
-|---|---|---|---|---|
-| 1 | `STOCK-QUERY` | 库存查询 | `GET /stock/inventory-query/query-all` | 核心，最常问 |
-| 2 | `EXP-WARN-QUERY` | 效期预警 | `GET /stock/expiry-warning/query-all` | Java 版，跳过 C++ 版（网关无路由） |
-| 3 | `DAYCHECK-NOUP` | 收货未上架 | `GET /daycheck/no-up/get-no-up-goods` | 核心 |
-| 4 | `DASH-PEND` | 待办统计 | `GET /dashboard/query-pend-*` 系列 | 核心 |
-| 5 | `DASH-TREND` | 上下架 7 日趋势 | `GET /dashboard/query-goods-to-*` | 重要 |
-| 6 | `DAYCHECK-DELAY` | 进货延时 | `GET /daycheck/delay/im-delay` | 重要 |
+| 优先级 | 工具 ID            | 名称        | Java 端点                                | 说明                     |
+| --- | ---------------- | --------- | -------------------------------------- | ---------------------- |
+| 1   | `STOCK-QUERY`    | 库存查询      | `GET /stock/inventory-query/query-all` | 核心，最常问                 |
+| 2   | `EXP-WARN-QUERY` | 效期预警      | `GET /stock/expiry-warning/query-all`  | Java 版，跳过 C++ 版（网关无路由） |
+| 3   | `DAYCHECK-NOUP`  | 收货未上架     | `GET /daycheck/no-up/get-no-up-goods`  | 核心                     |
+| 4   | `DASH-PEND`      | 待办统计      | `GET /dashboard/query-pend-*` 系列       | 核心                     |
+| 5   | `DASH-TREND`     | 上下架 7 日趋势 | `GET /dashboard/query-goods-to-*`      | 重要                     |
+| 6   | `DAYCHECK-DELAY` | 进货延时      | `GET /daycheck/delay/im-delay`         | 重要                     |
 
 **跳过的 L0 工具**（4 个）：
+
 - `STOCK-EXPORT`（Excel 下载，Agent 不适合做文件导出）
 - `STOCK-CUS-QUERY`（客户库存报表，需要客户维度过滤，复杂）
 - `DAYCHECK-YICHANG`（异常出货检查，场景复杂）
@@ -211,26 +215,27 @@
 
 **① 参数命名两套并存**（LLM 只看适配层暴露的统一 schema）：
 
-| 工具 | 端点参数命名 | 关键差异 |
-|---|---|---|
-| `STOCK-QUERY` | 驼峰：`pageIndex/pageSize/kuWeiBianMa/binId/cusCode/zhongWenQch/goodsCode/shpMingCheng` | 商品编码叫 `goodsCode` |
-| `EXP-WARN-QUERY` | 驼峰：`pageIndex/pageSize/cusCode/zhongWenQch/goodsId/shpMingCheng` | 商品编码叫 `goodsId`（与上一条不同名） |
-| `DAYCHECK-NOUP` | **下划线**：`bin_id/tin_id/cus_code/zhong_wen_qch/goods_id/shp_ming_cheng` + 驼峰 `pageIndex/pageSize` | 一套里两种风格混用 |
-| `DASH-PEND` / `DASH-TREND` | 无业务查询参数（仅 `count`，默认 6 / 7，范围 1..30） | 超出范围 → `9994 请求参数过大` |
-| `DAYCHECK-DELAY` | 无查询类，仅必填 `pageIndex/pageSize` | 缺参 → `9995 参数值缺失` |
+| 工具                         | 端点参数命名                                                                                           | 关键差异                     |
+| -------------------------- | ------------------------------------------------------------------------------------------------ | ------------------------ |
+| `STOCK-QUERY`              | 驼峰：`pageIndex/pageSize/kuWeiBianMa/binId/cusCode/zhongWenQch/goodsCode/shpMingCheng`             | 商品编码叫 `goodsCode`        |
+| `EXP-WARN-QUERY`           | 驼峰：`pageIndex/pageSize/cusCode/zhongWenQch/goodsId/shpMingCheng`                                 | 商品编码叫 `goodsId`（与上一条不同名） |
+| `DAYCHECK-NOUP`            | **下划线**：`bin_id/tin_id/cus_code/zhong_wen_qch/goods_id/shp_ming_cheng` + 驼峰 `pageIndex/pageSize` | 一套里两种风格混用                |
+| `DASH-PEND` / `DASH-TREND` | 无业务查询参数（仅 `count`，默认 6 / 7，范围 1..30）                                                             | 超出范围 → `9994 请求参数过大`     |
+| `DAYCHECK-DELAY`           | 无查询类，仅必填 `pageIndex/pageSize`                                                                    | 缺参 → `9995 参数值缺失`        |
 
 **② 返回结构三态**（适配层统一为 `{rows, total}`）：
 
-| 工具 | 原始返回 | 空数据表现 |
-|---|---|---|
-| `STOCK-QUERY` | `JsonVO<PageDTO<WvStockDTO>>` | `data.rows == null`（`PageDTO.create(page,callback)` 仅非空时 setRows，`PageDTO.java:90-101`） |
-| `EXP-WARN-QUERY` | `JsonVO<PageDTO<MvStockYj>>` | `data.rows == []`（`PageDTO.create(page)` `:63-71`） |
-| `DAYCHECK-NOUP` | `JsonVO<List<NoUpGoodsDTO>>` | `data == []`，**无 total**（裸 List） |
-| `DAYCHECK-DELAY` | `JsonVO<PageDTO<WaringAllDTO>>` | `data.rows == null` |
-| `DASH-PEND` | `JsonVO<GoodsPendingVO>`（4 个端点各一） | 不报错，`goodsNumber="0"` |
-| `DASH-TREND` | `JsonVO<List<...>>`（4 个端点各一） | **`code=9999`（FAIL，「查询数据不存在」）、`data=null`**（`DashboardController.java:104-106/:174-176/:192-194/:212-214`） |
+| 工具               | 原始返回                              | 空数据表现                                                                                                      |
+| ---------------- | --------------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| `STOCK-QUERY`    | `JsonVO<PageDTO<WvStockDTO>>`     | `data.rows == null`（`PageDTO.create(page,callback)` 仅非空时 setRows，`PageDTO.java:90-101`）                    |
+| `EXP-WARN-QUERY` | `JsonVO<PageDTO<MvStockYj>>`      | `data.rows == []`（`PageDTO.create(page)` `:63-71`）                                                         |
+| `DAYCHECK-NOUP`  | `JsonVO<List<NoUpGoodsDTO>>`      | `data == []`，**无 total**（裸 List）                                                                           |
+| `DAYCHECK-DELAY` | `JsonVO<PageDTO<WaringAllDTO>>`   | `data.rows == null`                                                                                        |
+| `DASH-PEND`      | `JsonVO<GoodsPendingVO>`（4 个端点各一） | 不报错，`goodsNumber="0"`                                                                                      |
+| `DASH-TREND`     | `JsonVO<List<...>>`（4 个端点各一）      | **`code=9999`（FAIL，「查询数据不存在」）、`data=null`**（`DashboardController.java:104-106/:174-176/:192-194/:212-214`） |
 
 **适配规则**：
+
 - `code=9999` 对 `DASH-TREND` 属于**业务"无数据"**，不是失败 → 适配层转成空结果，禁止向 LLM 报"查询失败"。
 - `9999` 结果有约 2 分钟 Redis 缓存（`WmToUpGoodsServiceImpl.java:52-64/:79-88`，空列表也缓存）→ 修复后重查仍可能 9999，属预期。
 - `rows == null` 与 `rows == []` 在适配层统一成 `[]`；`DAYCHECK-NOUP` 的裸 List 无 total，适配层置 `total = len(rows)`。
@@ -243,6 +248,7 @@
 **决策**：开发测试阶段用 **agnes-3.0-flash**（用户自有 API Key，Agnes OpenAI 兼容接口），但**必须包一层 `LLMProvider`**，不让 AgentScope 直接管模型。AgentScope 的模型类放在封装后面。
 
 **理由**：
+
 1. **可回放验证**：harness 要求 mock LLM 回放 + 工具断言才能判 passing。直连 agnes-3.0-flash 无法确定性验证。
 2. **可替换**：模型厂商/型号切换只改配置，不动 Agent 代码。
 3. **统一治理**：key、超时、重试、限流、成本、审计全在一处。
@@ -253,6 +259,7 @@
 **边界**：直连 agnes-3.0-flash 只适合个人 demo，不适合要进审计链的项目。
 
 **Agnes 配置（2026-11-23 更新）**：
+
 - OpenAI 兼容 Base URL：`https://api.agnes-ai.cn/v1`；
 - 模型名：`agnes-3.0-flash`；
 - API Key 只放运行环境或本地 gitignored `.env`，禁止写入代码、文档、fixture、Nacos、日志、快照或 `MEMORY.md`；
@@ -275,9 +282,10 @@ WMS_AGENT_DB_URL=postgresql+psycopg://postgres:postgres@<VM-IP>:5432/ragent
 （`.env` 本地保存、不入库；生产由部署注入。）
 
 **表设计起点**：
+
 - `agent_sessions` - 会话主键 / 用户 ID / 创建时间 / 最近活跃
 - `agent_traces` - 每次 Agent 运行的完整 trace（输入/中间步骤/输出/耗时）
-- `agent_tool_calls` - 工具调用记录（关联 trace_id）
+- `agent_tool_calls` - 工具调用记录（关联 trace\_id）
 
 **降级边界（Simplicity First）**：**PG 不可用时不阻塞服务启动**——`/agent/health`、`/agent/tools` 正常可用，`/agent/query` 降级为"无持久化只读问数"（trace 只进内存/日志，不落库），并在响应中标注 `persisted=false`。落库失败只记日志，不让问数失败。
 
@@ -300,11 +308,13 @@ WMS_AGENT_DB_URL=postgresql+psycopg://postgres:postgres@<VM-IP>:5432/ragent
 **决策**：uv + `pyproject.toml` + `uv.lock`，Python 版本固定 **3.14.7**（2026-11-23 Round 3 按本机系统环境修订；`requires-python = ">=3.14,<3.15"`），`uv.lock` 提交进仓库。
 
 **本机解释器与缓存**：
+
 - 解释器固定 `D:/DownloadPackage/environment/python.exe`（当前实测 3.14.7）；
 - uv cache 固定项目内 `.uv/cache`，避免用户级 cache 权限/损坏问题；
 - AgentScope 在 F-010 才引入；引入前必须先跑 Python 3.14 兼容性探针，不兼容则 F-010 记 `blocked`，不悄悄降级解释器。
 
 **理由**：
+
 - **可复现**：`uv.lock` 锁死版本，CI 和本机一致；`requirements.txt` 不锁依赖树，会漂移。
 - **快、跨平台**：Windows/Git Bash 都能跑，比 poetry 轻。
 - **适配 harness**：`init.sh --agent` 可以直接校验 `pyproject.toml` + lock 是否同步。
@@ -313,12 +323,13 @@ WMS_AGENT_DB_URL=postgresql+psycopg://postgres:postgres@<VM-IP>:5432/ragent
 
 **决策**：混合——**非密配置进 Nacos（只读不注册），密钥走环境变量/`.env`**。
 
-| 配置 | 放哪 | 例子 |
-|---|---|---|
-| 共享非密 | Nacos 配置中心（像 C++ 那样只读拉取） | 网关地址、模型名、超时、开关 |
-| 密钥 | 环境变量 + 本地 `.env`（gitignored） | LLM API Key、服务间 API Key |
+| 配置   | 放哪                           | 例子                      |
+| ---- | ---------------------------- | ----------------------- |
+| 共享非密 | Nacos 配置中心（像 C++ 那样只读拉取）     | 网关地址、模型名、超时、开关          |
+| 密钥   | 环境变量 + 本地 `.env`（gitignored） | LLM API Key、服务间 API Key |
 
 **要点**：
+
 - `nacos-sdk-python` 只拉配置、**不注册服务**，和 C++ 行为一致。
 - `.env` 不进 git、不进 `MEMORY.md`、不进快照哈希、不进日志。
 - 本地开发 `.env` 兜底，生产由部署注入环境变量。
@@ -329,6 +340,7 @@ WMS_AGENT_DB_URL=postgresql+psycopg://postgres:postgres@<VM-IP>:5432/ragent
 **决策**：网关加静态路由（仿 C++），Python 暴露 5 个端点；除匿名健康检查外，业务响应契约沿用前端现有成功码 `10000`。
 
 **网关路由**（`wms-gateway/application.yaml` 新增）：
+
 ```yaml
 - id: agent-route
   uri: http://127.0.0.1:${sp.agent}   # 如 11200
@@ -338,13 +350,13 @@ WMS_AGENT_DB_URL=postgresql+psycopg://postgres:postgres@<VM-IP>:5432/ragent
 
 **端点（第一版）**：
 
-| 方法 | 路径 | 用途 |
-|---|---|---|
-| GET | `/agent/health` | 匿名健康检查，仅返回 `{"status":"ok"}` |
-| GET | `/agent/tools` | 工具 Schema 列表（供验证/前端展示） |
-| POST | `/agent/query` | 同步问数（主入口） |
-| GET | `/agent/trace/{traceId}` | 调用审计查询 |
-| POST | `/agent/scan` | 预留异步巡检，第一版不实现 |
+| 方法   | 路径                       | 用途                           |
+| ---- | ------------------------ | ---------------------------- |
+| GET  | `/agent/health`          | 匿名健康检查，仅返回 `{"status":"ok"}` |
+| GET  | `/agent/tools`           | 工具 Schema 列表（供验证/前端展示）       |
+| POST | `/agent/query`           | 同步问数（主入口）                    |
+| GET  | `/agent/trace/{traceId}` | 调用审计查询                       |
+| POST | `/agent/scan`            | 预留异步巡检，第一版不实现                |
 
 **响应契约**（沿用前端现有成功码 `10000`；字段名沿用 `JsonVO` 的 `code/message/data`）：
 
@@ -392,7 +404,7 @@ WMS_AGENT_DB_URL=postgresql+psycopg://postgres:postgres@<VM-IP>:5432/ragent
 
 **触发条件**：Agent 运行 trace 数据显示某类 W 级工具建议准确率 ≥ 95% 时，评估是否对该类工具放开"白名单自动执行 + 审计回放"模式。
 
----
+***
 
 ### ADR-018 巡检规则配置
 
@@ -416,23 +428,23 @@ WMS_AGENT_DB_URL=postgresql+psycopg://postgres:postgres@<VM-IP>:5432/ragent
 
 ## 4. 剩余风险
 
-| 风险 | 应对 |
-|---|---|
-| 跨语言契约漂移 | 建议建立 `contracts/` 目录（或 Java 侧统一暴露 OpenAPI 文档），Python 手写 Pydantic 模型对齐；变更需双方 code review |
-| Python 微服务变成"第二个 Java" | 严格限制 Python 职责：只做编排、推理、生成 + 状态持久化，不做业务规则校验 |
-| Agent 幻觉导致业务事故 | W 级/X 级强制人工确认 + 双签；R 级可缓存但不做写操作 |
-| Mneme-rag 版本演进冲突 | HTTP 集成（ADR-016），不 fork 魔改；需要改 Mneme-rag 时先提 PR 上游 |
-| 调试困难（多模型 + 多工具 + 多步骤） | 从第一天就写 trace 到 PostgreSQL，每个 Agent 运行记录完整工具调用链和中间状态 |
-| agnes-3.0-flash 外部模型数据边界风险 | 工具结果在本地摘要/脱敏后再进 prompt；或后续切换内网模型（ADR-010 预留的 `LLMProvider` 抽象） |
-| 巡检 LLM 摘要质量未用真实模型评估 | 模型只写摘要不判定，失败降级模板（ADR-019）；`llm.enabled` 默认关闭，模型可用后再开并补质量评估 |
-| 巡检指标日聚合只回看最近 180 天补算 | 更早的日期不补算；超过 90 天的长窗口查询在 `coverage.missingDays` 中如实暴露缺算天数，不给出貌似完整的数字（ADR-020 第 3.1 节） |
-| 网关无 token 全放行、资源角色不生效（实测，影响全部 Java 服务） | **阻塞生产上线**（ADR-021）；巡检端点由 agent 自验并有路由级回归；平台侧按 ADR-021 第 5 节修复并补网关契约测试后才能上线 |
-| `EXP-WARN-CPP` 网关无路由 | 首版跳过，Java 版功能覆盖一致；后续补 C++ 网关路由时再评估 |
-| Python 不查 Redis 注销黑名单 | 服务只绑 loopback，正常流量先过网关；已登出 token 在 JWT 过期前直连 Python 仍是理论风险 |
-| AgentScope 与 Python 3.14 兼容性未实测 | F-010 引入前先跑 import/最小构造探针；失败则 blocked，不降级解释器 |
-| JWT 签发私钥明文存在于仓库历史 | 独立安全问题，不在问数 Agent 范围内修；后续轮换密钥、清理历史并补充忽略规则 |
+| 风险                                     | 应对                                                                                      |
+| -------------------------------------- | --------------------------------------------------------------------------------------- |
+| 跨语言契约漂移                                | 建议建立 `contracts/` 目录（或 Java 侧统一暴露 OpenAPI 文档），Python 手写 Pydantic 模型对齐；变更需双方 code review |
+| Python 微服务变成"第二个 Java"                 | 严格限制 Python 职责：只做编排、推理、生成 + 状态持久化，不做业务规则校验                                              |
+| Agent 幻觉导致业务事故                         | W 级/X 级强制人工确认 + 双签；R 级可缓存但不做写操作                                                         |
+| Mneme-rag 版本演进冲突                       | HTTP 集成（ADR-016），不 fork 魔改；需要改 Mneme-rag 时先提 PR 上游                                      |
+| 调试困难（多模型 + 多工具 + 多步骤）                  | 从第一天就写 trace 到 PostgreSQL，每个 Agent 运行记录完整工具调用链和中间状态                                     |
+| agnes-3.0-flash 外部模型数据边界风险             | 工具结果在本地摘要/脱敏后再进 prompt；或后续切换内网模型（ADR-010 预留的 `LLMProvider` 抽象）                          |
+| 巡检 LLM 摘要质量未用真实模型评估                    | 模型只写摘要不判定，失败降级模板（ADR-019）；`llm.enabled` 默认关闭，模型可用后再开并补质量评估                              |
+| 巡检指标日聚合只回看最近 180 天补算                   | 更早的日期不补算；超过 90 天的长窗口查询在 `coverage.missingDays` 中如实暴露缺算天数，不给出貌似完整的数字（ADR-020 第 3.1 节）    |
+| 网关无 token 全放行、资源角色不生效（实测，影响全部 Java 服务） | **阻塞生产上线**（ADR-021）；巡检端点由 agent 自验并有路由级回归；平台侧按 ADR-021 第 5 节修复并补网关契约测试后才能上线             |
+| `EXP-WARN-CPP` 网关无路由                   | 首版跳过，Java 版功能覆盖一致；后续补 C++ 网关路由时再评估                                                      |
+| Python 不查 Redis 注销黑名单                  | 服务只绑 loopback，正常流量先过网关；已登出 token 在 JWT 过期前直连 Python 仍是理论风险                              |
+| AgentScope 与 Python 3.14 兼容性未实测        | F-010 引入前先跑 import/最小构造探针；失败则 blocked，不降级解释器                                            |
+| JWT 签发私钥明文存在于仓库历史                      | 独立安全问题，不在问数 Agent 范围内修；后续轮换密钥、清理历史并补充忽略规则                                               |
 
----
+***
 
 ## 5. 下一步（建议实施顺序）
 
@@ -442,10 +454,10 @@ WMS_AGENT_DB_URL=postgresql+psycopg://postgres:postgres@<VM-IP>:5432/ragent
 4. **实现 6 个工具**：按 ADR-009 优先级逐个接入，每个工具带 Pydantic 参数模型 + Gateway 调用 + JWT 透传 + 审计写入。
 5. **ReAct 循环**：AgentScope 单 Agent + 6 工具 + `LLMProvider`，**首版只做同步 `/agent/query`**（SSE 流式后置，见 ADR-012 修正）。
 6. **前端悬浮窗**：`wms-frontend/src/components/ai-assistant/` 全局组件 + `apis/agent.ts`。
-7. **状态持久化**：PostgreSQL `wms_agent` schema + 3 张表（sessions/traces/tool_calls），`agent_tool_calls` 写入。
+7. **状态持久化**：PostgreSQL `wms_agent` schema + 3 张表（sessions/traces/tool\_calls），`agent_tool_calls` 写入。
 8. **harness 集成**：`init.sh` 加 `--agent` 模式，校验 `uv sync` + `uv run pytest`。
 
----
+***
 
 ## 6. 状态标签
 

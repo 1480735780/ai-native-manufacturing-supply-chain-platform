@@ -27,6 +27,12 @@
 - Codex 沙箱内 `wms-agent` 的 `cryptography` DLL 与 Maven 本地仓库不可用：pytest / psycopg / mvn 必须提权执行；Windows 下打包前先停掉占用 jar 的服务，否则 `spring-boot:repackage` 因文件锁失败、产出无主清单的 jar。
 - MyBatis resultMap 映射了实体没有的 property 时，解析不报错，但逐行映射到非空列会抛 `There is no setter for property named ...`；空表会让缺陷“看起来正常”。守护测试：`NoUpMapperXmlTest`（真实解析 + `MetaClass.hasSetter` + 逐行赋值）。
 - 网关 `wms-gateway/src/main/resources/application.yaml` 路由现状：`/dashboard/**` 行 37-40、`/stockln/**,/stock/**` 行 85-88、`/daycheck/**` 行 89-92 走 `lb://${sn.*}`；C++ 走静态端口样式（行 103-106 `c3-chuweiguanli-route uri: http://127.0.0.1:8103`，`Path=/chuweiguanli/**`）；`/warningmanagement/**` 无路由，故 ADR 跳过 `EXP-WARN-CPP` 成立。
+- S1 源码核查确认的库表与鉴权底座事实（2026-11-27）：
+  - `t_s_role.rolecode` 列宽为 `varchar(10)`，新增角色码须 ≤10 字符；
+  - 零壹多表「库位 vs 托盘」列名互异：`wm_to_up_goods` 中 `ku_wei_bian_ma`=库位、`bin_id`=托盘码；`wm_to_down_goods` 中 `ku_wei_bian_ma`=源库位、`bin_id_from`=源托盘；`wm_om_qm_i`/`wm_in_qm_i` 中 `bin_id`=库位、`tin_id`=托盘码；未入 `wm_notice_conf` 的下架记录在 j8 视图（`InTransitStockMapper.xml:8`）中归属“在途”；
+  - `TaskConfirmServiceImpl.batchConfirmTask`（j7）无 `@Transactional` 且仅置 `bin_sta='Y'`，非库存分配时点；回单写入归 `wms-j8-exportmana`（`ReceiptServiceImpl`→`wm_notice_conf`，`ManyReceiptsServiceImpl`→`wm_om_notice_h`）；仓库不存在 Java `/cost` 服务（计费在 C++ `wms-c5-costmanagement`）；
+  - C++ `wms-c4-icmanagement` `AdjustlistDAO.cpp:148` 直接 `UPDATE wm_to_up_goods SET goods_qua=...` 而未同步 `base_goodscount`，而 `wv_stock` 汇总 `base_goodscount`；
+  - `wms-common` `JwtComponent.java:84` 对 HMAC 密钥做 MD5 且 `exp` 按毫秒计算，不可复用于标准 JWT 验签；`ResourcePermission` 仅为静态声明注解，运行时拦截须独立 AOP 且外包 `@Transactional`；`GatewayAccessFilter` 当前仅识别 `token_use=agent_service`；`wms-agent/pyproject.toml` 当前未安装 `psycopg-pool`。
 
 ## 环境限制
 
@@ -55,6 +61,10 @@
 - 不引入根级 `MEMORY.md`，避免与 `.workbuddy-ai/memory/MEMORY.md` 形成两套记忆。
 - 配置类 CRUD 可止步静态验证；资金、库存过账、PLC、权限边界必须有运行时或端到端证据。
 - 没有证据不得写 `passing`；不能通过删除测试、削弱断言、跳过检查制造通过。
+- S1 每日巡检与异常自愈 Agent 架构决策（2026-11-27 锁定，详见 `wms-agent/docs/implement/S1_每日巡检与异常自愈Agent_代码实施设计文档_v2.3-rc1.md`）：
+  - 在现有 `wms-agent` 平滑演进（新增 `app/s1/`、`/agent/s1/**`、PG `V013~V019`），保持 `app/scan/` 与 588 passed 零退化；纯 Python 轻量自研，**先逐个完成单领域 Agent，全领域完成后再做顶层 Supervisor-Worker 编排**；
+  - 严守 ADR-005（Python 不直读 MySQL），通过网关调 Java 端点；前端复用 `wms-frontend`，**既有问数悬浮球（`components/ai-assistant/index.vue`）保持原样不动**，S1 新增独立形态 B 右侧抽屉与动作级权限组合式函数（不扩大全站 `WRITABLE_ROLES`）；
+  - 角色范围落 PG（不动 `wms-oauth2` 登录 JWT）；写动作按动作级独立控 `disabled | dry_run | live`（默认 `dry_run`），受 `CHECK(live ⇒ ready)` 与逐动作安全评审约束；不侵入任何 `wms-cpp` 服务。
 
 ## 不要写入本文件
 
